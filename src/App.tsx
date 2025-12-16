@@ -228,6 +228,7 @@ function App() {
                     onMessageChange={setMessage}
                     onLayoutChange={setLayout}
                     etoImages={ETO_IMAGES}
+                    userPubkey={authState.pubkey}
                   />
                 </section>
 

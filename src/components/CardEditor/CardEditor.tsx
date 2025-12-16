@@ -1,10 +1,11 @@
 // 年賀状エディタ統合コンポーネント
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DrawingCanvas } from './DrawingCanvas';
 import { EtoGallery, DEFAULT_ETO_IMAGES } from './EtoGallery';
 import { MessageInput } from './MessageInput';
 import { LayoutSelector } from './LayoutSelector';
+import { fetchUserEmojiLists, fetchPopularEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import type { LayoutType, EtoImage } from '../../types';
 import styles from './CardEditor.module.css';
 
@@ -22,6 +23,7 @@ interface CardEditorProps {
   onMessageChange: (message: string) => void;
   onLayoutChange: (layoutId: LayoutType) => void;
   etoImages?: EtoImage[];
+  userPubkey?: string | null;
 }
 
 type TabType = 'draw' | 'gallery';
@@ -34,8 +36,48 @@ export function CardEditor({
   onMessageChange,
   onLayoutChange,
   etoImages = DEFAULT_ETO_IMAGES,
+  userPubkey,
 }: CardEditorProps) {
   const [activeTab, setActiveTab] = useState<TabType>('gallery');
+  const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
+  const [isLoadingEmojis, setIsLoadingEmojis] = useState(false);
+
+  // カスタム絵文字を取得
+  useEffect(() => {
+    async function loadEmojis() {
+      setIsLoadingEmojis(true);
+      try {
+        const emojis: CustomEmoji[] = [];
+        
+        // ユーザーの絵文字リストを取得
+        if (userPubkey) {
+          const userLists = await fetchUserEmojiLists(userPubkey);
+          userLists.forEach(list => {
+            emojis.push(...list.emojis);
+          });
+        }
+        
+        // 人気の絵文字パックも取得
+        const popularPacks = await fetchPopularEmojiPacks(10);
+        popularPacks.forEach(pack => {
+          emojis.push(...pack.emojis);
+        });
+        
+        // 重複を除去（URLベースで）
+        const uniqueEmojis = emojis.filter((emoji, index, self) =>
+          index === self.findIndex(e => e.url === emoji.url)
+        );
+        
+        setCustomEmojis(uniqueEmojis);
+      } catch (error) {
+        console.error('カスタム絵文字の取得に失敗:', error);
+      } finally {
+        setIsLoadingEmojis(false);
+      }
+    }
+    
+    loadEmojis();
+  }, [userPubkey]);
 
   // SVGをdata URIに変換（表示用）
   const imageDataUri = useMemo(() => {
@@ -87,6 +129,8 @@ export function CardEditor({
             <DrawingCanvas 
               onSave={handleDrawingSave} 
               initialMessage={message}
+              customEmojis={customEmojis}
+              isLoadingEmojis={isLoadingEmojis}
             />
           )}
         </div>

@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { TEMPLATES, STAMPS, type Template, type Stamp } from '../../../data/templates';
 import { JAPANESE_FONTS, FONT_CATEGORIES, type FontOption } from '../../../data/fonts';
+import { type CustomEmoji } from '../../../services/emoji';
 import styles from './DrawingCanvas.module.css';
 
 interface DrawingCanvasProps {
@@ -10,6 +11,8 @@ interface DrawingCanvasProps {
   width?: number;
   height?: number;
   initialMessage?: string;
+  customEmojis?: CustomEmoji[];
+  isLoadingEmojis?: boolean;
 }
 
 interface Point {
@@ -29,6 +32,8 @@ interface PlacedStamp {
   x: number;
   y: number;
   scale: number;
+  isCustomEmoji?: boolean;
+  customEmojiUrl?: string;
 }
 
 // メッセージボックスの状態
@@ -51,6 +56,8 @@ export function DrawingCanvas({
   width = 400,
   height = 300,
   initialMessage = '',
+  customEmojis = [],
+  isLoadingEmojis = false,
 }: DrawingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -68,8 +75,10 @@ export function DrawingCanvas({
   // テンプレートとスタンプ
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(TEMPLATES[0]);
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null);
+  const [selectedCustomEmoji, setSelectedCustomEmoji] = useState<CustomEmoji | null>(null);
   const [placedStamps, setPlacedStamps] = useState<PlacedStamp[]>([]);
   const [stampScale, setStampScale] = useState(1);
+  const [stampTab, setStampTab] = useState<'builtin' | 'custom'>('builtin');
 
   // メッセージボックス
   const [message, setMessage] = useState(initialMessage);
@@ -128,18 +137,32 @@ export function DrawingCanvas({
 
       // スタンプを再描画
       placedStamps.forEach(placed => {
-        const stamp = STAMPS.find(s => s.id === placed.stampId);
-        if (!stamp) return;
-        
-        const stampImg = new Image();
-        const stampSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`;
-        const stampEncoded = btoa(unescape(encodeURIComponent(stampSvg)));
-        stampImg.onload = () => {
-          const w = stamp.width * placed.scale;
-          const h = stamp.height * placed.scale;
-          ctx.drawImage(stampImg, placed.x - w/2, placed.y - h/2, w, h);
-        };
-        stampImg.src = `data:image/svg+xml;base64,${stampEncoded}`;
+        if (placed.isCustomEmoji && placed.customEmojiUrl) {
+          // カスタム絵文字スタンプ
+          const emojiImg = new Image();
+          emojiImg.crossOrigin = 'anonymous';
+          emojiImg.onload = () => {
+            const defaultSize = 50;
+            const w = defaultSize * placed.scale;
+            const h = defaultSize * placed.scale;
+            ctx.drawImage(emojiImg, placed.x - w/2, placed.y - h/2, w, h);
+          };
+          emojiImg.src = placed.customEmojiUrl;
+        } else {
+          // ビルトインスタンプ
+          const stamp = STAMPS.find(s => s.id === placed.stampId);
+          if (!stamp) return;
+          
+          const stampImg = new Image();
+          const stampSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`;
+          const stampEncoded = btoa(unescape(encodeURIComponent(stampSvg)));
+          stampImg.onload = () => {
+            const w = stamp.width * placed.scale;
+            const h = stamp.height * placed.scale;
+            ctx.drawImage(stampImg, placed.x - w/2, placed.y - h/2, w, h);
+          };
+          stampImg.src = `data:image/svg+xml;base64,${stampEncoded}`;
+        }
       });
     };
     img.src = templateDataUri;
@@ -169,17 +192,33 @@ export function DrawingCanvas({
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const point = getPointerPosition(e);
 
-    if (tool === 'stamp' && selectedStamp) {
-      // スタンプを配置
-      const newStamp: PlacedStamp = {
-        id: `stamp-${Date.now()}`,
-        stampId: selectedStamp.id,
-        x: point.x,
-        y: point.y,
-        scale: stampScale,
-      };
-      setPlacedStamps(prev => [...prev, newStamp]);
-      return;
+    if (tool === 'stamp') {
+      // ビルトインスタンプを配置
+      if (selectedStamp) {
+        const newStamp: PlacedStamp = {
+          id: `stamp-${Date.now()}`,
+          stampId: selectedStamp.id,
+          x: point.x,
+          y: point.y,
+          scale: stampScale,
+        };
+        setPlacedStamps(prev => [...prev, newStamp]);
+        return;
+      }
+      // カスタム絵文字スタンプを配置
+      if (selectedCustomEmoji) {
+        const newStamp: PlacedStamp = {
+          id: `emoji-${Date.now()}`,
+          stampId: selectedCustomEmoji.shortcode,
+          x: point.x,
+          y: point.y,
+          scale: stampScale,
+          isCustomEmoji: true,
+          customEmojiUrl: selectedCustomEmoji.url,
+        };
+        setPlacedStamps(prev => [...prev, newStamp]);
+        return;
+      }
     }
 
     if (!context) return;
@@ -191,7 +230,7 @@ export function DrawingCanvas({
 
     context.beginPath();
     context.moveTo(point.x, point.y);
-  }, [context, getPointerPosition, tool, selectedStamp, stampScale]);
+  }, [context, getPointerPosition, tool, selectedStamp, selectedCustomEmoji, stampScale]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !context || !lastPointRef.current || tool === 'stamp') return;
@@ -256,13 +295,24 @@ export function DrawingCanvas({
 
     // スタンプ
     const stampElements = placedStamps.map((placed) => {
-      const stamp = STAMPS.find(s => s.id === placed.stampId);
-      if (!stamp) return '';
-      const w = stamp.width * placed.scale;
-      const h = stamp.height * placed.scale;
-      const x = placed.x - w/2;
-      const y = placed.y - h/2;
-      return `<g transform="translate(${x.toFixed(2)}, ${y.toFixed(2)}) scale(${placed.scale})">${stamp.svg}</g>`;
+      if (placed.isCustomEmoji && placed.customEmojiUrl) {
+        // カスタム絵文字スタンプ（SVG内に画像として埋め込み）
+        const defaultSize = 50;
+        const w = defaultSize * placed.scale;
+        const h = defaultSize * placed.scale;
+        const x = placed.x - w/2;
+        const y = placed.y - h/2;
+        return `<image href="${placed.customEmojiUrl}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet"/>`;
+      } else {
+        // ビルトインスタンプ
+        const stamp = STAMPS.find(s => s.id === placed.stampId);
+        if (!stamp) return '';
+        const w = stamp.width * placed.scale;
+        const h = stamp.height * placed.scale;
+        const x = placed.x - w/2;
+        const y = placed.y - h/2;
+        return `<g transform="translate(${x.toFixed(2)}, ${y.toFixed(2)}) scale(${placed.scale})">${stamp.svg}</g>`;
+      }
     }).join('\n  ');
 
     // メッセージテキスト（改行対応）
@@ -527,20 +577,91 @@ export function DrawingCanvas({
 
       {/* スタンプパレット（スタンプモード時） */}
       {tool === 'stamp' && (
-        <div className={styles.stampPalette}>
-          {STAMPS.map((stamp) => {
-            const dataUri = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`)))}`;
-            return (
-              <button
-                key={stamp.id}
-                className={`${styles.stampButton} ${selectedStamp?.id === stamp.id ? styles.active : ''}`}
-                onClick={() => setSelectedStamp(stamp)}
-                title={stamp.name}
-              >
-                <img src={dataUri} alt={stamp.name} className={styles.stampPreview} />
-              </button>
-            );
-          })}
+        <div className={styles.stampSection}>
+          {/* スタンプタブ */}
+          <div className={styles.stampTabs}>
+            <button
+              className={`${styles.stampTabButton} ${stampTab === 'builtin' ? styles.active : ''}`}
+              onClick={() => {
+                setStampTab('builtin');
+                setSelectedCustomEmoji(null);
+              }}
+            >
+              🎨 内蔵スタンプ
+            </button>
+            <button
+              className={`${styles.stampTabButton} ${stampTab === 'custom' ? styles.active : ''}`}
+              onClick={() => {
+                setStampTab('custom');
+                setSelectedStamp(null);
+              }}
+            >
+              😀 カスタム絵文字 {customEmojis.length > 0 && `(${customEmojis.length})`}
+            </button>
+          </div>
+
+          {/* 内蔵スタンプパレット */}
+          {stampTab === 'builtin' && (
+            <div className={styles.stampPalette}>
+              {STAMPS.map((stamp) => {
+                const dataUri = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`)))}`;
+                return (
+                  <button
+                    key={stamp.id}
+                    className={`${styles.stampButton} ${selectedStamp?.id === stamp.id ? styles.active : ''}`}
+                    onClick={() => {
+                      setSelectedStamp(stamp);
+                      setSelectedCustomEmoji(null);
+                    }}
+                    title={stamp.name}
+                  >
+                    <img src={dataUri} alt={stamp.name} className={styles.stampPreview} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* カスタム絵文字パレット */}
+          {stampTab === 'custom' && (
+            <div className={styles.customEmojiPalette}>
+              {isLoadingEmojis && (
+                <div className={styles.loadingEmojis}>
+                  カスタム絵文字を読み込み中...
+                </div>
+              )}
+              {!isLoadingEmojis && customEmojis.length === 0 && (
+                <div className={styles.noEmojis}>
+                  <p>カスタム絵文字が見つかりません</p>
+                  <p className={styles.noEmojisHint}>
+                    💡 NIP-30の絵文字リスト (kind 10030) を設定すると、ここにカスタム絵文字が表示されます
+                  </p>
+                </div>
+              )}
+              {!isLoadingEmojis && customEmojis.length > 0 && (
+                <div className={styles.emojiGrid}>
+                  {customEmojis.map((emoji) => (
+                    <button
+                      key={`${emoji.shortcode}-${emoji.url}`}
+                      className={`${styles.emojiButton} ${selectedCustomEmoji?.url === emoji.url ? styles.active : ''}`}
+                      onClick={() => {
+                        setSelectedCustomEmoji(emoji);
+                        setSelectedStamp(null);
+                      }}
+                      title={`:${emoji.shortcode}:`}
+                    >
+                      <img 
+                        src={emoji.url} 
+                        alt={emoji.shortcode} 
+                        className={styles.emojiPreview}
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -566,7 +687,7 @@ export function DrawingCanvas({
           ref={canvasRef}
           width={width}
           height={height}
-          className={`${styles.canvas} ${tool === 'stamp' && selectedStamp ? styles.stampCursor : ''} ${tool === 'text' ? styles.textMode : ''}`}
+          className={`${styles.canvas} ${tool === 'stamp' && (selectedStamp || selectedCustomEmoji) ? styles.stampCursor : ''} ${tool === 'text' ? styles.textMode : ''}`}
           onPointerDown={tool !== 'text' ? handlePointerDown : undefined}
           onPointerMove={tool !== 'text' ? handlePointerMove : undefined}
           onPointerUp={tool !== 'text' ? handlePointerUp : undefined}

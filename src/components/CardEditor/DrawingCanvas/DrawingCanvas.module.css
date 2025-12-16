@@ -321,6 +321,108 @@
   object-fit: contain;
 }
 
+/* スタンプセクション（タブ付き） */
+.stampSection {
+  margin-bottom: 1rem;
+}
+
+.stampTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stampTabButton {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stampTabButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ccc;
+}
+
+.stampTabButton.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+}
+
+/* カスタム絵文字パレット */
+.customEmojiPalette {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  min-height: 80px;
+}
+
+.loadingEmojis {
+  text-align: center;
+  color: #888;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.noEmojis {
+  text-align: center;
+  color: #888;
+  padding: 1rem;
+}
+
+.noEmojis p {
+  margin: 0.5rem 0;
+}
+
+.noEmojisHint {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.emojiGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.emojiButton {
+  width: 44px;
+  height: 44px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emojiButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.08);
+}
+
+.emojiButton.active {
+  border-color: #e94560;
+  background: rgba(233, 69, 96, 0.2);
+  box-shadow: 0 0 8px rgba(233, 69, 96, 0.3);
+}
+
+.emojiPreview {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
