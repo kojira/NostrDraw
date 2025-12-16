@@ -1,0 +1,180 @@
+/* レイアウト選択のスタイル */
+
+.layoutSelector {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e94560;
+  margin: 0 0 1rem 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.option.selected {
+  border-color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.optionName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.optionDesc {
+  font-size: 0.75rem;
+  color: #666;
+  text-align: center;
+}
+
+/* プレビュー共通 */
+.preview {
+  width: 60px;
+  height: 80px;
+  background: #2a2a3e;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  font-size: 0.6rem;
+}
+
+.previewImage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(233, 69, 96, 0.2);
+}
+
+.previewText {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: #666;
+  font-size: 0.7rem;
+}
+
+/* 縦型 */
+.preview_vertical {
+  flex-direction: column;
+}
+
+.preview_vertical .previewImage {
+  flex: 2;
+  width: 100%;
+}
+
+.preview_vertical .previewText {
+  flex: 1;
+  width: 100%;
+}
+
+/* 横型 */
+.preview_horizontal {
+  flex-direction: row;
+}
+
+.preview_horizontal .previewImage {
+  flex: 1;
+  height: 100%;
+}
+
+.preview_horizontal .previewText {
+  flex: 1;
+  height: 100%;
+}
+
+/* 全面 */
+.preview_fullscreen {
+  position: relative;
+}
+
+.previewOverlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.previewOverlay .previewImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.previewTextOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.25rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.6rem;
+  text-align: center;
+}
+
+/* クラシック */
+.preview_classic {
+  padding: 4px;
+  background: #3a3a4e;
+}
+
+.previewClassic {
+  width: 100%;
+  height: 100%;
+}
+
+.previewBorder {
+  width: 100%;
+  height: 100%;
+  border: 2px solid #e94560;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.previewBorder .previewImage {
+  flex: 2;
+}
+
+.previewBorder .previewText {
+  flex: 1;
+}
+

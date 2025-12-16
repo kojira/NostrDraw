@@ -1,0 +1,59 @@
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 背景（和紙風） -->
+  <rect width="200" height="200" fill="#FDF5E6"/>
+  <circle cx="160" cy="40" r="25" fill="#e94560" opacity="0.8"/>
+  
+  <!-- 水墨画風の馬 -->
+  <g fill="none" stroke="#333" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 体 -->
+    <path d="M50 130 Q80 100 120 110 Q150 115 160 130 Q165 145 155 155 Q130 165 90 160 Q60 155 50 140 Z" 
+          fill="#333" opacity="0.7"/>
+    
+    <!-- 首と頭 -->
+    <path d="M70 115 Q55 85 50 60 Q48 45 55 35 Q70 25 85 35 Q95 45 90 60 Q85 80 80 100" 
+          stroke-width="3" fill="#333" opacity="0.8"/>
+    
+    <!-- 顔の輪郭 -->
+    <path d="M55 35 Q45 45 40 55 Q38 65 45 70 Q55 72 65 65 Q75 55 70 40" 
+          stroke-width="2" fill="#555"/>
+    
+    <!-- 目 -->
+    <circle cx="62" cy="45" r="3" fill="#333"/>
+    
+    <!-- 耳 -->
+    <path d="M58 30 Q55 20 60 15 Q67 20 65 30" stroke-width="2" fill="#444"/>
+    <path d="M75 28 Q78 18 85 20 Q83 28 78 32" stroke-width="2" fill="#444"/>
+    
+    <!-- たてがみ（筆風） -->
+    <path d="M60 25 Q45 35 40 50" stroke-width="4" opacity="0.6"/>
+    <path d="M65 30 Q50 45 48 65" stroke-width="3" opacity="0.5"/>
+    <path d="M70 40 Q58 55 55 75" stroke-width="3" opacity="0.5"/>
+    <path d="M72 60 Q62 75 60 95" stroke-width="2" opacity="0.4"/>
+    
+    <!-- 脚 -->
+    <path d="M75 155 L70 185" stroke-width="6"/>
+    <path d="M95 158 L92 185" stroke-width="5"/>
+    <path d="M125 155 L130 185" stroke-width="6"/>
+    <path d="M145 150 L152 185" stroke-width="5"/>
+    
+    <!-- しっぽ（筆風） -->
+    <path d="M160 125 Q180 115 185 130" stroke-width="4" opacity="0.6"/>
+    <path d="M158 130 Q175 125 182 140" stroke-width="3" opacity="0.5"/>
+    <path d="M157 135 Q172 135 178 150" stroke-width="2" opacity="0.4"/>
+  </g>
+  
+  <!-- 午の文字 -->
+  <text x="165" y="180" font-family="serif" font-size="24" fill="#e94560" opacity="0.8">午</text>
+  
+  <!-- 梅の花 -->
+  <g transform="translate(15, 160)">
+    <circle cx="0" cy="0" r="8" fill="#e94560"/>
+    <circle cx="0" cy="-10" r="4" fill="#FFB6C1"/>
+    <circle cx="9.5" cy="-3" r="4" fill="#FFB6C1"/>
+    <circle cx="5.9" cy="8" r="4" fill="#FFB6C1"/>
+    <circle cx="-5.9" cy="8" r="4" fill="#FFB6C1"/>
+    <circle cx="-9.5" cy="-3" r="4" fill="#FFB6C1"/>
+    <circle cx="0" cy="0" r="3" fill="#FFD700"/>
+  </g>
+</svg>
+

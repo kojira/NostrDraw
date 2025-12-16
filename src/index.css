@@ -1,0 +1,118 @@
+/* グローバルスタイル */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  /* カラーパレット */
+  --color-primary: #e94560;
+  --color-primary-light: #ff6b6b;
+  --color-background: #0f0f1a;
+  --color-surface: #1a1a2e;
+  --color-surface-light: #16213e;
+  --color-text: #ffffff;
+  --color-text-muted: #888888;
+  --color-text-dim: #555555;
+  --color-success: #4ade80;
+  --color-warning: #ffd93d;
+  --color-error: #ff6b6b;
+  
+  /* フォント */
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  
+  /* カラースキーム */
+  color-scheme: dark;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  
+  /* テキストレンダリング */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, 
+    var(--color-background) 0%, 
+    var(--color-surface) 50%,
+    var(--color-background) 100%
+  );
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 選択 */
+::selection {
+  background: rgba(233, 69, 96, 0.3);
+  color: #fff;
+}
+
+/* フォーカス */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* リンク */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-primary-light);
+}
+
+/* ボタンリセット */
+button {
+  font-family: inherit;
+}
+
+/* 入力リセット */
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* 画像 */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* アニメーション設定（動きを減らす設定への対応） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

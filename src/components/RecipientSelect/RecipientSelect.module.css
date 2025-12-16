@@ -1,0 +1,298 @@
+/* 宛先選択コンポーネントのスタイル */
+
+.recipientSelect {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e94560;
+  margin: 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.refreshButton {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: #888;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  font-size: 0.85rem;
+  color: #ff6b6b;
+  margin-bottom: 0.75rem;
+}
+
+/* 選択中の宛先 */
+.selected {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 8px;
+}
+
+.selectedLabel {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.selectedProfile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.selectedAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.selectedName {
+  font-size: 0.9rem;
+  color: #e94560;
+  font-weight: 500;
+}
+
+.clearButton {
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  color: #888;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.clearButton:hover {
+  color: #ff6b6b;
+}
+
+/* 検索入力 */
+.searchContainer {
+  margin-bottom: 0.75rem;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #e94560;
+}
+
+.searchInput::placeholder {
+  color: #555;
+}
+
+/* リストコンテナ */
+.listContainer {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.listContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.listContainer::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.listContainer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.loading,
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.itemSelected {
+  background: rgba(233, 69, 96, 0.15);
+}
+
+.itemSelected:hover {
+  background: rgba(233, 69, 96, 0.2);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarPlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  display: block;
+  font-size: 0.9rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subName {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 手動入力セクション */
+.manualSection {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+}
+
+.manualToggle {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.manualToggle:hover {
+  color: #aaa;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.manualForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.manualInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.manualInput:focus {
+  border-color: #e94560;
+}
+
+.manualInput::placeholder {
+  color: #555;
+}
+
+.manualSubmit {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e94560;
+  background: transparent;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.manualSubmit:hover {
+  background: rgba(233, 69, 96, 0.1);
+}
+

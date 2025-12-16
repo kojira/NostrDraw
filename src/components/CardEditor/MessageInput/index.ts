@@ -1,0 +1,2 @@
+export { MessageInput } from './MessageInput';
+

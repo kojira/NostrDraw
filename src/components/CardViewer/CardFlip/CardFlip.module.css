@@ -1,0 +1,274 @@
+/* カードフリップアニメーションのスタイル */
+
+.cardFlipContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1000px;
+  padding: 2rem;
+}
+
+.closeButton {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  color: #888;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.closeButton:hover {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.8);
+}
+
+.card {
+  width: 320px;
+  height: 450px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.card.flipped {
+  transform: rotateY(180deg);
+}
+
+.cardFace {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* 表面（宛名面） */
+.cardFront {
+  background: linear-gradient(135deg, #f5f5dc 0%, #fffacd 50%, #f5f5dc 100%);
+}
+
+.frontContent {
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.stamp {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 2.5rem;
+  opacity: 0.8;
+}
+
+.addressSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.toSection,
+.fromSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  color: #666;
+  min-width: 40px;
+}
+
+.name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Shippori Mincho', serif;
+  flex: 1;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e94560;
+}
+
+.date {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #888;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.flipHint,
+.flipHintBack {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 0.5rem;
+}
+
+/* 裏面（絵柄面） */
+.cardBack {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+}
+
+.flipHintBack {
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: #aaa;
+}
+
+/* コンテンツ共通 */
+.content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.imageArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.messageArea {
+  padding: 1rem;
+  font-family: 'Shippori Mincho', serif;
+  font-size: 0.9rem;
+  color: #fff;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+
+.messageArea p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 縦型レイアウト */
+.layout_vertical {
+  flex-direction: column;
+}
+
+.layout_vertical .imageArea {
+  flex: 2;
+  width: 100%;
+}
+
+.layout_vertical .messageArea {
+  flex: 1;
+  width: 100%;
+}
+
+/* 横型レイアウト */
+.layout_horizontal {
+  flex-direction: row;
+}
+
+.layout_horizontal .imageArea {
+  flex: 1;
+  height: 100%;
+}
+
+.layout_horizontal .messageArea {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* 全面レイアウト */
+.fullscreenLayout {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.fullscreenImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fullscreenMessage {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  font-family: 'Shippori Mincho', serif;
+  font-size: 0.9rem;
+  color: #fff;
+  line-height: 1.6;
+}
+
+.fullscreenMessage p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* クラシックレイアウト */
+.classicLayout {
+  width: 100%;
+  height: 100%;
+  padding: 0.75rem;
+  background: #f5f5dc;
+  box-sizing: border-box;
+}
+
+.classicInner {
+  width: 100%;
+  height: 100%;
+  border: 3px solid #e94560;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.classicLayout .imageArea {
+  flex: 2;
+}
+
+.classicLayout .messageArea {
+  flex: 1;
+  color: #333;
+  background: rgba(233, 69, 96, 0.05);
+  border-top: 1px solid rgba(233, 69, 96, 0.2);
+}
+

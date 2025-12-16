@@ -1,0 +1,58 @@
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 背景 -->
+  <circle cx="100" cy="100" r="95" fill="#fff5f5"/>
+  
+  <!-- 体 -->
+  <ellipse cx="100" cy="120" rx="45" ry="35" fill="#8B4513"/>
+  
+  <!-- 首 -->
+  <path d="M85 95 Q70 60 80 40 Q90 35 100 40 Q105 50 100 95" fill="#8B4513"/>
+  
+  <!-- 顔 -->
+  <ellipse cx="85" cy="45" rx="25" ry="20" fill="#A0522D"/>
+  
+  <!-- 鼻 -->
+  <ellipse cx="70" cy="50" rx="12" ry="10" fill="#DEB887"/>
+  
+  <!-- 鼻の穴 -->
+  <circle cx="66" cy="50" r="2" fill="#333"/>
+  <circle cx="74" cy="50" r="2" fill="#333"/>
+  
+  <!-- 目 -->
+  <ellipse cx="85" cy="38" rx="6" ry="7" fill="#fff"/>
+  <circle cx="86" cy="39" r="4" fill="#333"/>
+  <circle cx="87" cy="37" r="1.5" fill="#fff"/>
+  
+  <!-- 耳 -->
+  <path d="M70 25 Q65 15 70 10 Q75 15 75 25" fill="#A0522D"/>
+  <path d="M95 22 Q100 12 105 17 Q103 25 98 28" fill="#A0522D"/>
+  <path d="M72 22 Q70 17 73 14 Q75 18 74 23" fill="#FFB6C1"/>
+  <path d="M97 24 Q100 16 102 19 Q101 24 99 26" fill="#FFB6C1"/>
+  
+  <!-- たてがみ -->
+  <path d="M75 25 Q60 30 55 45 Q58 35 65 30 Q55 40 52 55 Q58 45 68 38" fill="#5D3A1A" stroke="#5D3A1A" stroke-width="2"/>
+  <path d="M80 30 Q70 50 75 70 Q78 55 82 45 Q75 65 78 80 Q82 65 88 55" fill="#5D3A1A"/>
+  
+  <!-- 脚 -->
+  <rect x="70" y="140" width="12" height="35" rx="5" fill="#8B4513"/>
+  <rect x="118" y="140" width="12" height="35" rx="5" fill="#8B4513"/>
+  <rect x="80" y="145" width="10" height="30" rx="4" fill="#6B3510"/>
+  <rect x="108" y="145" width="10" height="30" rx="4" fill="#6B3510"/>
+  
+  <!-- ひづめ -->
+  <ellipse cx="76" cy="177" rx="8" ry="5" fill="#333"/>
+  <ellipse cx="124" cy="177" rx="8" ry="5" fill="#333"/>
+  <ellipse cx="85" cy="177" rx="7" ry="4" fill="#333"/>
+  <ellipse cx="113" cy="177" rx="7" ry="4" fill="#333"/>
+  
+  <!-- しっぽ -->
+  <path d="M145 115 Q165 110 170 130 Q160 125 155 135 Q165 130 175 145 Q160 140 150 140" fill="#5D3A1A"/>
+  
+  <!-- ほっぺ -->
+  <circle cx="65" cy="55" r="5" fill="#FFB6C1" opacity="0.6"/>
+  
+  <!-- 飾り（お正月風） -->
+  <circle cx="90" cy="28" r="4" fill="#e94560"/>
+  <circle cx="85" cy="32" r="3" fill="#FFD700"/>
+</svg>
+

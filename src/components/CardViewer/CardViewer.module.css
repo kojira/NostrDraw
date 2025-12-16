@@ -1,0 +1,128 @@
+/* 年賀状ビューアのスタイル */
+
+.cardViewer {
+  /* コンテナ */
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #e94560;
+  margin: 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.refreshButton {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  color: #888;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* バッジ */
+.badges {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.badgeIcon {
+  font-size: 1.2rem;
+}
+
+.badgeLabel {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.badgeCount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e94560;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tab.active {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border-color: #e94560;
+}
+
+.listContainer {
+  /* リストコンテナ */
+}
+
+/* モーダル */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+

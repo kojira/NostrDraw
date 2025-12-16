@@ -1,0 +1,222 @@
+/* Nostr年賀状サービス メインスタイル */
+
+/* フォントインポート */
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* ヘッダー */
+.header {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+  border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+}
+
+.logo {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #e94560;
+  margin: 0;
+  font-family: 'Shippori Mincho', serif;
+  text-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+}
+
+.tagline {
+  font-size: 1rem;
+  color: #888;
+  margin: 0.5rem 0 0 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+/* メインコンテンツ */
+.main {
+  flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+/* ビュー切り替え */
+.viewToggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.viewButton {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #888;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.viewButton:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.viewButton.active {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border-color: #e94560;
+}
+
+/* 送信セクション */
+.sendSection {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+.error {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+.warning {
+  color: #ffd93d;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.sendButton {
+  padding: 1rem 3rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.sendButton:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(233, 69, 96, 0.4);
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* kind 1 コピーセクション */
+.kind1Section {
+  width: 100%;
+}
+
+.kind1Hint {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-bottom: 1rem;
+}
+
+.kind1Textarea {
+  width: 100%;
+  padding: 1rem;
+  font-size: 0.9rem;
+  font-family: 'Noto Sans JP', monospace;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  resize: vertical;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.kind1Textarea:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.copyButton {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.copyButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(74, 222, 128, 0.3);
+}
+
+.kind1Warning {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+/* フッター */
+.footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer p {
+  margin: 0.25rem 0;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.footer a {
+  color: #e94560;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+.footerNote {
+  font-size: 0.75rem;
+  color: #555;
+}
+
+/* レスポンシブ */
+@media (max-width: 640px) {
+  .logo {
+    font-size: 1.5rem;
+  }
+  
+  .main {
+    padding: 1rem;
+  }
+  
+  .viewToggle {
+    flex-direction: column;
+  }
+  
+  .sendButton {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+}

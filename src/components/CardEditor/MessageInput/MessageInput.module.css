@@ -1,0 +1,52 @@
+/* メッセージ入力のスタイル */
+
+.messageInput {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e94560;
+  margin-bottom: 0.75rem;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-family: 'Shippori Mincho', 'Noto Sans JP', sans-serif;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.textarea:focus {
+  border-color: #e94560;
+}
+
+.textarea::placeholder {
+  color: #555;
+}
+
+.charCount {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.charCount .limit {
+  color: #ff6b6b;
+}
+

@@ -1,0 +1,456 @@
+/* お絵描きキャンバスのスタイル */
+
+.drawingCanvas {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+/* テンプレート選択 */
+.templateSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.sectionLabel {
+  font-size: 0.85rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.templateList {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.templateButton {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.templateButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.templateButton.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.toolGroup {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.toolButton {
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.toolButton.active {
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+}
+
+.colorPicker {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.colorButton {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.colorButton:hover {
+  transform: scale(1.1);
+}
+
+.colorButton.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.5);
+}
+
+.sizeControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sizeSlider {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  outline: none;
+}
+
+.sizeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #e94560;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.sizeLabel {
+  font-size: 0.8rem;
+  color: #888;
+  min-width: 35px;
+}
+
+/* メッセージ入力セクション */
+.messageInputSection {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.messageTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.messageTextarea::placeholder {
+  color: #666;
+}
+
+.messageTextarea:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.messageHint {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.canvasContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+.canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.canvas.stampCursor {
+  cursor: copy;
+}
+
+.canvas.textMode {
+  cursor: default;
+}
+
+/* キャンバスオーバーレイ（メッセージボックス用） */
+.canvasOverlay {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+/* メッセージボックス */
+.messageBox {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  padding: 5px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.messageBox.editable {
+  border: 2px dashed rgba(233, 69, 96, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.messageText {
+  width: 100%;
+  height: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+/* ドラッグ用の中央ハンドル */
+.moveHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  cursor: move;
+}
+
+/* リサイズハンドル */
+.resizeHandle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #e94560;
+  border: 2px solid #fff;
+  border-radius: 2px;
+  z-index: 10;
+}
+
+.resizeNW {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.resizeNE {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.resizeSW {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.resizeSE {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+/* スタンプパレット */
+.stampPalette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.stampButton {
+  width: 50px;
+  height: 50px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stampButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.stampButton.active {
+  border-color: #e94560;
+  background: rgba(233, 69, 96, 0.2);
+  box-shadow: 0 0 8px rgba(233, 69, 96, 0.3);
+}
+
+.stampPreview {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.clearButton {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: #888;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clearButton:hover {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.saveButton {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.saveButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+}
+
+/* フォント選択セクション */
+.fontSection {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.fontCategoryTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fontCategoryTab {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fontCategoryTab:hover {
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.fontCategoryTab.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.3);
+  border-color: #e94560;
+}
+
+.fontList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.fontList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fontList::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.fontList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.fontList::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.fontButton {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fontButton:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+}
+
+.fontButton.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+  box-shadow: 0 0 8px rgba(233, 69, 96, 0.3);
+}

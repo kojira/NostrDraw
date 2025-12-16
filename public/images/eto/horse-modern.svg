@@ -1,0 +1,79 @@
+<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 背景グラデーション -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="horseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#ff6b6b"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="200" height="200" fill="url(#bgGrad)"/>
+  
+  <!-- 装飾的な円 -->
+  <circle cx="150" cy="50" r="30" fill="none" stroke="#e94560" stroke-width="1" opacity="0.3"/>
+  <circle cx="150" cy="50" r="40" fill="none" stroke="#e94560" stroke-width="0.5" opacity="0.2"/>
+  <circle cx="50" cy="150" r="25" fill="none" stroke="#ff6b6b" stroke-width="1" opacity="0.3"/>
+  
+  <!-- モダンな馬のシルエット -->
+  <g fill="url(#horseGrad)">
+    <!-- 体 -->
+    <path d="M40 120 
+             Q30 90 45 65 
+             Q55 50 65 45 
+             Q75 42 80 50 
+             Q85 60 80 75
+             Q75 90 80 105
+             Q90 95 110 100
+             Q140 105 160 115
+             Q170 125 165 140
+             Q155 160 130 165
+             Q100 168 70 165
+             Q45 160 40 140
+             Z"/>
+    
+    <!-- 頭 -->
+    <ellipse cx="60" cy="52" rx="18" ry="15"/>
+    
+    <!-- 耳 -->
+    <path d="M50 40 Q45 30 52 25 Q58 30 55 40"/>
+    <path d="M65 38 Q68 28 75 30 Q72 38 68 42"/>
+    
+    <!-- 脚（シンプル） -->
+    <rect x="55" y="155" width="8" height="30" rx="3"/>
+    <rect x="75" y="158" width="7" height="27" rx="3"/>
+    <rect x="120" y="155" width="8" height="30" rx="3"/>
+    <rect x="140" y="152" width="7" height="33" rx="3"/>
+  </g>
+  
+  <!-- たてがみ（ライン） -->
+  <g stroke="#fff" stroke-width="2" fill="none" opacity="0.8">
+    <path d="M55 35 Q40 45 38 60"/>
+    <path d="M58 40 Q45 55 45 75"/>
+    <path d="M62 50 Q52 65 52 85"/>
+    <path d="M68 60 Q60 80 62 100"/>
+  </g>
+  
+  <!-- しっぽ -->
+  <g stroke="#fff" stroke-width="2" fill="none" opacity="0.8">
+    <path d="M165 120 Q180 115 185 125"/>
+    <path d="M163 125 Q178 125 183 135"/>
+    <path d="M162 130 Q175 135 178 145"/>
+  </g>
+  
+  <!-- 目 -->
+  <circle cx="55" cy="50" r="3" fill="#fff"/>
+  
+  <!-- 2026 -->
+  <text x="140" y="180" font-family="sans-serif" font-size="20" font-weight="bold" fill="#fff" opacity="0.5">2026</text>
+  
+  <!-- 装飾ドット -->
+  <circle cx="30" cy="30" r="3" fill="#e94560"/>
+  <circle cx="170" cy="170" r="3" fill="#ff6b6b"/>
+  <circle cx="25" cy="100" r="2" fill="#e94560" opacity="0.5"/>
+  <circle cx="175" cy="100" r="2" fill="#ff6b6b" opacity="0.5"/>
+</svg>
+

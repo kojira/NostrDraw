@@ -1,0 +1,183 @@
+/* 干支ギャラリーのスタイル */
+
+.etoGallery {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e94560;
+  margin: 0 0 0.25rem 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0 0 1rem 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.imageButton {
+  aspect-ratio: 1;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.imageButton:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.imageButton.selected {
+  border-color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.image {
+  max-width: 80%;
+  max-height: 60px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.imageName {
+  font-size: 0.75rem;
+  color: #888;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.placeholder {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.placeholder p {
+  margin: 0.5rem 0;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+/* カスタムURL入力 */
+.customSection {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.customToggle {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.customToggle:hover {
+  color: #aaa;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.customForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.customInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.customInput:focus {
+  border-color: #e94560;
+}
+
+.customInput::placeholder {
+  color: #555;
+}
+
+.customSubmit {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e94560;
+  background: transparent;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.customSubmit:hover {
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.error {
+  font-size: 0.8rem;
+  color: #ff6b6b;
+  margin-top: 0.5rem;
+}
+
+/* プレビュー */
+.preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 8px;
+}
+
+.previewLabel {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.previewImage {
+  max-width: 60px;
+  max-height: 60px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
