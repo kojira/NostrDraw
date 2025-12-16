@@ -26,6 +26,7 @@ export function DrawingCanvas({
     selectedTemplate,
     selectedStamp,
     selectedCustomEmoji,
+    placedStamps,
     stampScale,
     stampTab,
     message,
@@ -131,6 +132,26 @@ export function DrawingCanvas({
           onPointerUp={tool !== 'text' ? handlePointerUp : undefined}
           onPointerLeave={tool !== 'text' ? handlePointerUp : undefined}
         />
+        
+        {/* カスタム絵文字スタンプオーバーレイ（CORS回避用） */}
+        {placedStamps.filter(s => s.isCustomEmoji).map(stamp => {
+          const defaultSize = 50;
+          const size = defaultSize * stamp.scale;
+          return (
+            <img
+              key={stamp.id}
+              src={stamp.customEmojiUrl}
+              alt={stamp.stampId}
+              className={styles.customEmojiStamp}
+              style={{
+                left: `${((stamp.x - size/2) / width) * 100}%`,
+                top: `${((stamp.y - size/2) / height) * 100}%`,
+                width: `${(size / width) * 100}%`,
+                height: `${(size / height) * 100}%`,
+              }}
+            />
+          );
+        })}
         
         {/* メッセージボックスオーバーレイ */}
         <div

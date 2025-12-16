@@ -99,32 +99,26 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
         ctx.stroke();
       });
 
-      // スタンプを再描画
+      // ビルトインスタンプのみキャンバスに再描画
+      // カスタム絵文字はCORS制限があるためオーバーレイで表示
       placedStamps.forEach(placed => {
-        if (placed.isCustomEmoji && placed.customEmojiUrl) {
-          const emojiImg = new Image();
-          emojiImg.crossOrigin = 'anonymous';
-          emojiImg.onload = () => {
-            const defaultSize = 50;
-            const w = defaultSize * placed.scale;
-            const h = defaultSize * placed.scale;
-            ctx.drawImage(emojiImg, placed.x - w/2, placed.y - h/2, w, h);
-          };
-          emojiImg.src = placed.customEmojiUrl;
-        } else {
-          const stamp = STAMPS.find(s => s.id === placed.stampId);
-          if (!stamp) return;
-          
-          const stampImg = new Image();
-          const stampSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`;
-          const stampEncoded = btoa(unescape(encodeURIComponent(stampSvg)));
-          stampImg.onload = () => {
-            const w = stamp.width * placed.scale;
-            const h = stamp.height * placed.scale;
-            ctx.drawImage(stampImg, placed.x - w/2, placed.y - h/2, w, h);
-          };
-          stampImg.src = `data:image/svg+xml;base64,${stampEncoded}`;
+        if (placed.isCustomEmoji) {
+          // カスタム絵文字はオーバーレイで表示するためスキップ
+          return;
         }
+        
+        const stamp = STAMPS.find(s => s.id === placed.stampId);
+        if (!stamp) return;
+        
+        const stampImg = new Image();
+        const stampSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`;
+        const stampEncoded = btoa(unescape(encodeURIComponent(stampSvg)));
+        stampImg.onload = () => {
+          const w = stamp.width * placed.scale;
+          const h = stamp.height * placed.scale;
+          ctx.drawImage(stampImg, placed.x - w/2, placed.y - h/2, w, h);
+        };
+        stampImg.src = `data:image/svg+xml;base64,${stampEncoded}`;
       });
     };
     img.src = templateDataUri;

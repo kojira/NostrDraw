@@ -200,6 +200,13 @@
   cursor: default;
 }
 
+/* カスタム絵文字スタンプ（CORS回避用オーバーレイ） */
+.customEmojiStamp {
+  position: absolute;
+  pointer-events: none;
+  object-fit: contain;
+}
+
 /* キャンバスオーバーレイ（メッセージボックス用） */
 .canvasOverlay {
   position: absolute;
