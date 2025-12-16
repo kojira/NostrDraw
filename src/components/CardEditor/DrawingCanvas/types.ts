@@ -1,0 +1,57 @@
+// DrawingCanvas用の型定義
+
+import type { Template, Stamp } from '../../../data/templates';
+import type { FontOption } from '../../../data/fonts';
+import type { CustomEmoji } from '../../../services/emoji';
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface Stroke {
+  points: Point[];
+  color: string;
+  lineWidth: number;
+}
+
+export interface PlacedStamp {
+  id: string;
+  stampId: string;
+  x: number;
+  y: number;
+  scale: number;
+  isCustomEmoji?: boolean;
+  customEmojiUrl?: string;
+}
+
+export interface MessageBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  color: string;
+  fontFamily: string;
+  fontId: string;
+}
+
+export type ToolType = 'pen' | 'eraser' | 'stamp' | 'text';
+export type DragMode = 'none' | 'move' | 'resize-se' | 'resize-sw' | 'resize-ne' | 'resize-nw';
+export type StampTab = 'builtin' | 'custom';
+
+export interface DrawingCanvasProps {
+  onSave: (svg: string, message: string) => void;
+  width?: number;
+  height?: number;
+  initialMessage?: string;
+  customEmojis?: CustomEmoji[];
+  isLoadingEmojis?: boolean;
+}
+
+// 定数
+export const COLORS = ['#e94560', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b5de5', '#000000', '#ffffff'];
+
+// Re-export types for convenience
+export type { Template, Stamp, FontOption, CustomEmoji };
+
