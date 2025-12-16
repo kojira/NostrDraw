@@ -68,6 +68,61 @@ export async function fetchPopularEmojiPacks(limit: number = 20): Promise<EmojiL
   return events.map(parseEmojiPackEvent).filter((list): list is EmojiList => list !== null);
 }
 
+// ブックマークしている絵文字パックを取得 (NIP-51)
+export async function fetchBookmarkedEmojiPacks(pubkey: string): Promise<EmojiList[]> {
+  // kind 10003: Public Bookmarks
+  // kind 30001: Lists (emoji type)
+  const filter: Filter = {
+    kinds: [10003, 30001],
+    authors: [pubkey],
+  };
+
+  const events = await fetchEvents(filter);
+  
+  // aタグから絵文字パック（kind 30030）への参照を抽出
+  const emojiPackRefs: { pubkey: string; identifier: string }[] = [];
+  
+  for (const event of events) {
+    // kind 30001の場合、dタグが"emoji"のものだけを対象にする
+    if (event.kind === 30001) {
+      const dTag = event.tags.find(tag => tag[0] === 'd');
+      if (dTag?.[1] !== 'emoji') continue;
+    }
+    
+    for (const tag of event.tags) {
+      // aタグ: ["a", "30030:pubkey:identifier", ...]
+      if (tag[0] === 'a' && tag[1]) {
+        const parts = tag[1].split(':');
+        if (parts[0] === '30030' && parts[1] && parts[2]) {
+          emojiPackRefs.push({
+            pubkey: parts[1],
+            identifier: parts[2],
+          });
+        }
+      }
+    }
+  }
+
+  if (emojiPackRefs.length === 0) return [];
+
+  // 参照されている絵文字パックを取得
+  const emojiPacks: EmojiList[] = [];
+  
+  for (const ref of emojiPackRefs) {
+    const packFilter: Filter = {
+      kinds: [30030],
+      authors: [ref.pubkey],
+      '#d': [ref.identifier],
+    };
+    
+    const packEvents = await fetchEvents(packFilter);
+    const parsed = packEvents.map(parseEmojiPackEvent).filter((list): list is EmojiList => list !== null);
+    emojiPacks.push(...parsed);
+  }
+
+  return emojiPacks;
+}
+
 // イベントから絵文字リストをパース（kind 10030）
 function parseEmojiListEvent(event: Event): EmojiList | null {
   try {

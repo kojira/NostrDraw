@@ -5,7 +5,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { EtoGallery, DEFAULT_ETO_IMAGES } from './EtoGallery';
 import { MessageInput } from './MessageInput';
 import { LayoutSelector } from './LayoutSelector';
-import { fetchUserEmojiLists, fetchPopularEmojiPacks, type CustomEmoji } from '../../services/emoji';
+import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import type { LayoutType, EtoImage } from '../../types';
 import styles from './CardEditor.module.css';
 
@@ -49,11 +49,17 @@ export function CardEditor({
       try {
         const emojis: CustomEmoji[] = [];
         
-        // ユーザーの絵文字リストを取得
         if (userPubkey) {
+          // ユーザーの絵文字リストを取得
           const userLists = await fetchUserEmojiLists(userPubkey);
           userLists.forEach(list => {
             emojis.push(...list.emojis);
+          });
+          
+          // ブックマークしている絵文字パックを取得 (NIP-51)
+          const bookmarkedPacks = await fetchBookmarkedEmojiPacks(userPubkey);
+          bookmarkedPacks.forEach(pack => {
+            emojis.push(...pack.emojis);
           });
         }
         
