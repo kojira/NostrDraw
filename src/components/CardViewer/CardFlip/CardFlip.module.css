@@ -3,6 +3,7 @@
 .cardFlipContainer {
   position: relative;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   perspective: 1000px;
@@ -345,9 +346,13 @@
 .actionArea {
   position: relative;
   display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
   gap: 1rem;
   margin-top: 1rem;
+  width: 100%;
 }
 
 .reactionButton {

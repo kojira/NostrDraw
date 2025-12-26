@@ -195,3 +195,57 @@ export function injectStrokeAnimationStyles(svg: string): string {
   return svg.replace(/<svg([^>]*)>/, `<svg$1>${styleContent}`);
 }
 
+/**
+ * 全てのストローク要素にアニメーションクラスを追加（通常表示用）
+ */
+export function addAnimationToAllStrokes(
+  svg: string,
+  animationClass: string = 'extended-stroke'
+): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svg, 'image/svg+xml');
+  const svgElement = doc.querySelector('svg');
+  
+  if (!svgElement) {
+    return svg;
+  }
+  
+  // 描画要素にアニメーションクラスを追加
+  const strokeElements = ['path', 'line', 'polyline', 'polygon'];
+  let delay = 0;
+  
+  function processElement(element: Element) {
+    const tagName = element.tagName.toLowerCase();
+    
+    // defs内の要素はスキップ
+    if (element.closest('defs')) {
+      return;
+    }
+    
+    if (strokeElements.includes(tagName)) {
+      // stroke属性を持つ要素のみ
+      const stroke = element.getAttribute('stroke');
+      if (stroke && stroke !== 'none') {
+        element.classList.add(animationClass);
+        element.setAttribute('data-new-stroke', 'true');
+        // 連続したアニメーションのためにディレイを追加
+        element.setAttribute('style', `animation-delay: ${delay}ms`);
+        delay += 50; // 50msずつずらす
+      }
+    }
+    
+    // 子要素も処理
+    for (const child of element.children) {
+      processElement(child);
+    }
+  }
+  
+  for (const child of svgElement.children) {
+    processElement(child);
+  }
+  
+  // シリアライズして返す
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(svgElement);
+}
+

@@ -13,6 +13,7 @@ import { useAuth } from './hooks/useAuth';
 import { useNostr, useFollowees } from './hooks/useNostr';
 import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useCardEditor, useSendCard } from './hooks/useCards';
 import { fetchCardById } from './services/card';
+import { pubkeyToNpub } from './services/profile';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import './App.css';
 
@@ -192,7 +193,11 @@ function App() {
       // タイムラインにも投稿するオプションがオンの場合、テキストを準備
       if (postToTimeline) {
         const url = `${BASE_URL}?eventid=${eventId}`;
-        const defaultText = `🎨 NostrDrawで見てね\n${url}\n#NostrDraw`;
+        // 宛先がある場合はメンションを追加
+        const mention = editorState.recipientPubkey 
+          ? `\nnostr:${pubkeyToNpub(editorState.recipientPubkey)} さんへ` 
+          : '';
+        const defaultText = `🎨 NostrDrawで見てね${mention}\n${url}\n#NostrDraw`;
         setTimelineText(defaultText);
       }
     }
@@ -201,28 +206,48 @@ function App() {
   // タイムラインに投稿
   const handlePostToTimeline = async () => {
     if (!timelineText.trim() || !lastSentEventId) return;
+    
+    // NIP-07ログインが必要
+    if (!authState.isNip07) {
+      console.error('タイムライン投稿にはNIP-07ログインが必要です');
+      return;
+    }
 
     setIsPostingTimeline(true);
     try {
       // ハッシュタグを抽出
       const hashtags = timelineText.match(/#\w+/g) || [];
-      const tags = hashtags.map(tag => ['t', tag.slice(1)]);
+      const tags: string[][] = hashtags.map(tag => ['t', tag.slice(1)]);
+      
+      // 宛先がある場合はpタグを追加（メンション通知用）
+      if (editorState.recipientPubkey) {
+        tags.push(['p', editorState.recipientPubkey]);
+      }
 
+      console.log('タイムライン投稿開始:', { timelineText, tags });
+      
       const timelineEvent = await signEvent({
         kind: 1,
         content: timelineText,
         tags,
         created_at: Math.floor(Date.now() / 1000),
       });
+      
+      console.log('署名済みイベント:', timelineEvent);
 
       // タイムラインイベントを発行
       const relayUrls = relays.map(r => r.url);
+      console.log('リレーに発行:', relayUrls);
+      
       const pool = new SimplePool();
       await Promise.any(pool.publish(relayUrls, timelineEvent));
       pool.close(relayUrls);
+      
+      console.log('タイムライン投稿成功');
       setTimelinePosted(true);
     } catch (err) {
       console.error('タイムライン投稿に失敗:', err);
+      alert('タイムライン投稿に失敗しました。もう一度お試しください。');
     } finally {
       setIsPostingTimeline(false);
     }
@@ -381,7 +406,7 @@ function App() {
                       <h3>🎉 送信完了！</h3>
                       
                       {/* タイムライン投稿セクション */}
-                      {postToTimeline && timelineText && !timelinePosted && (
+                      {postToTimeline && timelineText && !timelinePosted && authState.isNip07 && (
                         <div className="timelinePostSection">
                           <p>タイムラインに投稿する内容を編集できます：</p>
                           <textarea
@@ -397,6 +422,13 @@ function App() {
                           >
                             {isPostingTimeline ? '投稿中...' : '📢 タイムラインに投稿する'}
                           </button>
+                        </div>
+                      )}
+                      
+                      {/* NIP-07でない場合の説明 */}
+                      {postToTimeline && timelineText && !timelinePosted && !authState.isNip07 && (
+                        <div className="timelinePostSection">
+                          <p>⚠️ タイムライン投稿にはNIP-07拡張機能でのログインが必要です</p>
                         </div>
                       )}
 

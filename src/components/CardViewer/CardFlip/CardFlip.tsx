@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { NewYearCard, NostrProfile} from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById } from '../../../services/card';
-import { addAnimationToNewElements, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
+import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import styles from './CardFlip.module.css';
 
@@ -58,37 +58,52 @@ export function CardFlip({
     loadReactionState();
   }, [card.id, userPubkey]);
 
-  // 描き足し投稿の場合、親SVGを取得してアニメーション付きSVGを生成
+  // SVGにストロークアニメーションを適用
+  // 描き足しの場合は差分のみ、通常の場合は全てのストロークにアニメーション
   useEffect(() => {
-    const loadParentAndAnimate = async () => {
-      if (!card.parentEventId || !card.svg) {
+    const loadAndAnimate = async () => {
+      if (!card.svg) {
         setAnimatedSvg(null);
         return;
       }
       
-      setIsLoadingParent(true);
-      
-      try {
-        const parentCard = await fetchCardById(card.parentEventId);
+      // 描き足し投稿の場合
+      if (card.parentEventId) {
+        setIsLoadingParent(true);
         
-        if (parentCard?.svg) {
-          // 差分検出してアニメーションクラスを追加
-          const svgWithAnimation = addAnimationToNewElements(card.svg, parentCard.svg);
-          // アニメーションスタイルを注入
+        try {
+          const parentCard = await fetchCardById(card.parentEventId);
+          
+          if (parentCard?.svg) {
+            // 差分検出してアニメーションクラスを追加
+            const svgWithAnimation = addAnimationToNewElements(card.svg, parentCard.svg);
+            // アニメーションスタイルを注入
+            const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
+            setAnimatedSvg(finalSvg);
+          } else {
+            // 親が見つからない場合は全ストロークにアニメーション
+            const svgWithAnimation = addAnimationToAllStrokes(card.svg);
+            const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
+            setAnimatedSvg(finalSvg);
+          }
+        } catch (error) {
+          console.error('親イベントの取得に失敗:', error);
+          // エラー時も全ストロークにアニメーション
+          const svgWithAnimation = addAnimationToAllStrokes(card.svg);
           const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
           setAnimatedSvg(finalSvg);
-        } else {
-          setAnimatedSvg(null);
+        } finally {
+          setIsLoadingParent(false);
         }
-      } catch (error) {
-        console.error('親イベントの取得に失敗:', error);
-        setAnimatedSvg(null);
-      } finally {
-        setIsLoadingParent(false);
+      } else {
+        // 通常の投稿の場合は全てのストロークにアニメーション
+        const svgWithAnimation = addAnimationToAllStrokes(card.svg);
+        const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
+        setAnimatedSvg(finalSvg);
       }
     };
     
-    loadParentAndAnimate();
+    loadAndAnimate();
   }, [card.parentEventId, card.svg]);
 
   const handleFlip = () => {
