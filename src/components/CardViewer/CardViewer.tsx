@@ -20,6 +20,7 @@ interface CardViewerProps {
   onRefresh: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
+  onExtend?: (card: NewYearCard) => void;
 }
 
 type TabType = 'received' | 'sent';
@@ -36,6 +37,7 @@ export function CardViewer({
   onRefresh,
   userPubkey,
   signEvent,
+  onExtend,
 }: CardViewerProps) {
   const [activeTab, setActiveTab] = useState<TabType>('received');
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
@@ -174,6 +176,7 @@ export function CardViewer({
               onClose={handleCloseCard}
               userPubkey={userPubkey}
               signEvent={signEvent}
+              onExtend={onExtend}
             />
           </div>
         </div>

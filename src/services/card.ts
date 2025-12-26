@@ -9,6 +9,7 @@ import {
   type NewYearCard, 
   type LayoutType 
 } from '../types';
+import { compressSvg, decompressSvg } from '../utils/compression';
 
 // NostrDrawのイベントかどうかをチェック
 export function isNostrDrawEvent(event: Event): boolean {
@@ -26,10 +27,18 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
 
     const tags = new Map<string, string>();
     let recipientPubkey: string | null = null;
+    let parentEventId: string | null = null;
+    let parentPubkey: string | null = null;
     
     for (const tag of event.tags) {
       if (tag[0] === 'p') {
         recipientPubkey = tag[1];
+      } else if (tag[0] === 'e' && tag[3] === 'reply') {
+        // 描き足し元の参照
+        parentEventId = tag[1];
+      } else if (tag[0] === 'parent_p') {
+        // 描き足し元の投稿者
+        parentPubkey = tag[1];
       } else if (tag[0] && tag[1]) {
         tags.set(tag[0], tag[1]);
       }
@@ -37,6 +46,7 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
 
     const dTag = tags.get('d') || '';
     const year = parseInt(dTag.split('-')[0]) || new Date().getFullYear();
+    const allowExtend = tags.get('allow_extend') === 'true';
 
     // contentからSVGとメッセージを取得
     let message = '';
@@ -46,7 +56,19 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
     try {
       const parsed = JSON.parse(event.content);
       message = parsed.message || '';
-      svg = parsed.svg || '';
+      
+      // 圧縮されたSVGがあれば解凍、なければ通常のSVG
+      if (parsed.svgCompressed) {
+        try {
+          svg = decompressSvg(parsed.svgCompressed);
+        } catch (decompressError) {
+          console.error('Failed to decompress SVG:', decompressError);
+          svg = '';
+        }
+      } else {
+        svg = parsed.svg || '';
+      }
+      
       layoutId = parsed.layoutId || 'vertical';
     } catch {
       // JSONパース失敗
@@ -66,6 +88,9 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
       layoutId,
       createdAt: event.created_at,
       year,
+      allowExtend,
+      parentEventId,
+      parentPubkey,
     };
   } catch {
     return null;
@@ -218,6 +243,9 @@ export interface SendCardParams {
   message: string;
   layoutId: LayoutType;
   year?: number;
+  allowExtend?: boolean; // 描き足し許可
+  parentEventId?: string | null; // 描き足し元のイベントID
+  parentPubkey?: string | null; // 描き足し元の投稿者
 }
 
 export async function sendCard(
@@ -247,18 +275,47 @@ export async function sendCard(
     tags.push(['p', params.recipientPubkey]);
   }
 
+  // 描き足し許可
+  if (params.allowExtend) {
+    tags.push(['allow_extend', 'true']);
+  }
+
+  // 描き足し元の参照（スレッド形式）
+  if (params.parentEventId) {
+    tags.push(['e', params.parentEventId, '', 'reply']);
+  }
+  if (params.parentPubkey) {
+    tags.push(['parent_p', params.parentPubkey]);
+  }
+
+  // SVGを圧縮してサイズを削減
+  let svgCompressed: string;
+  try {
+    svgCompressed = compressSvg(params.svg);
+  } catch (error) {
+    console.error('Failed to compress SVG, using original:', error);
+    // 圧縮失敗時は元のSVGを使用
+    svgCompressed = '';
+  }
+
   // SVGデータはcontentに含める（タグには長すぎる可能性がある）
+  // 圧縮に成功した場合はsvgCompressedを使用、失敗時はsvgを使用
   const eventTemplate: EventTemplate = {
     kind: NOSTRDRAW_KIND,
     created_at: timestamp,
     tags,
     content: JSON.stringify({
       message: params.message,
-      svg: params.svg,
+      ...(svgCompressed 
+        ? { svgCompressed, compression: 'gzip+base64' }
+        : { svg: params.svg }
+      ),
       layoutId: params.layoutId,
       year,
       version: NOSTRDRAW_VERSION,
       isPublic: !params.recipientPubkey, // 宛先なしの場合はpublicフラグ
+      allowExtend: params.allowExtend,
+      parentEventId: params.parentEventId,
     }),
   };
 

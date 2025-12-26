@@ -325,11 +325,12 @@
   border-top: 1px solid rgba(233, 69, 96, 0.2);
 }
 
-/* リアクションエリア */
-.reactionArea {
+/* アクションエリア */
+.actionArea {
   position: relative;
   display: flex;
   justify-content: center;
+  gap: 1rem;
   margin-top: 1rem;
 }
 
@@ -389,6 +390,41 @@
   font-weight: 600;
   min-width: 1.5rem;
   text-align: center;
+}
+
+/* 描き足しボタン */
+.extendButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(100, 200, 255, 0.5);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  color: #64c8ff;
+}
+
+.extendButton:hover {
+  background: rgba(100, 200, 255, 0.2);
+  border-color: #64c8ff;
+  transform: scale(1.05);
+}
+
+.extendButton span:first-child {
+  font-size: 1.25rem;
+}
+
+/* 描き足し元情報 */
+.parentInfo {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #64c8ff;
+  opacity: 0.8;
 }
 
 /* ハートパーティクルアニメーション */

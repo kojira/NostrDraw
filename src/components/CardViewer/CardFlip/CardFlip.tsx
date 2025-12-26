@@ -14,6 +14,7 @@ interface CardFlipProps {
   onClose?: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
+  onExtend?: (card: NewYearCard) => void; // 描き足しボタンのコールバック
 }
 
 export function CardFlip({
@@ -23,6 +24,7 @@ export function CardFlip({
   onClose,
   userPubkey,
   signEvent,
+  onExtend,
 }: CardFlipProps) {
   // 宛先がない場合は最初から裏面（絵柄面）を表示
   const hasRecipient = !!card.recipientPubkey;
@@ -161,8 +163,9 @@ export function CardFlip({
         </div>
       </div>
 
-      {/* リアクションボタン */}
-      <div className={styles.reactionArea}>
+      {/* アクションエリア */}
+      <div className={styles.actionArea}>
+        {/* リアクションボタン */}
         <button
           className={`${styles.reactionButton} ${hasReacted ? styles.reacted : ''} ${showReactionAnimation ? styles.animating : ''}`}
           onClick={handleReaction}
@@ -175,6 +178,22 @@ export function CardFlip({
           <span className={styles.reactionCount}>{reactionCount}</span>
         </button>
         
+        {/* 描き足しボタン（許可されている場合のみ表示） */}
+        {card.allowExtend && onExtend && userPubkey && signEvent && (
+          <button
+            className={styles.extendButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              onExtend(card);
+              onClose?.();
+            }}
+            title="この絵に描き足す"
+          >
+            <span>✏️</span>
+            <span>描き足す</span>
+          </button>
+        )}
+        
         {/* アニメーション用のハートパーティクル */}
         {showReactionAnimation && (
           <div className={styles.heartParticles}>
@@ -186,6 +205,13 @@ export function CardFlip({
           </div>
         )}
       </div>
+
+      {/* 描き足し元の表示 */}
+      {card.parentEventId && (
+        <div className={styles.parentInfo}>
+          <span>🔗 描き足し作品</span>
+        </div>
+      )}
     </div>
   );
 }

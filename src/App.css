@@ -273,6 +273,36 @@
   margin-bottom: 1rem;
 }
 
+/* 描き足し中の表示 */
+.extendingInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  color: #e94560;
+  font-weight: 600;
+}
+
+.cancelExtendButton {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelExtendButton:hover {
+  background: rgba(233, 69, 96, 0.2);
+}
+
 .timelineOption {
   display: flex;
   align-items: center;

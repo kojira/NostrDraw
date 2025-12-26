@@ -54,6 +54,7 @@ export interface DrawingCanvasProps {
   customEmojis?: CustomEmoji[];
   isLoadingEmojis?: boolean;
   etoImages?: EtoImage[];
+  baseImageSvg?: string; // 描き足し元のSVG（背景として表示）
 }
 
 // 定数

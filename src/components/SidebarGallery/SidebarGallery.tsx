@@ -35,6 +35,7 @@ interface SidebarGalleryProps {
   onRefresh: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
+  onExtend?: (card: NewYearCard) => void;
 }
 
 export function SidebarGallery({
@@ -45,6 +46,7 @@ export function SidebarGallery({
   onRefresh,
   userPubkey,
   signEvent,
+  onExtend,
 }: SidebarGalleryProps) {
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
@@ -191,6 +193,7 @@ export function SidebarGallery({
               onClose={handleCloseCard}
               userPubkey={userPubkey}
               signEvent={signEvent}
+              onExtend={onExtend}
             />
           </div>
         </div>

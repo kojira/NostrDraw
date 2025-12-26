@@ -1,13 +1,13 @@
 // お絵描きキャンバスコンポーネント（統合）
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDrawingCanvas } from './useDrawingCanvas';
 import { TemplateSelector } from './TemplateSelector';
 import { Toolbar } from './Toolbar';
 import { StampPalette } from './StampPalette';
 import { FontSelector } from './FontSelector';
 import { STAMPS } from '../../../data/templates';
-import type { DrawingCanvasProps } from './types';
+import type { DrawingCanvasProps, Template } from './types';
 import styles from './DrawingCanvas.module.css';
 
 export function DrawingCanvas({
@@ -18,6 +18,7 @@ export function DrawingCanvas({
   customEmojis = [],
   isLoadingEmojis = false,
   etoImages = [],
+  baseImageSvg,
 }: DrawingCanvasProps) {
   const {
     canvasRef,
@@ -70,6 +71,33 @@ export function DrawingCanvas({
     handleOverlayPointerMove,
     handleOverlayPointerUp,
   } = useDrawingCanvas({ width, height, initialMessage });
+
+  // 描き足し元のSVGが渡されたらテンプレートとして設定
+  const hasSetBaseImage = useRef(false);
+  useEffect(() => {
+    if (baseImageSvg && !hasSetBaseImage.current) {
+      hasSetBaseImage.current = true;
+      
+      // SVGの内容を抽出してテンプレートとして設定
+      const svgMatch = baseImageSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+      const innerSvg = svgMatch ? svgMatch[1] : baseImageSvg;
+      
+      const baseTemplate: Template = {
+        id: 'extend-base',
+        name: '描き足し元',
+        svg: innerSvg,
+      };
+      
+      setSelectedTemplate(baseTemplate);
+    }
+  }, [baseImageSvg, setSelectedTemplate]);
+
+  // baseImageSvgがリセットされたらフラグもリセット
+  useEffect(() => {
+    if (!baseImageSvg) {
+      hasSetBaseImage.current = false;
+    }
+  }, [baseImageSvg]);
 
   const handleSave = useCallback(() => {
     const svg = generateSvg();

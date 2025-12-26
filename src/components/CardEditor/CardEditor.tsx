@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { DrawingCanvas } from './DrawingCanvas';
 import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import { ETO_IMAGES } from '../../data/etoGallery';
+import type { NewYearCard } from '../../types';
 import styles from './CardEditor.module.css';
 
 interface CardEditorProps {
@@ -12,6 +13,7 @@ interface CardEditorProps {
   onSvgChange: (svg: string | null) => void;
   onMessageChange: (message: string) => void;
   userPubkey?: string | null;
+  extendingCard?: NewYearCard | null; // 描き足し元のカード
 }
 
 export function CardEditor({
@@ -19,6 +21,7 @@ export function CardEditor({
   onSvgChange,
   onMessageChange,
   userPubkey,
+  extendingCard,
 }: CardEditorProps) {
   const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
   const [isLoadingEmojis, setIsLoadingEmojis] = useState(false);
@@ -82,6 +85,7 @@ export function CardEditor({
           customEmojis={customEmojis}
           isLoadingEmojis={isLoadingEmojis}
           etoImages={ETO_IMAGES}
+          baseImageSvg={extendingCard?.svg}
         />
       </div>
     </div>

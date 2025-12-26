@@ -19,6 +19,9 @@ export interface NewYearCard {
   layoutId: LayoutType;
   createdAt: number;
   year: number;
+  allowExtend?: boolean; // 描き足し許可
+  parentEventId?: string | null; // 描き足し元のイベントID
+  parentPubkey?: string | null; // 描き足し元の投稿者
 }
 
 export type LayoutType = 'vertical' | 'horizontal' | 'fullscreen' | 'classic';

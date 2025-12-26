@@ -92,6 +92,8 @@ function App() {
   const [timelineText, setTimelineText] = useState(''); // タイムライン投稿用テキスト
   const [isPostingTimeline, setIsPostingTimeline] = useState(false); // タイムライン投稿中
   const [timelinePosted, setTimelinePosted] = useState(false); // タイムライン投稿完了
+  const [allowExtend, setAllowExtend] = useState(true); // 描き足しを許可
+  const [extendingCard, setExtendingCard] = useState<NewYearCard | null>(null); // 描き足し元のカード
   
   // URLパラメータからeventidを取得して表示するカード
   const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
@@ -110,6 +112,12 @@ function App() {
     }
     setSvg(svg);
   }, [lastSentEventId, setSvg]);
+
+  // 描き足しを開始
+  const handleExtend = useCallback((card: NewYearCard) => {
+    setExtendingCard(card);
+    setActiveView('create'); // 作成画面に切り替え
+  }, []);
 
   // URLパラメータのeventidをチェック
   useEffect(() => {
@@ -170,10 +178,14 @@ function App() {
       message: editorState.message,
       layoutId: editorState.layoutId,
       year: 2026,
+      allowExtend, // 描き足し許可
+      parentEventId: extendingCard?.id || null, // 描き足し元
+      parentPubkey: extendingCard?.pubkey || null,
     });
 
     if (eventId) {
       setLastSentEventId(eventId);
+      setExtendingCard(null); // 描き足し元をクリア
       refreshSent();
       setTimelinePosted(false);
 
@@ -246,6 +258,7 @@ function App() {
             onRefresh={refreshPopular}
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
+            onExtend={handleExtend}
           />
         </aside>
 
@@ -263,6 +276,7 @@ function App() {
                       card={sharedCard} 
                       userPubkey={authState.pubkey}
                       signEvent={authState.isNip07 ? signEvent : undefined}
+                      onExtend={handleExtend}
                     />
                   </div>
                   <div className="sharedCardActions">
@@ -351,6 +365,7 @@ function App() {
                     onSvgChange={handleSvgChange}
                     onMessageChange={setMessage}
                     userPubkey={authState.pubkey}
+                    extendingCard={extendingCard}
                   />
                 </section>
 
@@ -422,6 +437,27 @@ function App() {
                   
                   {authState.isNip07 && !lastSentEventId && (
                     <>
+                      {/* 描き足し中の表示 */}
+                      {extendingCard && (
+                        <div className="extendingInfo">
+                          <span>✏️ 描き足し中</span>
+                          <button 
+                            onClick={() => setExtendingCard(null)}
+                            className="cancelExtendButton"
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      )}
+                      
+                      <label className="timelineOption">
+                        <input
+                          type="checkbox"
+                          checked={allowExtend}
+                          onChange={(e) => setAllowExtend(e.target.checked)}
+                        />
+                        <span>描き足しを許可する</span>
+                      </label>
                       <label className="timelineOption">
                         <input
                           type="checkbox"
@@ -435,7 +471,7 @@ function App() {
                         disabled={!editorIsValid || isSending}
                         className="sendButton"
                       >
-                        {isSending ? '送信中...' : '🎨 送信する'}
+                        {isSending ? '送信中...' : extendingCard ? '✏️ 描き足して送信' : '🎨 送信する'}
                       </button>
                     </>
                   )}
@@ -463,6 +499,7 @@ function App() {
                   onRefresh={() => { refreshReceived(); refreshSent(); }}
                   userPubkey={authState.pubkey}
                   signEvent={authState.isNip07 ? signEvent : undefined}
+                  onExtend={handleExtend}
                 />
               </section>
             )}
@@ -480,6 +517,7 @@ function App() {
             onRefresh={refreshRecent}
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
+            onExtend={handleExtend}
           />
         </aside>
       </div>
