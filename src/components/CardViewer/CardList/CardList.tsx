@@ -4,10 +4,26 @@ import type { NewYearCard, NostrProfile } from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
 import styles from './CardList.module.css';
 
-// SVGをdata URIに変換
-function svgToDataUri(svg: string): string {
+// SVGを安全にレンダリングするためのコンポーネント
+function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
+  // SVGに外部画像参照が含まれているかチェック
+  const hasExternalImage = svg.includes('<image') && svg.includes('href=');
+  
+  if (hasExternalImage) {
+    // 外部画像を含むSVGは直接HTMLとしてレンダリング
+    return (
+      <div 
+        className={className}
+        dangerouslySetInnerHTML={{ __html: svg }}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+      />
+    );
+  }
+  
+  // 外部画像がない場合はdata URI経由で表示
   const encoded = btoa(unescape(encodeURIComponent(svg)));
-  return `data:image/svg+xml;base64,${encoded}`;
+  const dataUri = `data:image/svg+xml;base64,${encoded}`;
+  return <img src={dataUri} alt="" className={className} />;
 }
 
 interface CardListProps {
@@ -49,7 +65,7 @@ export function CardList({
   if (isLoading) {
     return (
       <div className={styles.loading}>
-        年賀状を読み込み中...
+        お手紙を読み込み中...
       </div>
     );
   }
@@ -65,7 +81,7 @@ export function CardList({
   if (cards.length === 0) {
     return (
       <div className={styles.empty}>
-        {type === 'received' ? '届いた年賀状はありません' : '送った年賀状はありません'}
+        {type === 'received' ? '届いたお手紙はありません' : '送ったお手紙はありません'}
       </div>
     );
   }
@@ -77,7 +93,6 @@ export function CardList({
           const otherPubkey = type === 'received' ? card.pubkey : card.recipientPubkey;
           const picture = otherPubkey ? getProfilePicture(otherPubkey) : null;
           const name = otherPubkey ? getProfileName(otherPubkey) : 'みんな';
-          const thumbnailSrc = card.svg ? svgToDataUri(card.svg) : null;
 
           return (
             <li
@@ -86,8 +101,8 @@ export function CardList({
               onClick={() => onSelectCard(card)}
             >
               <div className={styles.thumbnail}>
-                {thumbnailSrc ? (
-                  <img src={thumbnailSrc} alt="" className={styles.thumbnailImage} />
+                {card.svg ? (
+                  <SvgRenderer svg={card.svg} className={styles.thumbnailImage} />
                 ) : (
                   <span className={styles.placeholderEmoji}>🎍</span>
                 )}

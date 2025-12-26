@@ -192,6 +192,60 @@
   flex-wrap: wrap;
 }
 
+.timelinePostSection {
+  margin-bottom: 1rem;
+}
+
+.timelinePostSection p {
+  margin-bottom: 0.75rem;
+}
+
+.postTimelineButton {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.postTimelineButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+}
+
+.postTimelineButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.timelinePostedMessage {
+  background: rgba(107, 203, 119, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.timelinePostedMessage p {
+  color: #6bcb77;
+  margin: 0;
+  font-weight: 600;
+}
+
+.manualShareSection {
+  margin-bottom: 1rem;
+}
+
+.manualShareSection p {
+  margin-bottom: 0.75rem;
+}
+
 .closeButton {
   padding: 0.6rem 1.2rem;
   font-size: 0.9rem;
@@ -217,6 +271,27 @@
   color: #ffd93d;
   font-size: 0.9rem;
   margin-bottom: 1rem;
+}
+
+.timelineOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
+.timelineOption input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+
+.timelineOption span {
+  user-select: none;
 }
 
 .sendButton {

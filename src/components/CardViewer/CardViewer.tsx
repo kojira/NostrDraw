@@ -125,13 +125,13 @@ export function CardViewer({
           className={`${styles.tab} ${activeTab === 'received' ? styles.active : ''}`}
           onClick={() => setActiveTab('received')}
         >
-          📨 届いた年賀状 ({receivedCount})
+          📨 届いたお手紙 ({receivedCount})
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'sent' ? styles.active : ''}`}
           onClick={() => setActiveTab('sent')}
         >
-          📤 送った年賀状 ({sentCount})
+          📤 送ったお手紙 ({sentCount})
         </button>
       </div>
 

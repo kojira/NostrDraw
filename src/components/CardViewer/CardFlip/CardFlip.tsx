@@ -111,23 +111,37 @@ export function CardFlip({
   );
 }
 
-// SVGをdata URIに変換
-function svgToDataUri(svg: string): string {
-  // Base64エンコード
+// SVGを安全にレンダリングするためのコンポーネント
+function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
+  // SVGに外部画像参照が含まれているかチェック
+  const hasExternalImage = svg.includes('<image') && svg.includes('href=');
+  
+  if (hasExternalImage) {
+    // 外部画像を含むSVGは直接HTMLとしてレンダリング（imgタグだとブロックされる）
+    return (
+      <div 
+        className={className}
+        dangerouslySetInnerHTML={{ __html: svg }}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      />
+    );
+  }
+  
+  // 外部画像がない場合はdata URI経由で表示（より安全）
   const encoded = btoa(unescape(encodeURIComponent(svg)));
-  return `data:image/svg+xml;base64,${encoded}`;
+  const dataUri = `data:image/svg+xml;base64,${encoded}`;
+  return <img src={dataUri} alt="" className={className} />;
 }
 
 // カードコンテンツ表示（レイアウト対応）
 function CardContent({ card }: { card: NewYearCard }) {
   const layoutClass = styles[`layout_${card.layoutId}`] || styles.layout_vertical;
-  const imageSrc = card.svg ? svgToDataUri(card.svg) : '';
 
   return (
     <div className={`${styles.content} ${layoutClass}`}>
       {card.layoutId === 'fullscreen' ? (
         <div className={styles.fullscreenLayout}>
-          {imageSrc && <img src={imageSrc} alt="" className={styles.fullscreenImage} />}
+          {card.svg && <SvgRenderer svg={card.svg} className={styles.fullscreenImage} />}
           <div className={styles.fullscreenMessage}>
             <p>{card.message}</p>
           </div>
@@ -136,7 +150,7 @@ function CardContent({ card }: { card: NewYearCard }) {
         <div className={styles.classicLayout}>
           <div className={styles.classicInner}>
             <div className={styles.imageArea}>
-              {imageSrc && <img src={imageSrc} alt="" className={styles.image} />}
+              {card.svg && <SvgRenderer svg={card.svg} className={styles.image} />}
             </div>
             <div className={styles.messageArea}>
               <p>{card.message}</p>
@@ -146,7 +160,7 @@ function CardContent({ card }: { card: NewYearCard }) {
       ) : (
         <>
           <div className={styles.imageArea}>
-            {imageSrc && <img src={imageSrc} alt="" className={styles.image} />}
+            {card.svg && <SvgRenderer svg={card.svg} className={styles.image} />}
           </div>
           <div className={styles.messageArea}>
             <p>{card.message}</p>

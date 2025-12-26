@@ -1,6 +1,6 @@
 // 年賀状エディタ統合コンポーネント
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { DrawingCanvas } from './DrawingCanvas';
 import { EtoGallery, DEFAULT_ETO_IMAGES } from './EtoGallery';
 import { MessageInput } from './MessageInput';
@@ -9,10 +9,26 @@ import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks,
 import type { LayoutType, EtoImage } from '../../types';
 import styles from './CardEditor.module.css';
 
-// SVGをdata URIに変換
-function svgToDataUri(svg: string): string {
+// SVGを安全にレンダリングするためのコンポーネント
+function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
+  // SVGに外部画像参照が含まれているかチェック
+  const hasExternalImage = svg.includes('<image') && svg.includes('href=');
+  
+  if (hasExternalImage) {
+    // 外部画像を含むSVGは直接HTMLとしてレンダリング
+    return (
+      <div 
+        className={className}
+        dangerouslySetInnerHTML={{ __html: svg }}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      />
+    );
+  }
+  
+  // 外部画像がない場合はdata URI経由で表示
   const encoded = btoa(unescape(encodeURIComponent(svg)));
-  return `data:image/svg+xml;base64,${encoded}`;
+  const dataUri = `data:image/svg+xml;base64,${encoded}`;
+  return <img src={dataUri} alt="" className={className} />;
 }
 
 interface CardEditorProps {
@@ -85,11 +101,6 @@ export function CardEditor({
     loadEmojis();
   }, [userPubkey]);
 
-  // SVGをdata URIに変換（表示用）
-  const imageDataUri = useMemo(() => {
-    return svg ? svgToDataUri(svg) : null;
-  }, [svg]);
-
   // お絵描きモード：SVGにメッセージが埋め込まれる
   const handleDrawingSave = (svgData: string, embeddedMessage: string) => {
     onSvgChange(svgData);
@@ -142,10 +153,12 @@ export function CardEditor({
         </div>
 
         {/* 選択中の画像プレビュー（お絵描きタブの時のみ） */}
-        {imageDataUri && activeTab !== 'gallery' && (
+        {svg && activeTab !== 'gallery' && (
           <div className={styles.selectedImage}>
             <span className={styles.selectedLabel}>選択中の画像:</span>
-            <img src={imageDataUri} alt="選択中" className={styles.previewImage} />
+            <div className={styles.previewImageWrapper}>
+              <SvgRenderer svg={svg} className={styles.previewImage} />
+            </div>
             <button
               onClick={() => onSvgChange(null)}
               className={styles.clearButton}
@@ -171,11 +184,11 @@ export function CardEditor({
       )}
 
       {/* プレビュー（ギャラリーモードのみ） */}
-      {imageDataUri && activeTab === 'gallery' && (
+      {svg && activeTab === 'gallery' && (
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>プレビュー</h3>
           <CardPreview
-            imageDataUri={imageDataUri}
+            svg={svg}
             message={message}
             layoutId={layoutId}
           />
@@ -187,19 +200,19 @@ export function CardEditor({
 
 // 年賀状プレビューコンポーネント
 interface CardPreviewProps {
-  imageDataUri: string;
+  svg: string;
   message: string;
   layoutId: LayoutType;
 }
 
-function CardPreview({ imageDataUri, message, layoutId }: CardPreviewProps) {
+function CardPreview({ svg, message, layoutId }: CardPreviewProps) {
   return (
     <div className={`${styles.preview} ${styles[`preview_${layoutId}`]}`}>
       <div className={styles.previewInner}>
         {layoutId === 'vertical' && (
           <>
             <div className={styles.previewImageArea}>
-              <img src={imageDataUri} alt="" className={styles.previewImg} />
+              <SvgRenderer svg={svg} className={styles.previewImg} />
             </div>
             <div className={styles.previewMessage}>
               <p>{message || '（メッセージ未入力）'}</p>
@@ -209,7 +222,7 @@ function CardPreview({ imageDataUri, message, layoutId }: CardPreviewProps) {
         {layoutId === 'horizontal' && (
           <>
             <div className={styles.previewImageArea}>
-              <img src={imageDataUri} alt="" className={styles.previewImg} />
+              <SvgRenderer svg={svg} className={styles.previewImg} />
             </div>
             <div className={styles.previewMessage}>
               <p>{message || '（メッセージ未入力）'}</p>
@@ -218,7 +231,7 @@ function CardPreview({ imageDataUri, message, layoutId }: CardPreviewProps) {
         )}
         {layoutId === 'fullscreen' && (
           <div className={styles.previewFullscreen}>
-            <img src={imageDataUri} alt="" className={styles.previewImgFull} />
+            <SvgRenderer svg={svg} className={styles.previewImgFull} />
             <div className={styles.previewMessageOverlay}>
               <p>{message || '（メッセージ未入力）'}</p>
             </div>
@@ -228,7 +241,7 @@ function CardPreview({ imageDataUri, message, layoutId }: CardPreviewProps) {
           <div className={styles.previewClassic}>
             <div className={styles.previewClassicInner}>
               <div className={styles.previewImageArea}>
-                <img src={imageDataUri} alt="" className={styles.previewImg} />
+                <SvgRenderer svg={svg} className={styles.previewImg} />
               </div>
               <div className={styles.previewMessage}>
                 <p>{message || '（メッセージ未入力）'}</p>

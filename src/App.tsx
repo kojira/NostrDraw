@@ -1,7 +1,7 @@
 // NostrDraw - Nostrで絵を描いて送るサービス
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { nip19 } from 'nostr-tools';
+import { SimplePool } from 'nostr-tools';
 import type { NewYearCard } from './types';
 import { Auth } from './components/Auth';
 import { RelaySettings } from './components/RelaySettings';
@@ -73,9 +73,12 @@ function App() {
   const { send: sendCard, isSending, error: sendError } = useSendCard(signEvent);
 
   const [activeView, setActiveView] = useState<'create' | 'view'>('create');
-  const [copied, setCopied] = useState(false);
   const [lastSentEventId, setLastSentEventId] = useState<string | null>(null);
   const [shareTextCopied, setShareTextCopied] = useState(false);
+  const [postToTimeline, setPostToTimeline] = useState(true); // タイムラインにも投稿するオプション
+  const [timelineText, setTimelineText] = useState(''); // タイムライン投稿用テキスト
+  const [isPostingTimeline, setIsPostingTimeline] = useState(false); // タイムライン投稿中
+  const [timelinePosted, setTimelinePosted] = useState(false); // タイムライン投稿完了
   
   // URLパラメータからeventidを取得して表示するカード
   const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
@@ -103,53 +106,6 @@ function App() {
         });
     }
   }, []);
-
-  // 宛先のプロフィール名を取得
-  const recipientName = useMemo(() => {
-    if (!editorState.recipientPubkey) return '';
-    const profile = followees.find(f => f.pubkey === editorState.recipientPubkey);
-    if (profile?.display_name) return profile.display_name;
-    if (profile?.name) return profile.name;
-    return nip19.npubEncode(editorState.recipientPubkey).slice(0, 16) + '...';
-  }, [editorState.recipientPubkey, followees]);
-
-  // kind 1用のテキストを生成（SVGはdata URIとして埋め込み）
-  const kind1Text = useMemo(() => {
-    if (!editorState.svg) return '';
-    
-    const lines = [
-      '🎨 NostrDraw 🎍 New Year 2026',
-      '',
-    ];
-    
-    // 宛先がある場合のみTo:を追加
-    if (editorState.recipientPubkey) {
-      const recipientNpub = nip19.npubEncode(editorState.recipientPubkey);
-      lines.push(`To: ${recipientName} (nostr:${recipientNpub})`);
-      lines.push('');
-    }
-    
-    if (editorState.message) {
-      lines.push(editorState.message);
-      lines.push('');
-    }
-    
-    // 注意: SVGは直接埋め込めないので説明を追加
-    lines.push('💌 NostrDrawでご覧ください');
-    
-    return lines.join('\n');
-  }, [editorState.recipientPubkey, editorState.svg, editorState.message, recipientName]);
-
-  // テキストをクリップボードにコピー
-  const handleCopyKind1 = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(kind1Text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('コピーに失敗しました:', err);
-    }
-  }, [kind1Text]);
 
   // NIP-07からリレーを取得
   const handleFetchRelaysFromNip07 = useCallback(async () => {
@@ -195,12 +151,52 @@ function App() {
     if (eventId) {
       setLastSentEventId(eventId);
       refreshSent();
+      setTimelinePosted(false);
+
+      // タイムラインにも投稿するオプションがオンの場合、テキストを準備
+      if (postToTimeline) {
+        const url = `${BASE_URL}?eventid=${eventId}`;
+        const defaultText = `🎨 NostrDrawで見てね\n${url}\n#NostrDraw`;
+        setTimelineText(defaultText);
+      }
+    }
+  };
+
+  // タイムラインに投稿
+  const handlePostToTimeline = async () => {
+    if (!timelineText.trim() || !lastSentEventId) return;
+
+    setIsPostingTimeline(true);
+    try {
+      // ハッシュタグを抽出
+      const hashtags = timelineText.match(/#\w+/g) || [];
+      const tags = hashtags.map(tag => ['t', tag.slice(1)]);
+
+      const timelineEvent = await signEvent({
+        kind: 1,
+        content: timelineText,
+        tags,
+        created_at: Math.floor(Date.now() / 1000),
+      });
+
+      // タイムラインイベントを発行
+      const relayUrls = relays.map(r => r.url);
+      const pool = new SimplePool();
+      await Promise.any(pool.publish(relayUrls, timelineEvent));
+      pool.close(relayUrls);
+      setTimelinePosted(true);
+    } catch (err) {
+      console.error('タイムライン投稿に失敗:', err);
+    } finally {
+      setIsPostingTimeline(false);
     }
   };
 
   // 送信完了ダイアログを閉じる
   const handleCloseSendSuccess = () => {
     setLastSentEventId(null);
+    setTimelineText('');
+    setTimelinePosted(false);
     resetEditor();
   };
 
@@ -335,76 +331,88 @@ function App() {
                   {lastSentEventId && (
                     <div className="sendSuccess">
                       <h3>🎉 送信完了！</h3>
-                      <p>タイムラインで共有してみんなに見てもらおう！</p>
-                      <textarea
-                        className="shareTextarea"
-                        value={shareText}
-                        readOnly
-                        rows={6}
-                      />
-                      <div className="shareButtons">
-                        <button
-                          onClick={handleCopyShareText}
-                          className="copyButton"
-                        >
-                          {shareTextCopied ? '✅ コピーしました！' : '📋 テキストをコピー'}
-                        </button>
-                        <button
-                          onClick={handleCloseSendSuccess}
-                          className="closeButton"
-                        >
-                          閉じる
-                        </button>
-                      </div>
+                      
+                      {/* タイムライン投稿セクション */}
+                      {postToTimeline && timelineText && !timelinePosted && (
+                        <div className="timelinePostSection">
+                          <p>タイムラインに投稿する内容を編集できます：</p>
+                          <textarea
+                            className="shareTextarea"
+                            value={timelineText}
+                            onChange={(e) => setTimelineText(e.target.value)}
+                            rows={6}
+                          />
+                          <button
+                            onClick={handlePostToTimeline}
+                            disabled={isPostingTimeline || !timelineText.trim()}
+                            className="postTimelineButton"
+                          >
+                            {isPostingTimeline ? '投稿中...' : '📢 タイムラインに投稿する'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* タイムライン投稿完了 */}
+                      {timelinePosted && (
+                        <div className="timelinePostedMessage">
+                          <p>✅ タイムラインに投稿しました！</p>
+                        </div>
+                      )}
+
+                      {/* タイムライン投稿しない場合の共有UI */}
+                      {(!postToTimeline || !timelineText) && !timelinePosted && (
+                        <div className="manualShareSection">
+                          <p>タイムラインで共有してみんなに見てもらおう！</p>
+                          <textarea
+                            className="shareTextarea"
+                            value={shareText}
+                            readOnly
+                            rows={6}
+                          />
+                          <button
+                            onClick={handleCopyShareText}
+                            className="copyButton"
+                          >
+                            {shareTextCopied ? '✅ コピーしました！' : '📋 テキストをコピー'}
+                          </button>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleCloseSendSuccess}
+                        className="closeButton"
+                      >
+                        閉じる
+                      </button>
                     </div>
                   )}
                   
                   {authState.isNip07 && !lastSentEventId && (
-                    <button
-                      onClick={handleSendCard}
-                      disabled={!editorIsValid || isSending}
-                      className="sendButton"
-                    >
-                      {isSending ? '送信中...' : '🎨 送信する'}
-                    </button>
+                    <>
+                      <label className="timelineOption">
+                        <input
+                          type="checkbox"
+                          checked={postToTimeline}
+                          onChange={(e) => setPostToTimeline(e.target.checked)}
+                        />
+                        <span>タイムラインにも投稿する</span>
+                      </label>
+                      <button
+                        onClick={handleSendCard}
+                        disabled={!editorIsValid || isSending}
+                        className="sendButton"
+                      >
+                        {isSending ? '送信中...' : '🎨 送信する'}
+                      </button>
+                    </>
                   )}
                   
-                  {/* kind 1コピー機能（常に表示） */}
-                  <div className="kind1Section">
-                    {!authState.isNip07 && (
-                      <p className="warning">
-                        ⚠️ NIP-07でログインしていないため、独自kindでの送信はできません。
-                      </p>
-                    )}
-                    <p className="kind1Hint">
-                      {authState.isNip07 
-                        ? '💡 kind 1（通常のノート）として投稿したい場合は、以下のテキストをコピーできます。'
-                        : '代わりに、以下のテキストをコピーして他のNostrクライアントからkind 1（通常のノート）として投稿できます。'}
+                  {/* NIP-07未ログイン時の警告 */}
+                  {!authState.isNip07 && (
+                    <p className="warning">
+                      ⚠️ NIP-07拡張機能でログインすると送信できます。
                     </p>
-                    
-                    {editorIsValid && (
-                      <>
-                        <textarea
-                          className="kind1Textarea"
-                          value={kind1Text}
-                          readOnly
-                          rows={8}
-                        />
-                        <button
-                          onClick={handleCopyKind1}
-                          className="copyButton"
-                        >
-                          {copied ? '✅ コピーしました！' : '📋 テキストをコピー'}
-                        </button>
-                      </>
-                    )}
-                    
-                    {!editorIsValid && (
-                      <p className="kind1Warning">
-                        画像を作成してください
-                      </p>
-                    )}
-                  </div>
+                  )}
                 </section>
               </>
             ) : (
