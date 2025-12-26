@@ -44,6 +44,11 @@ body {
     var(--color-surface) 50%,
     var(--color-background) 100%
   );
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 /* スクロールバー */

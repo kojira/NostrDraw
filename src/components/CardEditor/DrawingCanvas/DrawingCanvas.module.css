@@ -5,6 +5,17 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   padding: 1rem;
+  box-sizing: border-box;
+  max-width: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .drawingCanvas {
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
 }
 
 /* テンプレート選択 */
@@ -170,6 +181,12 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+@media (max-width: 480px) {
+  .toolbar {
+    gap: 0.5rem;
+  }
+}
+
 .toolGroup {
   display: flex;
   gap: 0.25rem;
@@ -205,6 +222,14 @@
   transform: none;
 }
 
+@media (max-width: 480px) {
+  .toolButton {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+}
+
 .colorPicker {
   display: flex;
   gap: 0.25rem;
@@ -226,6 +251,13 @@
 .colorButton.active {
   border-color: #fff;
   box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.5);
+}
+
+@media (max-width: 480px) {
+  .colorButton {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .sizeControl {
@@ -347,21 +379,38 @@
   border-radius: 8px;
   padding: 0.5rem;
   overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .canvasWrapper {
   position: relative;
-  display: inline-block;
+  display: block;
   line-height: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .canvas {
   max-width: 100%;
+  width: 100%;
   height: auto;
   border-radius: 4px;
   cursor: crosshair;
   touch-action: none;
   display: block;
+}
+
+@media (max-width: 480px) {
+  .canvasContainer {
+    padding: 0;
+    background: transparent;
+  }
+  
+  .canvasWrapper {
+    width: 100%;
+  }
 }
 
 .canvas.stampCursor {

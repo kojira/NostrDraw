@@ -369,3 +369,27 @@
   background: rgba(233, 69, 96, 0.1);
 }
 
+/* スマホ対応 */
+@media (max-width: 640px) {
+  .recipientSelect {
+    padding: 0.75rem;
+  }
+  
+  .title {
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+  }
+  
+  .selectedBadge {
+    max-width: 120px;
+  }
+  
+  .manualForm {
+    flex-direction: column;
+  }
+  
+  .manualSubmit {
+    width: 100%;
+  }
+}
+

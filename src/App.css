@@ -94,6 +94,9 @@
   border-radius: 16px;
   padding: 1.5rem;
   text-align: center;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .sharedCardTitle {
@@ -107,6 +110,10 @@
   display: flex;
   justify-content: center;
   margin-bottom: 1rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .sharedCardActions {
@@ -486,21 +493,120 @@
 }
 
 @media (max-width: 640px) {
+  .header {
+    padding: 1rem 0.75rem;
+  }
+  
+  .headerTop {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
   .logo {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+  }
+  
+  .tagline {
+    font-size: 0.85rem;
+  }
+  
+  .campaign {
+    gap: 0.5rem;
+  }
+  
+  .campaignBadge {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+  
+  .campaignText {
+    font-size: 0.8rem;
   }
   
   .main {
-    padding: 1rem;
+    padding: 0.75rem;
+  }
+  
+  .section {
+    margin-bottom: 1rem;
   }
   
   .viewToggle {
     flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .viewButton {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .sendSection {
+    padding: 1rem;
   }
   
   .sendButton {
     width: 100%;
-    padding: 1rem;
+    padding: 0.875rem;
     font-size: 1rem;
+  }
+  
+  .shareTextarea {
+    font-size: 0.85rem;
+  }
+  
+  .timelineOption {
+    font-size: 0.85rem;
+  }
+  
+  .extendingInfo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .sharedCardSection {
+    padding: 0.75rem 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .sharedCardTitle {
+    font-size: 1.1rem;
+  }
+  
+  .closeButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .footer {
+    padding: 1.5rem 0.75rem;
+  }
+  
+  .footer p {
+    font-size: 0.8rem;
+  }
+  
+  .footerNote {
+    font-size: 0.7rem;
+  }
+}
+
+/* 極小画面（320px以下対応） */
+@media (max-width: 360px) {
+  .header {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .logo {
+    font-size: 1.2rem;
+  }
+  
+  .main {
+    padding: 0.5rem;
+  }
+  
+  .sendSection {
+    padding: 0.75rem;
   }
 }

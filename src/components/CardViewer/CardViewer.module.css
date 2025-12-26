@@ -126,3 +126,38 @@
   }
 }
 
+/* スマホ対応 */
+@media (max-width: 640px) {
+  .title {
+    font-size: 1.2rem;
+  }
+  
+  .badges {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .badge {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .badgeCount {
+    font-size: 1.2rem;
+  }
+  
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.75rem;
+  }
+  
+  .modal {
+    padding: 0.5rem;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+}
+
