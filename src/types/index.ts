@@ -13,7 +13,7 @@ export interface NostrProfile {
 export interface NewYearCard {
   id: string;
   pubkey: string; // 送信者
-  recipientPubkey: string; // 宛先
+  recipientPubkey: string | null; // 宛先（nullの場合はパブリック）
   svg: string; // SVGデータ
   message: string;
   layoutId: LayoutType;

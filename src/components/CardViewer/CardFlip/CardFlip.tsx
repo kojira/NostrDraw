@@ -18,9 +18,13 @@ export function CardFlip({
   recipientProfile,
   onClose,
 }: CardFlipProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
+  // 宛先がない場合は最初から裏面（絵柄面）を表示
+  const hasRecipient = !!card.recipientPubkey;
+  const [isFlipped, setIsFlipped] = useState(!hasRecipient);
 
   const handleFlip = () => {
+    // 宛先がない場合はフリップしない（常に裏面表示）
+    if (!hasRecipient) return;
     setIsFlipped(!isFlipped);
   };
 
@@ -31,6 +35,7 @@ export function CardFlip({
   };
 
   const getRecipientName = () => {
+    if (!card.recipientPubkey) return 'みんな';
     if (recipientProfile?.display_name) return recipientProfile.display_name;
     if (recipientProfile?.name) return recipientProfile.name;
     return pubkeyToNpub(card.recipientPubkey).slice(0, 12) + '...';
@@ -38,11 +43,17 @@ export function CardFlip({
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('ja-JP', {
+    const dateStr = date.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
+    const timeStr = date.toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    return `${dateStr} ${timeStr}`;
   };
 
   return (

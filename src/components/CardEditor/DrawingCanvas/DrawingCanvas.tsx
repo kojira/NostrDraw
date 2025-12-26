@@ -235,15 +235,22 @@ export function DrawingCanvas({
                     />
                   ) : null}
                   {isSelected && (
-                    <button
-                      className={styles.stampDeleteButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePlacedStamp(stamp.id);
-                      }}
-                    >
-                      ✕
-                    </button>
+                    <>
+                      <button
+                        className={styles.stampDeleteButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removePlacedStamp(stamp.id);
+                        }}
+                      >
+                        ✕
+                      </button>
+                      <div
+                        className={styles.stampResizeHandle}
+                        onPointerDown={(e) => handleStampPointerDown(e, stamp.id, 'resize')}
+                        onTouchStart={(e) => handleStampPointerDown(e, stamp.id, 'resize')}
+                      />
+                    </>
                   )}
                 </div>
               );

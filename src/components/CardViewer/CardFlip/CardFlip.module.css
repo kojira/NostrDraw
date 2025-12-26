@@ -6,37 +6,48 @@
   justify-content: center;
   align-items: center;
   perspective: 1000px;
-  padding: 2rem;
+  padding: 60px 1rem 1rem 1rem;
 }
 
 .closeButton {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 40px;
-  height: 40px;
-  font-size: 1.5rem;
-  color: #888;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  font-size: 1.8rem;
+  color: #fff;
+  background: #e94560;
+  border: 2px solid #fff;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .closeButton:hover {
-  color: #fff;
-  background: rgba(233, 69, 96, 0.8);
+  background: #ff6b6b;
+  transform: scale(1.1);
 }
 
 .card {
-  width: 320px;
-  height: 450px;
+  width: min(85vw, 550px);
+  height: min(65vh, 420px);
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .card {
+    width: 90vw;
+    height: 60vh;
+  }
 }
 
 .card.flipped {
@@ -53,9 +64,15 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-/* 表面（宛名面） */
+/* 表面（宛名面）- 羊皮紙風 */
 .cardFront {
-  background: linear-gradient(135deg, #f5f5dc 0%, #fffacd 50%, #f5f5dc 100%);
+  background: 
+    radial-gradient(ellipse at 15% 25%, rgba(139, 90, 43, 0.12) 0%, transparent 40%),
+    radial-gradient(ellipse at 85% 75%, rgba(139, 90, 43, 0.1) 0%, transparent 45%),
+    radial-gradient(ellipse at 0% 0%, rgba(139, 90, 43, 0.15) 0%, transparent 30%),
+    radial-gradient(ellipse at 100% 100%, rgba(139, 90, 43, 0.15) 0%, transparent 30%),
+    linear-gradient(180deg, #f4e4bc 0%, #e8d5a3 50%, #dcc890 100%);
+  box-shadow: inset 0 0 40px rgba(139, 90, 43, 0.1);
 }
 
 .frontContent {
@@ -63,15 +80,16 @@
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  position: relative;
+  box-sizing: border-box;
 }
 
 .stamp {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  font-size: 2.5rem;
-  opacity: 0.8;
+  top: 1.5rem;
+  right: 1.5rem;
+  font-size: 3.5rem;
+  filter: drop-shadow(0 2px 4px rgba(139, 90, 43, 0.4)) sepia(20%);
+  opacity: 0.9;
 }
 
 .addressSection {
@@ -79,71 +97,97 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2rem;
+  gap: 2.5rem;
+  padding: 1rem 0;
 }
 
 .toSection,
 .fromSection {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border-bottom: 1px solid rgba(139, 90, 43, 0.2);
 }
 
 .label {
-  font-size: 0.9rem;
-  color: #666;
-  min-width: 40px;
+  font-size: 1.1rem;
+  color: #8b5a2b;
+  font-weight: 600;
+  min-width: 55px;
+  font-family: 'Shippori Mincho', serif;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .name {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #4a3520;
   font-family: 'Shippori Mincho', serif;
   flex: 1;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #e94560;
+  border: 3px solid #8b5a2b;
+  box-shadow: 
+    0 2px 8px rgba(139, 90, 43, 0.4),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 .date {
   text-align: center;
-  font-size: 0.85rem;
-  color: #888;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 1.1rem;
+  color: #6b4423;
+  font-family: 'Shippori Mincho', serif;
+  padding: 0.5rem;
+  font-style: italic;
+  letter-spacing: 0.1em;
 }
 
-.flipHint,
-.flipHintBack {
+.flipHint {
   text-align: center;
-  font-size: 0.8rem;
-  color: #999;
+  font-size: 0.95rem;
+  color: #8b5a2b;
   margin-top: 0.5rem;
+  font-weight: 500;
+  font-family: 'Shippori Mincho', serif;
+  letter-spacing: 0.05em;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.flipHintBack {
+  display: none;
 }
 
 /* 裏面（絵柄面） */
 .cardBack {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: #fff;
   transform: rotateY(180deg);
-  display: flex;
-  flex-direction: column;
 }
 
 .flipHintBack {
-  padding: 0.5rem;
-  background: rgba(0, 0, 0, 0.3);
-  color: #aaa;
+  display: none;
 }
 
 /* コンテンツ共通 */
 .content {
-  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   overflow: hidden;
 }
@@ -152,8 +196,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.02);
+  background: #fff;
   overflow: hidden;
+  width: 100%;
+  height: 100%;
 }
 
 .image {
@@ -177,19 +223,20 @@
   word-break: break-word;
 }
 
-/* 縦型レイアウト */
+/* 縦型レイアウト - 絵を全面表示 */
 .layout_vertical {
   flex-direction: column;
+  position: relative;
 }
 
 .layout_vertical .imageArea {
-  flex: 2;
+  flex: 1;
   width: 100%;
+  height: 100%;
 }
 
 .layout_vertical .messageArea {
-  flex: 1;
-  width: 100%;
+  display: none;
 }
 
 /* 横型レイアウト */

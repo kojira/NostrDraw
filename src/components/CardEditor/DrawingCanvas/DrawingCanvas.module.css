@@ -340,6 +340,40 @@
   background: #ff6b6b;
 }
 
+.stampResizeHandle {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: #4d96ff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  cursor: se-resize;
+  transition: background 0.2s ease;
+}
+
+.stampResizeHandle:hover {
+  background: #6bcb77;
+}
+
+@media (max-width: 768px) {
+  .stampResizeHandle {
+    width: 24px;
+    height: 24px;
+    bottom: -12px;
+    right: -12px;
+  }
+  
+  .stampDeleteButton {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    top: -14px;
+    right: -14px;
+  }
+}
+
 /* キャンバスオーバーレイ（メッセージボックス用） */
 .canvasOverlay {
   position: absolute;

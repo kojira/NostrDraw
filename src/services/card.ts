@@ -7,7 +7,7 @@ import { NEW_YEAR_CARD_KIND, type NewYearCard, type LayoutType } from '../types'
 export function parseNewYearCard(event: Event): NewYearCard | null {
   try {
     const tags = new Map<string, string>();
-    let recipientPubkey = '';
+    let recipientPubkey: string | null = null;
     
     for (const tag of event.tags) {
       if (tag[0] === 'p') {

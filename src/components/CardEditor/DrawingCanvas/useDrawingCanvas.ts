@@ -111,6 +111,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
   const [stampDragStart, setStampDragStart] = useState<Point | null>(null);
   const [stampDragOriginal, setStampDragOriginal] = useState<PlacedStamp | null>(null);
+  const [stampDragMode, setStampDragMode] = useState<'move' | 'resize' | null>(null);
 
   // テキストボックス（複数対応）
   const createTextBox = useCallback((overrides: Partial<TextBox> = {}): TextBox => ({
@@ -473,12 +474,13 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   }, [selectedPlacedStampId, strokes, redrawCanvas]);
 
   // スタンプのドラッグ開始
-  const handleStampPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string) => {
+  const handleStampPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: 'move' | 'resize' = 'move') => {
     e.stopPropagation();
     e.preventDefault();
     setSelectedPlacedStampId(id);
     setSelectedStamp(null);
     setSelectedCustomEmoji(null);
+    setStampDragMode(mode);
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -490,7 +492,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
 
   // スタンプのドラッグ移動
   const handleStampPointerMove = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
-    if (!stampDragStart || !stampDragOriginal || !selectedPlacedStampId) return;
+    if (!stampDragStart || !stampDragOriginal || !selectedPlacedStampId || !stampDragMode) return;
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -505,13 +507,25 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     const dx = (clientX - stampDragStart.x) * scaleX;
     const dy = (clientY - stampDragStart.y) * scaleY;
     
-    const newX = Math.max(20, Math.min(width - 20, stampDragOriginal.x + dx));
-    const newY = Math.max(20, Math.min(height - 20, stampDragOriginal.y + dy));
-    
-    setPlacedStamps(prev => prev.map(s =>
-      s.id === selectedPlacedStampId ? { ...s, x: newX, y: newY } : s
-    ));
-  }, [stampDragStart, stampDragOriginal, selectedPlacedStampId, width, height]);
+    if (stampDragMode === 'move') {
+      const newX = Math.max(20, Math.min(width - 20, stampDragOriginal.x + dx));
+      const newY = Math.max(20, Math.min(height - 20, stampDragOriginal.y + dy));
+      
+      setPlacedStamps(prev => prev.map(s =>
+        s.id === selectedPlacedStampId ? { ...s, x: newX, y: newY } : s
+      ));
+    } else if (stampDragMode === 'resize') {
+      // リサイズ：ドラッグ距離に応じてスケールを変更
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const direction = dx + dy > 0 ? 1 : -1;
+      const scaleDelta = (distance / 30) * direction;
+      const newScale = Math.max(0.2, Math.min(10, stampDragOriginal.scale + scaleDelta));
+      
+      setPlacedStamps(prev => prev.map(s =>
+        s.id === selectedPlacedStampId ? { ...s, scale: newScale } : s
+      ));
+    }
+  }, [stampDragStart, stampDragOriginal, selectedPlacedStampId, stampDragMode, width, height]);
 
   // スタンプのドラッグ終了
   const handleStampPointerUp = useCallback(() => {
@@ -521,6 +535,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     }
     setStampDragStart(null);
     setStampDragOriginal(null);
+    setStampDragMode(null);
   }, [stampDragStart, stampDragOriginal, strokes, placedStamps, redrawCanvas]);
 
   // オーバーレイクリックで新規スタンプを配置

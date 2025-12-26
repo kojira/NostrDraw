@@ -45,7 +45,9 @@ export function CardViewer({
 
     allCards.forEach(card => {
       pubkeysToFetch.add(card.pubkey);
-      pubkeysToFetch.add(card.recipientPubkey);
+      if (card.recipientPubkey) {
+        pubkeysToFetch.add(card.recipientPubkey);
+      }
     });
 
     pubkeysToFetch.forEach(async (pubkey) => {
@@ -68,9 +70,14 @@ export function CardViewer({
 
     const loadProfiles = async () => {
       const sender = await fetchProfile(selectedCard.pubkey);
-      const recipient = await fetchProfile(selectedCard.recipientPubkey);
       setSenderProfile(sender);
-      setRecipientProfile(recipient);
+      
+      if (selectedCard.recipientPubkey) {
+        const recipient = await fetchProfile(selectedCard.recipientPubkey);
+        setRecipientProfile(recipient);
+      } else {
+        setRecipientProfile(null);
+      }
     };
 
     loadProfiles();

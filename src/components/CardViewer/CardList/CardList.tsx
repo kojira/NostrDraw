@@ -75,8 +75,8 @@ export function CardList({
       <ul className={styles.list}>
         {cards.map((card) => {
           const otherPubkey = type === 'received' ? card.pubkey : card.recipientPubkey;
-          const picture = getProfilePicture(otherPubkey);
-          const name = getProfileName(otherPubkey);
+          const picture = otherPubkey ? getProfilePicture(otherPubkey) : null;
+          const name = otherPubkey ? getProfileName(otherPubkey) : 'みんな';
           const thumbnailSrc = card.svg ? svgToDataUri(card.svg) : null;
 
           return (
