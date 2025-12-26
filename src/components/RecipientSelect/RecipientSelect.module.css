@@ -22,6 +22,12 @@
   font-family: 'Shippori Mincho', serif;
 }
 
+.optional {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #888;
+}
+
 .refreshButton {
   padding: 0.5rem;
   font-size: 0.9rem;

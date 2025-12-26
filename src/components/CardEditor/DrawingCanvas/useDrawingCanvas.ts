@@ -16,6 +16,57 @@ import type {
   CustomEmoji,
 } from './types';
 
+// ローカルストレージのキー
+const STORAGE_KEY = 'nostrdraw-canvas-state';
+
+// 保存するデータの型
+interface CanvasStorageData {
+  strokes: Stroke[];
+  placedStamps: PlacedStamp[];
+  textBoxes: TextBox[];
+  templateId: string;
+  savedAt: number;
+}
+
+// ローカルストレージからデータを読み込む
+function loadCanvasState(): CanvasStorageData | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+    const data = JSON.parse(saved) as CanvasStorageData;
+    // 24時間以上経過したデータは無視
+    if (Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// ローカルストレージにデータを保存
+function saveCanvasState(data: Omit<CanvasStorageData, 'savedAt'>): void {
+  try {
+    const toSave: CanvasStorageData = {
+      ...data,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch {
+    // ストレージ容量オーバーなどのエラーを無視
+  }
+}
+
+// ローカルストレージのデータをクリア
+function clearCanvasState(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // エラーを無視
+  }
+}
+
 interface UseDrawingCanvasOptions {
   width: number;
   height: number;
@@ -34,29 +85,41 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const templateImageRef = useRef<HTMLImageElement | null>(null);
   const currentTemplateUri = useRef<string>('');
   
+  // ローカルストレージから初期状態を読み込む
+  const savedState = useMemo(() => loadCanvasState(), []);
+  
   // ストロークの履歴（SVG生成用）
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [strokes, setStrokes] = useState<Stroke[]>(() => savedState?.strokes || []);
   const currentStrokeRef = useRef<Point[]>([]);
   
   // Undo/Redo用の履歴
   const [undoStack, setUndoStack] = useState<Stroke[]>([]);
   
   // テンプレートとスタンプ
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(TEMPLATES[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(() => {
+    if (savedState?.templateId) {
+      const found = TEMPLATES.find(t => t.id === savedState.templateId);
+      if (found) return found;
+    }
+    return TEMPLATES[0];
+  });
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null);
   const [selectedCustomEmoji, setSelectedCustomEmoji] = useState<CustomEmoji | null>(null);
-  const [placedStamps, setPlacedStamps] = useState<PlacedStamp[]>([]);
+  const [placedStamps, setPlacedStamps] = useState<PlacedStamp[]>(() => savedState?.placedStamps || []);
+  const [selectedPlacedStampId, setSelectedPlacedStampId] = useState<string | null>(null);
   const [stampScale, setStampScale] = useState(1);
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
+  const [stampDragStart, setStampDragStart] = useState<Point | null>(null);
+  const [stampDragOriginal, setStampDragOriginal] = useState<PlacedStamp | null>(null);
 
   // テキストボックス（複数対応）
   const createTextBox = useCallback((overrides: Partial<TextBox> = {}): TextBox => ({
     id: `textbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     text: '',
     x: 20,
-    y: height - 80,
-    width: width - 40,
-    height: 60,
+    y: 20,
+    width: Math.min(width - 40, 360),
+    height: 50,
     fontSize: 16,
     color: '#333333',
     fontFamily: JAPANESE_FONTS[0].family,
@@ -64,9 +127,23 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     ...overrides,
   }), [width, height]);
 
-  const [textBoxes, setTextBoxes] = useState<TextBox[]>(() => [
-    createTextBox({ text: initialMessage }),
-  ]);
+  const [textBoxes, setTextBoxes] = useState<TextBox[]>(() => {
+    if (savedState?.textBoxes && savedState.textBoxes.length > 0) {
+      return savedState.textBoxes;
+    }
+    return [{
+      id: `textbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: initialMessage,
+      x: 20,
+      y: 20,
+      width: Math.min(width - 40, 360),
+      height: 50,
+      fontSize: 16,
+      color: '#333333',
+      fontFamily: JAPANESE_FONTS[0].family,
+      fontId: JAPANESE_FONTS[0].id,
+    }];
+  });
   const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>('none');
   const [dragStart, setDragStart] = useState<Point | null>(null);
@@ -88,7 +165,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   }, [selectedTemplate, width, height]);
 
   // キャンバスの初期化と再描画
-  const redrawCanvas = useCallback((strokesData: Stroke[], stampsData: PlacedStamp[]) => {
+  const redrawCanvas = useCallback((strokesData: Stroke[], _stampsData: PlacedStamp[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -117,24 +194,8 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
         ctx.strokeStyle = stroke.color;
         ctx.stroke();
       });
-
-      // ビルトインスタンプのみキャンバスに再描画
-      stampsData.forEach(placed => {
-        if (placed.isCustomEmoji) return;
-        
-        const stamp = STAMPS.find(s => s.id === placed.stampId);
-        if (!stamp) return;
-        
-        const stampImg = new Image();
-        const stampSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${stamp.width} ${stamp.height}">${stamp.svg}</svg>`;
-        const stampEncoded = btoa(unescape(encodeURIComponent(stampSvg)));
-        stampImg.onload = () => {
-          const w = stamp.width * placed.scale;
-          const h = stamp.height * placed.scale;
-          ctx.drawImage(stampImg, placed.x - w/2, placed.y - h/2, w, h);
-        };
-        stampImg.src = `data:image/svg+xml;base64,${stampEncoded}`;
-      });
+      
+      // スタンプはオーバーレイで表示するため、キャンバスには描画しない
     };
 
     // テンプレートが変わった場合のみ画像を再読み込み
@@ -267,6 +328,8 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     setStrokes([]);
     setPlacedStamps([]);
     setUndoStack([]);
+    // ローカルストレージもクリア
+    clearCanvasState();
     // クリア後に再描画
     setTimeout(() => redrawCanvas([], []), 0);
   }, [redrawCanvas]);
@@ -319,6 +382,21 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
+  // 状態が変わったらローカルストレージに保存
+  useEffect(() => {
+    // 初回レンダリング時は保存しない（復元したデータを上書きしないため）
+    const hasContent = strokes.length > 0 || placedStamps.length > 0 || 
+      textBoxes.some(tb => tb.text.length > 0);
+    if (hasContent) {
+      saveCanvasState({
+        strokes,
+        placedStamps,
+        textBoxes,
+        templateId: selectedTemplate.id,
+      });
+    }
+  }, [strokes, placedStamps, textBoxes, selectedTemplate.id]);
+
   // Undo/Redo可能かどうか
   const canUndo = strokes.length > 0;
   const canRedo = undoStack.length > 0;
@@ -341,12 +419,15 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
 
   // テキストボックスの追加
   const addTextBox = useCallback(() => {
+    // キャンバス内に収まるようにy座標を計算
+    const baseY = 20 + textBoxes.length * 60;
+    const maxY = height - 50; // テキストボックスの高さ分を引く
     const newBox = createTextBox({
-      y: 20 + textBoxes.length * 70,
+      y: Math.min(baseY, maxY),
     });
     setTextBoxes(prev => [...prev, newBox]);
     setSelectedTextBoxId(newBox.id);
-  }, [createTextBox, textBoxes.length]);
+  }, [createTextBox, textBoxes.length, height]);
 
   // テキストボックスの削除
   const removeTextBox = useCallback((id: string) => {
@@ -365,6 +446,120 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const selectTextBox = useCallback((id: string | null) => {
     setSelectedTextBoxId(id);
   }, []);
+
+  // スタンプの選択
+  const selectPlacedStamp = useCallback((id: string | null) => {
+    setSelectedPlacedStampId(id);
+    // スタンプ選択時は新規配置モードを解除
+    if (id) {
+      setSelectedStamp(null);
+      setSelectedCustomEmoji(null);
+    }
+  }, []);
+
+  // スタンプの削除
+  const removePlacedStamp = useCallback((id: string) => {
+    setPlacedStamps(prev => prev.filter(s => s.id !== id));
+    if (selectedPlacedStampId === id) {
+      setSelectedPlacedStampId(null);
+    }
+    // 再描画
+    setTimeout(() => {
+      setPlacedStamps(current => {
+        redrawCanvas(strokes, current);
+        return current;
+      });
+    }, 0);
+  }, [selectedPlacedStampId, strokes, redrawCanvas]);
+
+  // スタンプのドラッグ開始
+  const handleStampPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedPlacedStampId(id);
+    setSelectedStamp(null);
+    setSelectedCustomEmoji(null);
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setStampDragStart({ x: clientX, y: clientY });
+    
+    const stamp = placedStamps.find(s => s.id === id);
+    if (stamp) setStampDragOriginal({ ...stamp });
+  }, [placedStamps]);
+
+  // スタンプのドラッグ移動
+  const handleStampPointerMove = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
+    if (!stampDragStart || !stampDragOriginal || !selectedPlacedStampId) return;
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    // オーバーレイのサイズとキャンバスの論理サイズの比率を計算
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    
+    const scaleX = width / overlay.clientWidth;
+    const scaleY = height / overlay.clientHeight;
+    
+    const dx = (clientX - stampDragStart.x) * scaleX;
+    const dy = (clientY - stampDragStart.y) * scaleY;
+    
+    const newX = Math.max(20, Math.min(width - 20, stampDragOriginal.x + dx));
+    const newY = Math.max(20, Math.min(height - 20, stampDragOriginal.y + dy));
+    
+    setPlacedStamps(prev => prev.map(s =>
+      s.id === selectedPlacedStampId ? { ...s, x: newX, y: newY } : s
+    ));
+  }, [stampDragStart, stampDragOriginal, selectedPlacedStampId, width, height]);
+
+  // スタンプのドラッグ終了
+  const handleStampPointerUp = useCallback(() => {
+    if (stampDragStart && stampDragOriginal) {
+      // 再描画
+      setTimeout(() => redrawCanvas(strokes, placedStamps), 0);
+    }
+    setStampDragStart(null);
+    setStampDragOriginal(null);
+  }, [stampDragStart, stampDragOriginal, strokes, placedStamps, redrawCanvas]);
+
+  // オーバーレイクリックで新規スタンプを配置
+  const placeStampAtPosition = useCallback((clientX: number, clientY: number) => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    
+    const rect = overlay.getBoundingClientRect();
+    const scaleX = width / rect.width;
+    const scaleY = height / rect.height;
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    
+    if (selectedStamp) {
+      const newStamp: PlacedStamp = {
+        id: `stamp-${Date.now()}`,
+        stampId: selectedStamp.id,
+        x,
+        y,
+        scale: stampScale,
+      };
+      setPlacedStamps(prev => {
+        const updated = [...prev, newStamp];
+        setTimeout(() => redrawCanvas(strokes, updated), 0);
+        return updated;
+      });
+    } else if (selectedCustomEmoji) {
+      const newStamp: PlacedStamp = {
+        id: `emoji-${Date.now()}`,
+        stampId: selectedCustomEmoji.shortcode,
+        x,
+        y,
+        scale: stampScale,
+        isCustomEmoji: true,
+        customEmojiUrl: selectedCustomEmoji.url,
+      };
+      setPlacedStamps(prev => [...prev, newStamp]);
+    }
+  }, [width, height, selectedStamp, selectedCustomEmoji, stampScale, strokes, redrawCanvas]);
 
   // ストロークをSVGのpath文字列に変換
   const pointsToPath = useCallback((points: Point[]): string => {
@@ -549,6 +744,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     selectedStamp,
     selectedCustomEmoji,
     placedStamps,
+    selectedPlacedStampId,
     stampScale,
     stampTab,
     
@@ -580,6 +776,14 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     addTextBox,
     removeTextBox,
     selectTextBox,
+    
+    // スタンプ操作
+    selectPlacedStamp,
+    removePlacedStamp,
+    handleStampPointerDown,
+    handleStampPointerMove,
+    handleStampPointerUp,
+    placeStampAtPosition,
     
     // Undo/Redo
     undo,

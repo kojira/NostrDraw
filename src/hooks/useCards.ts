@@ -150,7 +150,8 @@ export function useCardEditor() {
     });
   }, []);
 
-  const isValid = !!(state.recipientPubkey && state.svg);
+  // SVGがあれば有効（宛先は任意）
+  const isValid = !!state.svg;
 
   return {
     state,

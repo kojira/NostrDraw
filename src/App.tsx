@@ -115,15 +115,19 @@ function App() {
 
   // kind 1用のテキストを生成（SVGはdata URIとして埋め込み）
   const kind1Text = useMemo(() => {
-    if (!editorState.recipientPubkey || !editorState.svg) return '';
+    if (!editorState.svg) return '';
     
-    const recipientNpub = nip19.npubEncode(editorState.recipientPubkey);
     const lines = [
       '🎨 NostrDraw 🎍 New Year 2026',
       '',
-      `To: ${recipientName} (nostr:${recipientNpub})`,
-      '',
     ];
+    
+    // 宛先がある場合のみTo:を追加
+    if (editorState.recipientPubkey) {
+      const recipientNpub = nip19.npubEncode(editorState.recipientPubkey);
+      lines.push(`To: ${recipientName} (nostr:${recipientNpub})`);
+      lines.push('');
+    }
     
     if (editorState.message) {
       lines.push(editorState.message);
@@ -176,12 +180,12 @@ function App() {
 
   // 送信（SVGをイベントに直接埋め込み）
   const handleSendCard = async () => {
-    if (!editorState.recipientPubkey || !editorState.svg) {
+    if (!editorState.svg) {
       return;
     }
 
     const eventId = await sendCard({
-      recipientPubkey: editorState.recipientPubkey,
+      recipientPubkey: editorState.recipientPubkey, // nullでもOK
       svg: editorState.svg,
       message: editorState.message,
       layoutId: editorState.layoutId,
@@ -397,7 +401,7 @@ function App() {
                     
                     {!editorIsValid && (
                       <p className="kind1Warning">
-                        宛先と画像を選択してください
+                        画像を作成してください
                       </p>
                     )}
                   </div>

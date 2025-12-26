@@ -102,7 +102,7 @@ export async function fetchSentCards(pubkey: string): Promise<NewYearCard[]> {
 }
 
 export interface SendCardParams {
-  recipientPubkey: string;
+  recipientPubkey?: string | null; // 任意（宛先なしでも送信可能）
   svg: string; // SVGデータ
   message: string;
   layoutId: LayoutType;
@@ -114,24 +114,37 @@ export async function sendCard(
   signEvent: (event: EventTemplate) => Promise<Event>
 ): Promise<Event> {
   const year = params.year || new Date().getFullYear();
-  const dTag = `${year}-${params.recipientPubkey}`;
+  const timestamp = Math.floor(Date.now() / 1000);
+  
+  // 宛先がある場合はrecipient付きのdTag、ない場合はタイムスタンプベース
+  const dTag = params.recipientPubkey 
+    ? `${year}-${params.recipientPubkey}` 
+    : `${year}-public-${timestamp}`;
+
+  // タグを構築
+  const tags: string[][] = [
+    ['d', dTag],
+    ['message', params.message],
+    ['layout', params.layoutId],
+    ['year', year.toString()],
+  ];
+  
+  // 宛先がある場合のみpタグを追加
+  if (params.recipientPubkey) {
+    tags.push(['p', params.recipientPubkey]);
+  }
 
   // SVGデータはcontentに含める（タグには長すぎる可能性がある）
   const eventTemplate: EventTemplate = {
     kind: NEW_YEAR_CARD_KIND,
-    created_at: Math.floor(Date.now() / 1000),
-    tags: [
-      ['d', dTag],
-      ['p', params.recipientPubkey],
-      ['message', params.message],
-      ['layout', params.layoutId],
-      ['year', year.toString()],
-    ],
+    created_at: timestamp,
+    tags,
     content: JSON.stringify({
       message: params.message,
       svg: params.svg,
       layoutId: params.layoutId,
       year,
+      isPublic: !params.recipientPubkey, // 宛先なしの場合はpublicフラグ
     }),
   };
 

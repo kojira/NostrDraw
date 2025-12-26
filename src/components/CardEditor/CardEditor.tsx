@@ -163,13 +163,15 @@ export function CardEditor({
         </div>
       )}
 
-      {/* レイアウト選択セクション */}
-      <div className={styles.section}>
-        <LayoutSelector selectedLayout={layoutId} onSelect={onLayoutChange} />
-      </div>
+      {/* レイアウト選択セクション（ギャラリーモードのみ） */}
+      {activeTab === 'gallery' && (
+        <div className={styles.section}>
+          <LayoutSelector selectedLayout={layoutId} onSelect={onLayoutChange} />
+        </div>
+      )}
 
-      {/* プレビュー */}
-      {imageDataUri && (
+      {/* プレビュー（ギャラリーモードのみ） */}
+      {imageDataUri && activeTab === 'gallery' && (
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>プレビュー</h3>
           <CardPreview

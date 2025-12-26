@@ -6,6 +6,7 @@ import { TemplateSelector } from './TemplateSelector';
 import { Toolbar } from './Toolbar';
 import { StampPalette } from './StampPalette';
 import { FontSelector } from './FontSelector';
+import { STAMPS } from '../../../data/templates';
 import type { DrawingCanvasProps } from './types';
 import styles from './DrawingCanvas.module.css';
 
@@ -27,6 +28,7 @@ export function DrawingCanvas({
     selectedStamp,
     selectedCustomEmoji,
     placedStamps,
+    selectedPlacedStampId,
     stampScale,
     stampTab,
     textBoxes,
@@ -51,6 +53,11 @@ export function DrawingCanvas({
     addTextBox,
     removeTextBox,
     selectTextBox,
+    removePlacedStamp,
+    handleStampPointerDown,
+    handleStampPointerMove,
+    handleStampPointerUp,
+    placeStampAtPosition,
     undo,
     redo,
     canUndo,
@@ -159,48 +166,101 @@ export function DrawingCanvas({
 
       {/* キャンバス */}
       <div className={styles.canvasContainer}>
-        <canvas
-          ref={canvasRef}
-          width={width}
-          height={height}
-          className={`${styles.canvas} ${tool === 'stamp' && (selectedStamp || selectedCustomEmoji) ? styles.stampCursor : ''} ${tool === 'text' ? styles.textMode : ''}`}
-          onPointerDown={tool !== 'text' ? handlePointerDown : undefined}
-          onPointerMove={tool !== 'text' ? handlePointerMove : undefined}
-          onPointerUp={tool !== 'text' ? handlePointerUp : undefined}
-          onPointerLeave={tool !== 'text' ? handlePointerUp : undefined}
-        />
-        
-        {/* カスタム絵文字スタンプオーバーレイ（CORS回避用） */}
-        {placedStamps.filter(s => s.isCustomEmoji).map(stamp => {
-          const defaultSize = 50;
-          const size = defaultSize * stamp.scale;
-          return (
-            <img
-              key={stamp.id}
-              src={stamp.customEmojiUrl}
-              alt={stamp.stampId}
-              className={styles.customEmojiStamp}
-              style={{
-                left: `${((stamp.x - size/2) / width) * 100}%`,
-                top: `${((stamp.y - size/2) / height) * 100}%`,
-                width: `${(size / width) * 100}%`,
-                height: `${(size / height) * 100}%`,
-              }}
-            />
-          );
-        })}
-        
-        {/* テキストボックスオーバーレイ（複数対応） */}
-        <div
-          ref={overlayRef}
-          className={styles.canvasOverlay}
-          onPointerMove={handleOverlayPointerMove}
-          onPointerUp={handleOverlayPointerUp}
-          onPointerLeave={handleOverlayPointerUp}
-          onTouchMove={handleOverlayPointerMove}
-          onTouchEnd={handleOverlayPointerUp}
-          style={{ pointerEvents: tool === 'text' ? 'auto' : 'none' }}
-        >
+        <div className={styles.canvasWrapper}>
+          <canvas
+            ref={canvasRef}
+            width={width}
+            height={height}
+            className={`${styles.canvas} ${tool === 'stamp' && (selectedStamp || selectedCustomEmoji) ? styles.stampCursor : ''} ${tool === 'text' ? styles.textMode : ''}`}
+            onPointerDown={tool !== 'text' ? handlePointerDown : undefined}
+            onPointerMove={tool !== 'text' ? handlePointerMove : undefined}
+            onPointerUp={tool !== 'text' ? handlePointerUp : undefined}
+            onPointerLeave={tool !== 'text' ? handlePointerUp : undefined}
+          />
+          
+          {/* スタンプオーバーレイ（ドラッグ可能） */}
+          <div
+            className={styles.canvasOverlay}
+            onPointerDown={tool === 'stamp' ? (e) => {
+              // オーバーレイ自体をクリックした場合（スタンプ以外の場所）に新規配置
+              if (e.target === e.currentTarget && (selectedStamp || selectedCustomEmoji)) {
+                placeStampAtPosition(e.clientX, e.clientY);
+              }
+            } : undefined}
+            onPointerMove={tool === 'stamp' ? handleStampPointerMove : undefined}
+            onPointerUp={tool === 'stamp' ? handleStampPointerUp : undefined}
+            onPointerLeave={tool === 'stamp' ? handleStampPointerUp : undefined}
+            onTouchMove={tool === 'stamp' ? handleStampPointerMove : undefined}
+            onTouchEnd={tool === 'stamp' ? handleStampPointerUp : undefined}
+            style={{ pointerEvents: tool === 'stamp' ? 'auto' : 'none' }}
+          >
+            {placedStamps.map(stamp => {
+              const isCustom = stamp.isCustomEmoji;
+              const builtinStamp = !isCustom ? STAMPS.find(s => s.id === stamp.stampId) : null;
+              const defaultSize = isCustom ? 50 : (builtinStamp ? Math.max(builtinStamp.width, builtinStamp.height) : 40);
+              const size = defaultSize * stamp.scale;
+              const isSelected = stamp.id === selectedPlacedStampId;
+              
+              // ビルトインスタンプのSVGをdata URIに変換
+              const builtinSvgDataUri = builtinStamp ? 
+                `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${builtinStamp.width} ${builtinStamp.height}">${builtinStamp.svg}</svg>`)}` : 
+                null;
+              
+              return (
+                <div
+                  key={stamp.id}
+                  className={`${styles.placedStamp} ${isSelected ? styles.stampSelected : ''}`}
+                  style={{
+                    left: `${((stamp.x - size/2) / width) * 100}%`,
+                    top: `${((stamp.y - size/2) / height) * 100}%`,
+                    width: `${(size / width) * 100}%`,
+                    height: `${(size / height) * 100}%`,
+                  }}
+                  onPointerDown={(e) => handleStampPointerDown(e, stamp.id)}
+                  onTouchStart={(e) => handleStampPointerDown(e, stamp.id)}
+                >
+                  {isCustom ? (
+                    <img
+                      src={stamp.customEmojiUrl}
+                      alt={stamp.stampId}
+                      className={styles.stampImage}
+                      draggable={false}
+                    />
+                  ) : builtinSvgDataUri ? (
+                    <img
+                      src={builtinSvgDataUri}
+                      alt={stamp.stampId}
+                      className={styles.stampImage}
+                      draggable={false}
+                    />
+                  ) : null}
+                  {isSelected && (
+                    <button
+                      className={styles.stampDeleteButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePlacedStamp(stamp.id);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* テキストボックスオーバーレイ（複数対応） */}
+          <div
+            ref={overlayRef}
+            className={styles.canvasOverlay}
+            onPointerMove={handleOverlayPointerMove}
+            onPointerUp={handleOverlayPointerUp}
+            onPointerLeave={handleOverlayPointerUp}
+            onTouchMove={handleOverlayPointerMove}
+            onTouchEnd={handleOverlayPointerUp}
+            style={{ pointerEvents: tool === 'text' ? 'auto' : 'none' }}
+          >
           {textBoxes.map((tb) => {
             const isSelected = tb.id === selectedTextBoxId;
             return (
@@ -258,6 +318,7 @@ export function DrawingCanvas({
               </div>
             );
           })}
+        </div>
         </div>
       </div>
 

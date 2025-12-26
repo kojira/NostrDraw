@@ -86,7 +86,7 @@ export function RecipientSelect({
   return (
     <div className={styles.recipientSelect}>
       <div className={styles.header}>
-        <h3 className={styles.title}>宛先を選択</h3>
+        <h3 className={styles.title}>宛先を選択 <span className={styles.optional}>（任意）</span></h3>
         <button
           onClick={onRefresh}
           disabled={isLoading}
