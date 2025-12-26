@@ -25,7 +25,9 @@ export interface PlacedStamp {
   customEmojiUrl?: string;
 }
 
-export interface MessageBox {
+export interface TextBox {
+  id: string;
+  text: string;
   x: number;
   y: number;
   width: number;
@@ -35,6 +37,9 @@ export interface MessageBox {
   fontFamily: string;
   fontId: string;
 }
+
+// 後方互換性のためのエイリアス
+export type MessageBox = TextBox;
 
 export type ToolType = 'pen' | 'eraser' | 'stamp' | 'text';
 export type DragMode = 'none' | 'move' | 'resize-se' | 'resize-sw' | 'resize-ne' | 'resize-nw';

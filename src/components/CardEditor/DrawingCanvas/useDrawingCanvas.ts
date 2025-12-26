@@ -7,7 +7,7 @@ import type {
   Point,
   Stroke,
   PlacedStamp,
-  MessageBox,
+  TextBox,
   ToolType,
   DragMode,
   StampTab,
@@ -49,9 +49,10 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const [stampScale, setStampScale] = useState(1);
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
 
-  // メッセージボックス
-  const [message, setMessage] = useState(initialMessage);
-  const [messageBox, setMessageBox] = useState<MessageBox>({
+  // テキストボックス（複数対応）
+  const createTextBox = useCallback((overrides: Partial<TextBox> = {}): TextBox => ({
+    id: `textbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    text: '',
     x: 20,
     y: height - 80,
     width: width - 40,
@@ -60,11 +61,24 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     color: '#333333',
     fontFamily: JAPANESE_FONTS[0].family,
     fontId: JAPANESE_FONTS[0].id,
-  });
+    ...overrides,
+  }), [width, height]);
+
+  const [textBoxes, setTextBoxes] = useState<TextBox[]>(() => [
+    createTextBox({ text: initialMessage }),
+  ]);
+  const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>('none');
   const [dragStart, setDragStart] = useState<Point | null>(null);
-  const [messageBoxStart, setMessageBoxStart] = useState<MessageBox | null>(null);
+  const [textBoxStart, setTextBoxStart] = useState<TextBox | null>(null);
   const [fontCategory, setFontCategory] = useState<string>('all');
+
+  // 選択中のテキストボックス
+  const selectedTextBox = textBoxes.find(tb => tb.id === selectedTextBoxId) || null;
+
+  // 後方互換性のためのmessageとmessageBox
+  const message = selectedTextBox?.text || '';
+  const messageBox = selectedTextBox || textBoxes[0] || createTextBox();
 
   // テンプレートのdata URI
   const templateDataUri = useMemo(() => {
@@ -309,6 +323,49 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const canUndo = strokes.length > 0;
   const canRedo = undoStack.length > 0;
 
+  // テキストボックスのテキスト更新
+  const setMessage = useCallback((text: string) => {
+    if (!selectedTextBoxId) return;
+    setTextBoxes(prev => prev.map(tb =>
+      tb.id === selectedTextBoxId ? { ...tb, text } : tb
+    ));
+  }, [selectedTextBoxId]);
+
+  // テキストボックスのスタイル更新（後方互換性用）
+  const setMessageBox = useCallback((box: TextBox) => {
+    if (!selectedTextBoxId) return;
+    setTextBoxes(prev => prev.map(tb =>
+      tb.id === selectedTextBoxId ? { ...box, id: tb.id } : tb
+    ));
+  }, [selectedTextBoxId]);
+
+  // テキストボックスの追加
+  const addTextBox = useCallback(() => {
+    const newBox = createTextBox({
+      y: 20 + textBoxes.length * 70,
+    });
+    setTextBoxes(prev => [...prev, newBox]);
+    setSelectedTextBoxId(newBox.id);
+  }, [createTextBox, textBoxes.length]);
+
+  // テキストボックスの削除
+  const removeTextBox = useCallback((id: string) => {
+    setTextBoxes(prev => {
+      const filtered = prev.filter(tb => tb.id !== id);
+      // 最低1つは残す
+      if (filtered.length === 0) return prev;
+      return filtered;
+    });
+    if (selectedTextBoxId === id) {
+      setSelectedTextBoxId(textBoxes.find(tb => tb.id !== id)?.id || null);
+    }
+  }, [selectedTextBoxId, textBoxes]);
+
+  // テキストボックスの選択
+  const selectTextBox = useCallback((id: string | null) => {
+    setSelectedTextBoxId(id);
+  }, []);
+
   // ストロークをSVGのpath文字列に変換
   const pointsToPath = useCallback((points: Point[]): string => {
     if (points.length < 2) return '';
@@ -346,43 +403,48 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
       }
     }).join('\n  ');
 
-    let textElement = '';
-    if (message.trim()) {
-      const lines = message.split('\n');
-      const lineHeight = messageBox.fontSize * 1.3;
-      const textLines = lines.map((line, i) => {
-        const y = messageBox.y + messageBox.fontSize + (i * lineHeight);
-        const escapedLine = line
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-        return `<tspan x="${messageBox.x + 5}" y="${y.toFixed(2)}">${escapedLine}</tspan>`;
-      }).join('');
-      
-      const fontFamilyForSvg = messageBox.fontFamily.split(',')[0].replace(/"/g, '').trim();
-      textElement = `<text font-family="${fontFamilyForSvg}, sans-serif" font-size="${messageBox.fontSize}" fill="${messageBox.color}">${textLines}</text>`;
-    }
+    // 複数テキストボックスをSVGに変換
+    const textElements = textBoxes
+      .filter(tb => tb.text.trim())
+      .map(tb => {
+        const lines = tb.text.split('\n');
+        const lineHeight = tb.fontSize * 1.3;
+        const textLines = lines.map((line, i) => {
+          const y = tb.y + tb.fontSize + (i * lineHeight);
+          const escapedLine = line
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+          return `<tspan x="${tb.x + 5}" y="${y.toFixed(2)}">${escapedLine}</tspan>`;
+        }).join('');
+        
+        const fontFamilyForSvg = tb.fontFamily.split(',')[0].replace(/"/g, '').trim();
+        return `<text font-family="${fontFamilyForSvg}, sans-serif" font-size="${tb.fontSize}" fill="${tb.color}">${textLines}</text>`;
+      })
+      .join('\n  ');
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
   ${selectedTemplate.svg}
   ${pathElements}
   ${stampElements}
-  ${textElement}
+  ${textElements}
 </svg>`;
-  }, [strokes, placedStamps, width, height, pointsToPath, selectedTemplate, message, messageBox]);
+  }, [strokes, placedStamps, width, height, pointsToPath, selectedTemplate, textBoxes]);
 
-  // メッセージボックスのドラッグハンドラ
-  const handleMessageBoxMouseDown = useCallback((e: React.MouseEvent, mode: DragMode) => {
+  // テキストボックスのドラッグハンドラ
+  const handleTextBoxMouseDown = useCallback((e: React.MouseEvent, id: string, mode: DragMode) => {
     e.stopPropagation();
     e.preventDefault();
+    setSelectedTextBoxId(id);
     setDragMode(mode);
     setDragStart({ x: e.clientX, y: e.clientY });
-    setMessageBoxStart({ ...messageBox });
-  }, [messageBox]);
+    const tb = textBoxes.find(t => t.id === id);
+    if (tb) setTextBoxStart({ ...tb });
+  }, [textBoxes]);
 
   const handleOverlayMouseMove = useCallback((e: React.MouseEvent) => {
-    if (dragMode === 'none' || !dragStart || !messageBoxStart) return;
+    if (dragMode === 'none' || !dragStart || !textBoxStart || !selectedTextBoxId) return;
 
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -394,38 +456,51 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     const dx = (e.clientX - dragStart.x) * scaleX;
     const dy = (e.clientY - dragStart.y) * scaleY;
 
+    const updateBox = (updates: Partial<TextBox>) => {
+      setTextBoxes(prev => prev.map(tb =>
+        tb.id === selectedTextBoxId ? { ...tb, ...updates } : tb
+      ));
+    };
+
     if (dragMode === 'move') {
-      const newX = Math.max(0, Math.min(width - messageBoxStart.width, messageBoxStart.x + dx));
-      const newY = Math.max(0, Math.min(height - messageBoxStart.height, messageBoxStart.y + dy));
-      setMessageBox(prev => ({ ...prev, x: newX, y: newY }));
+      const newX = Math.max(0, Math.min(width - textBoxStart.width, textBoxStart.x + dx));
+      const newY = Math.max(0, Math.min(height - textBoxStart.height, textBoxStart.y + dy));
+      updateBox({ x: newX, y: newY });
     } else if (dragMode === 'resize-se') {
-      const newW = Math.max(80, Math.min(width - messageBoxStart.x, messageBoxStart.width + dx));
-      const newH = Math.max(30, Math.min(height - messageBoxStart.y, messageBoxStart.height + dy));
-      setMessageBox(prev => ({ ...prev, width: newW, height: newH }));
+      const newW = Math.max(80, Math.min(width - textBoxStart.x, textBoxStart.width + dx));
+      const newH = Math.max(30, Math.min(height - textBoxStart.y, textBoxStart.height + dy));
+      updateBox({ width: newW, height: newH });
     } else if (dragMode === 'resize-sw') {
-      const newW = Math.max(80, messageBoxStart.width - dx);
-      const newX = Math.max(0, messageBoxStart.x + messageBoxStart.width - newW);
-      const newH = Math.max(30, Math.min(height - messageBoxStart.y, messageBoxStart.height + dy));
-      setMessageBox(prev => ({ ...prev, x: newX, width: newW, height: newH }));
+      const newW = Math.max(80, textBoxStart.width - dx);
+      const newX = Math.max(0, textBoxStart.x + textBoxStart.width - newW);
+      const newH = Math.max(30, Math.min(height - textBoxStart.y, textBoxStart.height + dy));
+      updateBox({ x: newX, width: newW, height: newH });
     } else if (dragMode === 'resize-ne') {
-      const newW = Math.max(80, Math.min(width - messageBoxStart.x, messageBoxStart.width + dx));
-      const newH = Math.max(30, messageBoxStart.height - dy);
-      const newY = Math.max(0, messageBoxStart.y + messageBoxStart.height - newH);
-      setMessageBox(prev => ({ ...prev, y: newY, width: newW, height: newH }));
+      const newW = Math.max(80, Math.min(width - textBoxStart.x, textBoxStart.width + dx));
+      const newH = Math.max(30, textBoxStart.height - dy);
+      const newY = Math.max(0, textBoxStart.y + textBoxStart.height - newH);
+      updateBox({ y: newY, width: newW, height: newH });
     } else if (dragMode === 'resize-nw') {
-      const newW = Math.max(80, messageBoxStart.width - dx);
-      const newH = Math.max(30, messageBoxStart.height - dy);
-      const newX = Math.max(0, messageBoxStart.x + messageBoxStart.width - newW);
-      const newY = Math.max(0, messageBoxStart.y + messageBoxStart.height - newH);
-      setMessageBox(prev => ({ ...prev, x: newX, y: newY, width: newW, height: newH }));
+      const newW = Math.max(80, textBoxStart.width - dx);
+      const newH = Math.max(30, textBoxStart.height - dy);
+      const newX = Math.max(0, textBoxStart.x + textBoxStart.width - newW);
+      const newY = Math.max(0, textBoxStart.y + textBoxStart.height - newH);
+      updateBox({ x: newX, y: newY, width: newW, height: newH });
     }
-  }, [dragMode, dragStart, messageBoxStart, width, height]);
+  }, [dragMode, dragStart, textBoxStart, selectedTextBoxId, width, height]);
 
   const handleOverlayMouseUp = useCallback(() => {
     setDragMode('none');
     setDragStart(null);
-    setMessageBoxStart(null);
+    setTextBoxStart(null);
   }, []);
+
+  // 後方互換性のためのエイリアス
+  const handleMessageBoxMouseDown = useCallback((e: React.MouseEvent, mode: DragMode) => {
+    if (selectedTextBoxId) {
+      handleTextBoxMouseDown(e, selectedTextBoxId, mode);
+    }
+  }, [selectedTextBoxId, handleTextBoxMouseDown]);
 
   // ツール変更時のリセット
   const selectTool = useCallback((newTool: ToolType) => {
@@ -454,7 +529,11 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     stampScale,
     stampTab,
     
-    // メッセージ
+    // テキストボックス（複数対応）
+    textBoxes,
+    selectedTextBoxId,
+    selectedTextBox,
+    // 後方互換
     message,
     messageBox,
     fontCategory,
@@ -474,6 +553,11 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     clearCanvas,
     generateSvg,
     
+    // テキストボックス操作
+    addTextBox,
+    removeTextBox,
+    selectTextBox,
+    
     // Undo/Redo
     undo,
     redo,
@@ -484,6 +568,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handleTextBoxMouseDown,
     handleMessageBoxMouseDown,
     handleOverlayMouseMove,
     handleOverlayMouseUp,

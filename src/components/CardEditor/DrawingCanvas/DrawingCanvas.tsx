@@ -29,6 +29,9 @@ export function DrawingCanvas({
     placedStamps,
     stampScale,
     stampTab,
+    textBoxes,
+    selectedTextBoxId,
+    selectedTextBox,
     message,
     messageBox,
     fontCategory,
@@ -45,6 +48,9 @@ export function DrawingCanvas({
     setFontCategory,
     clearCanvas,
     generateSvg,
+    addTextBox,
+    removeTextBox,
+    selectTextBox,
     undo,
     redo,
     canUndo,
@@ -52,7 +58,7 @@ export function DrawingCanvas({
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
-    handleMessageBoxMouseDown,
+    handleTextBoxMouseDown,
     handleOverlayMouseMove,
     handleOverlayMouseUp,
   } = useDrawingCanvas({ width, height, initialMessage });
@@ -115,15 +121,38 @@ export function DrawingCanvas({
       {/* メッセージ入力（テキストモード時） */}
       {tool === 'text' && (
         <div className={styles.messageInputSection}>
+          <div className={styles.textBoxControls}>
+            <span className={styles.textBoxLabel}>
+              テキストボックス: {textBoxes.length}個
+              {selectedTextBox && ` (${textBoxes.findIndex(tb => tb.id === selectedTextBoxId) + 1}番目を編集中)`}
+            </span>
+            <button
+              className={styles.addTextBoxButton}
+              onClick={addTextBox}
+              title="テキストボックスを追加"
+            >
+              ➕ 追加
+            </button>
+            {textBoxes.length > 1 && selectedTextBoxId && (
+              <button
+                className={styles.removeTextBoxButton}
+                onClick={() => removeTextBox(selectedTextBoxId)}
+                title="選択中のテキストボックスを削除"
+              >
+                🗑️ 削除
+              </button>
+            )}
+          </div>
           <textarea
             className={styles.messageTextarea}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="メッセージを入力してください..."
+            placeholder={selectedTextBox ? "メッセージを入力してください..." : "下のキャンバスでテキストボックスをクリックして選択"}
             rows={3}
+            disabled={!selectedTextBox}
           />
           <p className={styles.messageHint}>
-            💡 下のキャンバス上でテキストボックスをドラッグして位置を調整、角をドラッグしてサイズを変更できます
+            💡 キャンバス上でテキストボックスをクリックして選択、ドラッグで移動、角をドラッグでサイズ変更
           </p>
         </div>
       )}
@@ -161,7 +190,7 @@ export function DrawingCanvas({
           );
         })}
         
-        {/* メッセージボックスオーバーレイ */}
+        {/* テキストボックスオーバーレイ（複数対応） */}
         <div
           ref={overlayRef}
           className={styles.canvasOverlay}
@@ -170,51 +199,58 @@ export function DrawingCanvas({
           onMouseLeave={handleOverlayMouseUp}
           style={{ pointerEvents: tool === 'text' ? 'auto' : 'none' }}
         >
-          <div
-            className={`${styles.messageBox} ${tool === 'text' ? styles.editable : ''}`}
-            style={{
-              left: `${(messageBox.x / width) * 100}%`,
-              top: `${(messageBox.y / height) * 100}%`,
-              width: `${(messageBox.width / width) * 100}%`,
-              height: `${(messageBox.height / height) * 100}%`,
-            }}
-          >
-            <div
-              className={styles.messageText}
-              style={{
-                fontSize: `${messageBox.fontSize * (overlayRef.current?.clientWidth || width) / width}px`,
-                color: messageBox.color,
-                fontFamily: messageBox.fontFamily,
-              }}
-            >
-              {message || (tool === 'text' ? 'ここにメッセージが表示されます' : '')}
-            </div>
+          {textBoxes.map((tb) => {
+            const isSelected = tb.id === selectedTextBoxId;
+            return (
+              <div
+                key={tb.id}
+                className={`${styles.messageBox} ${tool === 'text' ? styles.editable : ''} ${isSelected ? styles.selected : ''}`}
+                style={{
+                  left: `${(tb.x / width) * 100}%`,
+                  top: `${(tb.y / height) * 100}%`,
+                  width: `${(tb.width / width) * 100}%`,
+                  height: `${(tb.height / height) * 100}%`,
+                }}
+                onClick={() => tool === 'text' && selectTextBox(tb.id)}
+              >
+                <div
+                  className={styles.messageText}
+                  style={{
+                    fontSize: `${tb.fontSize * (overlayRef.current?.clientWidth || width) / width}px`,
+                    color: tb.color,
+                    fontFamily: tb.fontFamily,
+                  }}
+                >
+                  {tb.text || (tool === 'text' && isSelected ? 'テキストを入力...' : '')}
+                </div>
 
-            {tool === 'text' && (
-              <>
-                <div
-                  className={styles.moveHandle}
-                  onMouseDown={(e) => handleMessageBoxMouseDown(e, 'move')}
-                />
-                <div
-                  className={`${styles.resizeHandle} ${styles.resizeNW}`}
-                  onMouseDown={(e) => handleMessageBoxMouseDown(e, 'resize-nw')}
-                />
-                <div
-                  className={`${styles.resizeHandle} ${styles.resizeNE}`}
-                  onMouseDown={(e) => handleMessageBoxMouseDown(e, 'resize-ne')}
-                />
-                <div
-                  className={`${styles.resizeHandle} ${styles.resizeSW}`}
-                  onMouseDown={(e) => handleMessageBoxMouseDown(e, 'resize-sw')}
-                />
-                <div
-                  className={`${styles.resizeHandle} ${styles.resizeSE}`}
-                  onMouseDown={(e) => handleMessageBoxMouseDown(e, 'resize-se')}
-                />
-              </>
-            )}
-          </div>
+                {tool === 'text' && isSelected && (
+                  <>
+                    <div
+                      className={styles.moveHandle}
+                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'move')}
+                    />
+                    <div
+                      className={`${styles.resizeHandle} ${styles.resizeNW}`}
+                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-nw')}
+                    />
+                    <div
+                      className={`${styles.resizeHandle} ${styles.resizeNE}`}
+                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-ne')}
+                    />
+                    <div
+                      className={`${styles.resizeHandle} ${styles.resizeSW}`}
+                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-sw')}
+                    />
+                    <div
+                      className={`${styles.resizeHandle} ${styles.resizeSE}`}
+                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-se')}
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
