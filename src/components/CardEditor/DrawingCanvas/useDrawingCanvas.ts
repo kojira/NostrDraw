@@ -38,6 +38,9 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const currentStrokeRef = useRef<Point[]>([]);
   
+  // Undo/Redo用の履歴
+  const [undoStack, setUndoStack] = useState<Stroke[]>([]);
+  
   // テンプレートとスタンプ
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(TEMPLATES[0]);
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null);
@@ -233,6 +236,8 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
         lineWidth,
       };
       setStrokes(prev => [...prev, newStroke]);
+      // 新しいストロークを追加したらundoStackをクリア
+      setUndoStack([]);
       // 注: ストローク追加時は再描画しない（既に描画済み）
     }
     setIsDrawing(false);
@@ -247,9 +252,62 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const clearCanvas = useCallback(() => {
     setStrokes([]);
     setPlacedStamps([]);
+    setUndoStack([]);
     // クリア後に再描画
     setTimeout(() => redrawCanvas([], []), 0);
   }, [redrawCanvas]);
+
+  // Undo
+  const undo = useCallback(() => {
+    if (strokes.length === 0) return;
+    
+    const lastStroke = strokes[strokes.length - 1];
+    const newStrokes = strokes.slice(0, -1);
+    
+    setStrokes(newStrokes);
+    setUndoStack(prev => [...prev, lastStroke]);
+    
+    // 再描画
+    setTimeout(() => redrawCanvas(newStrokes, placedStamps), 0);
+  }, [strokes, placedStamps, redrawCanvas]);
+
+  // Redo
+  const redo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    
+    const strokeToRestore = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, -1);
+    const newStrokes = [...strokes, strokeToRestore];
+    
+    setStrokes(newStrokes);
+    setUndoStack(newUndoStack);
+    
+    // 再描画
+    setTimeout(() => redrawCanvas(newStrokes, placedStamps), 0);
+  }, [strokes, undoStack, placedStamps, redrawCanvas]);
+
+  // キーボードショートカット
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z or Cmd+Z for Undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      // Ctrl+Shift+Z or Cmd+Shift+Z or Ctrl+Y or Cmd+Y for Redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  // Undo/Redo可能かどうか
+  const canUndo = strokes.length > 0;
+  const canRedo = undoStack.length > 0;
 
   // ストロークをSVGのpath文字列に変換
   const pointsToPath = useCallback((points: Point[]): string => {
@@ -415,6 +473,12 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     setFontCategory,
     clearCanvas,
     generateSvg,
+    
+    // Undo/Redo
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     
     // イベントハンドラ
     handlePointerDown,

@@ -10,11 +10,15 @@ interface ToolbarProps {
   lineWidth: number;
   stampScale: number;
   messageBox: MessageBox;
+  canUndo: boolean;
+  canRedo: boolean;
   onToolChange: (tool: ToolType) => void;
   onColorChange: (color: string) => void;
   onLineWidthChange: (width: number) => void;
   onStampScaleChange: (scale: number) => void;
   onMessageBoxChange: (box: MessageBox) => void;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 export function Toolbar({
@@ -23,14 +27,38 @@ export function Toolbar({
   lineWidth,
   stampScale,
   messageBox,
+  canUndo,
+  canRedo,
   onToolChange,
   onColorChange,
   onLineWidthChange,
   onStampScaleChange,
   onMessageBoxChange,
+  onUndo,
+  onRedo,
 }: ToolbarProps) {
   return (
     <div className={styles.toolbar}>
+      {/* Undo/Redo */}
+      <div className={styles.toolGroup}>
+        <button
+          className={`${styles.toolButton} ${!canUndo ? styles.disabled : ''}`}
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="元に戻す (Ctrl+Z)"
+        >
+          ↩️
+        </button>
+        <button
+          className={`${styles.toolButton} ${!canRedo ? styles.disabled : ''}`}
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="やり直し (Ctrl+Shift+Z)"
+        >
+          ↪️
+        </button>
+      </div>
+
       {/* ツール選択 */}
       <div className={styles.toolGroup}>
         <button

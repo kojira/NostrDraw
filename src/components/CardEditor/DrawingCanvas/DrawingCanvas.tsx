@@ -45,6 +45,10 @@ export function DrawingCanvas({
     setFontCategory,
     clearCanvas,
     generateSvg,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
@@ -73,11 +77,15 @@ export function DrawingCanvas({
         lineWidth={lineWidth}
         stampScale={stampScale}
         messageBox={messageBox}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onToolChange={selectTool}
         onColorChange={setColor}
         onLineWidthChange={setLineWidth}
         onStampScaleChange={setStampScale}
         onMessageBoxChange={setMessageBox}
+        onUndo={undo}
+        onRedo={redo}
       />
 
       {/* フォント選択（テキストモード時） */}

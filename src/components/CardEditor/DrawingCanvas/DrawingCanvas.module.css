@@ -86,6 +86,16 @@
   border-color: #e94560;
 }
 
+.toolButton.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolButton.disabled:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
+}
+
 .colorPicker {
   display: flex;
   gap: 0.25rem;
