@@ -76,6 +76,90 @@
   border-color: #e94560;
 }
 
+/* 台紙選択コンテンツ */
+.templateContent {
+  margin-top: 0.75rem;
+}
+
+/* タブボタン */
+.templateTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.templateTabButton {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.templateTabButton:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.templateTabButton.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.15);
+  border-color: #e94560;
+}
+
+/* 干支ギャラリー */
+.etoGallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+
+.etoButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.etoButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(233, 69, 96, 0.3);
+}
+
+.etoButton.active {
+  background: rgba(233, 69, 96, 0.15);
+  border-color: #e94560;
+}
+
+.etoPreview {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.etoName {
+  font-size: 0.65rem;
+  color: #aaa;
+  text-align: center;
+  line-height: 1.2;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

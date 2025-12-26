@@ -13,7 +13,6 @@ import { useNostr, useFollowees } from './hooks/useNostr';
 import { useReceivedCards, useSentCards, useCardEditor, useSendCard } from './hooks/useCards';
 import { fetchCardById } from './services/card';
 import { CardFlip } from './components/CardViewer/CardFlip';
-import { ETO_IMAGES } from './data/etoGallery';
 import './App.css';
 
 function App() {
@@ -65,7 +64,6 @@ function App() {
     setRecipient,
     setSvg,
     setMessage,
-    setLayout,
     reset: resetEditor,
     isValid: editorIsValid,
   } = useCardEditor();
@@ -86,6 +84,17 @@ function App() {
 
   // NostrDrawのベースURL
   const BASE_URL = 'https://kojira.github.io/NostrDraw';
+
+  // setSvgをラップして、呼ばれたら送信完了UIをクリア（新しい絵を保存したら送信ボタンを再表示）
+  const handleSvgChange = useCallback((svg: string | null) => {
+    // 送信完了状態をリセット
+    if (lastSentEventId) {
+      setLastSentEventId(null);
+      setTimelineText('');
+      setTimelinePosted(false);
+    }
+    setSvg(svg);
+  }, [lastSentEventId, setSvg]);
 
   // URLパラメータのeventidをチェック
   useEffect(() => {
@@ -307,16 +316,13 @@ function App() {
                   />
                 </section>
 
-                {/* 年賀状エディタ */}
+                {/* お絵かきエディタ */}
                 <section className="section">
                   <CardEditor
                     svg={editorState.svg}
                     message={editorState.message}
-                    layoutId={editorState.layoutId}
-                    onSvgChange={setSvg}
+                    onSvgChange={handleSvgChange}
                     onMessageChange={setMessage}
-                    onLayoutChange={setLayout}
-                    etoImages={ETO_IMAGES}
                     userPubkey={authState.pubkey}
                   />
                 </section>

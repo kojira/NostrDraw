@@ -3,6 +3,7 @@
 import type { Template, Stamp } from '../../../data/templates';
 import type { FontOption } from '../../../data/fonts';
 import type { CustomEmoji } from '../../../services/emoji';
+import type { EtoImage } from '../../../types';
 
 export interface Point {
   x: number;
@@ -52,11 +53,12 @@ export interface DrawingCanvasProps {
   initialMessage?: string;
   customEmojis?: CustomEmoji[];
   isLoadingEmojis?: boolean;
+  etoImages?: EtoImage[];
 }
 
 // 定数
 export const COLORS = ['#e94560', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b5de5', '#000000', '#ffffff'];
 
 // Re-export types for convenience
-export type { Template, Stamp, FontOption, CustomEmoji };
+export type { Template, Stamp, FontOption, CustomEmoji, EtoImage };
 

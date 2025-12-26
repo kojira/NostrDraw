@@ -17,6 +17,7 @@ export function DrawingCanvas({
   initialMessage = '',
   customEmojis = [],
   isLoadingEmojis = false,
+  etoImages = [],
 }: DrawingCanvasProps) {
   const {
     canvasRef,
@@ -77,10 +78,11 @@ export function DrawingCanvas({
 
   return (
     <div className={styles.drawingCanvas}>
-      {/* テンプレート選択 */}
+      {/* 台紙選択 */}
       <TemplateSelector
         selectedTemplate={selectedTemplate}
         onSelect={setSelectedTemplate}
+        etoImages={etoImages}
       />
 
       {/* ツールバー */}
