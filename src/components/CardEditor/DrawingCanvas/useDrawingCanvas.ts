@@ -25,12 +25,14 @@ interface UseDrawingCanvasOptions {
 export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCanvasOptions) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [color, setColor] = useState('#e94560');
   const [lineWidth, setLineWidth] = useState(3);
   const [tool, setTool] = useState<ToolType>('pen');
   const lastPointRef = useRef<Point | null>(null);
+  const templateImageRef = useRef<HTMLImageElement | null>(null);
+  const currentTemplateUri = useRef<string>('');
   
   // ストロークの履歴（SVG生成用）
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -69,23 +71,23 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   }, [selectedTemplate, width, height]);
 
   // キャンバスの初期化と再描画
-  const redrawCanvas = useCallback(() => {
+  const redrawCanvas = useCallback((strokesData: Stroke[], stampsData: PlacedStamp[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    contextRef.current = ctx;
 
-    // 背景をクリア
-    ctx.clearRect(0, 0, width, height);
-
-    // テンプレートを描画
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, width, height);
+    const doRedraw = (templateImg: HTMLImageElement) => {
+      // 背景をクリア
+      ctx.clearRect(0, 0, width, height);
+      
+      // テンプレートを描画
+      ctx.drawImage(templateImg, 0, 0, width, height);
       
       // ストロークを再描画
-      strokes.forEach(stroke => {
+      strokesData.forEach(stroke => {
         if (stroke.points.length < 2) return;
         ctx.beginPath();
         ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
@@ -100,12 +102,8 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
       });
 
       // ビルトインスタンプのみキャンバスに再描画
-      // カスタム絵文字はCORS制限があるためオーバーレイで表示
-      placedStamps.forEach(placed => {
-        if (placed.isCustomEmoji) {
-          // カスタム絵文字はオーバーレイで表示するためスキップ
-          return;
-        }
+      stampsData.forEach(placed => {
+        if (placed.isCustomEmoji) return;
         
         const stamp = STAMPS.find(s => s.id === placed.stampId);
         if (!stamp) return;
@@ -121,15 +119,26 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
         stampImg.src = `data:image/svg+xml;base64,${stampEncoded}`;
       });
     };
-    img.src = templateDataUri;
-    
-    setContext(ctx);
-  }, [width, height, templateDataUri, strokes, placedStamps]);
 
-  // 初期化
+    // テンプレートが変わった場合のみ画像を再読み込み
+    if (currentTemplateUri.current !== templateDataUri || !templateImageRef.current) {
+      const img = new Image();
+      img.onload = () => {
+        templateImageRef.current = img;
+        currentTemplateUri.current = templateDataUri;
+        doRedraw(img);
+      };
+      img.src = templateDataUri;
+    } else {
+      // キャッシュされた画像を使用して同期的に描画
+      doRedraw(templateImageRef.current);
+    }
+  }, [templateDataUri, width, height]);
+
+  // 初期化（テンプレート変更時のみ）
   useEffect(() => {
-    redrawCanvas();
-  }, [redrawCanvas]);
+    redrawCanvas(strokes, placedStamps);
+  }, [selectedTemplate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ポインター位置取得
   const getPointerPosition = useCallback((e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -149,6 +158,7 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   // キャンバスイベントハンドラ
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const point = getPointerPosition(e);
+    const ctx = contextRef.current;
 
     if (tool === 'stamp') {
       if (selectedStamp) {
@@ -159,7 +169,12 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
           y: point.y,
           scale: stampScale,
         };
-        setPlacedStamps(prev => [...prev, newStamp]);
+        setPlacedStamps(prev => {
+          const updated = [...prev, newStamp];
+          // スタンプ追加後に再描画
+          setTimeout(() => redrawCanvas(strokes, updated), 0);
+          return updated;
+        });
         return;
       }
       if (selectedCustomEmoji) {
@@ -177,58 +192,64 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
       }
     }
 
-    if (!context) return;
+    if (!ctx) return;
 
     setIsDrawing(true);
     lastPointRef.current = point;
     currentStrokeRef.current = [point];
 
-    context.beginPath();
-    context.moveTo(point.x, point.y);
-  }, [context, getPointerPosition, tool, selectedStamp, selectedCustomEmoji, stampScale]);
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+  }, [getPointerPosition, tool, selectedStamp, selectedCustomEmoji, stampScale, strokes, redrawCanvas]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !context || !lastPointRef.current || tool === 'stamp') return;
+    const ctx = contextRef.current;
+    if (!isDrawing || !ctx || !lastPointRef.current || tool === 'stamp') return;
 
     const point = getPointerPosition(e);
 
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    context.lineWidth = lineWidth;
-    context.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
 
-    context.lineTo(point.x, point.y);
-    context.stroke();
-    context.beginPath();
-    context.moveTo(point.x, point.y);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
 
     lastPointRef.current = point;
     currentStrokeRef.current.push(point);
-  }, [isDrawing, context, lineWidth, color, tool, getPointerPosition]);
+  }, [isDrawing, lineWidth, color, tool, getPointerPosition]);
 
   const handlePointerUp = useCallback(() => {
+    const ctx = contextRef.current;
     if (tool === 'stamp') return;
     
     if (isDrawing && currentStrokeRef.current.length > 1) {
-      setStrokes(prev => [...prev, {
+      const newStroke: Stroke = {
         points: [...currentStrokeRef.current],
         color: tool === 'eraser' ? '#ffffff' : color,
         lineWidth,
-      }]);
+      };
+      setStrokes(prev => [...prev, newStroke]);
+      // 注: ストローク追加時は再描画しない（既に描画済み）
     }
     setIsDrawing(false);
     lastPointRef.current = null;
     currentStrokeRef.current = [];
-    if (context) {
-      context.beginPath();
+    if (ctx) {
+      ctx.beginPath();
     }
-  }, [isDrawing, context, color, lineWidth, tool]);
+  }, [isDrawing, color, lineWidth, tool]);
 
   // キャンバスクリア
   const clearCanvas = useCallback(() => {
     setStrokes([]);
     setPlacedStamps([]);
-  }, []);
+    // クリア後に再描画
+    setTimeout(() => redrawCanvas([], []), 0);
+  }, [redrawCanvas]);
 
   // ストロークをSVGのpath文字列に変換
   const pointsToPath = useCallback((points: Point[]): string => {
