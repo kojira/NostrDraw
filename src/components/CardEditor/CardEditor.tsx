@@ -1,6 +1,7 @@
 // お絵かきエディタコンポーネント
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DrawingCanvas } from './DrawingCanvas';
 import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import { ETO_IMAGES } from '../../data/etoGallery';
@@ -23,6 +24,7 @@ export function CardEditor({
   userPubkey,
   extendingCard,
 }: CardEditorProps) {
+  const { t } = useTranslation();
   const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
   const [isLoadingEmojis, setIsLoadingEmojis] = useState(false);
 
@@ -78,7 +80,7 @@ export function CardEditor({
   return (
     <div className={styles.cardEditor}>
       <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>✏️ お絵かき</h3>
+        <h3 className={styles.sectionTitle}>✏️ {t('editor.draw')}</h3>
         <DrawingCanvas 
           onSave={handleDrawingSave} 
           initialMessage={message}

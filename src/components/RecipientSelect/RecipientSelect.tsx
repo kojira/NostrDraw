@@ -1,6 +1,7 @@
 // 宛先選択コンポーネント（フォロイーからのインクリメンタル検索）
 
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { NostrProfile } from '../../types';
 import { pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import styles from './RecipientSelect.module.css';
@@ -22,6 +23,7 @@ export function RecipientSelect({
   error,
   onRefresh,
 }: RecipientSelectProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [manualNpub, setManualNpub] = useState('');
@@ -92,7 +94,7 @@ export function RecipientSelect({
       >
         <h3 className={styles.title}>
           <span className={styles.toggleIcon}>{isOpen ? '▼' : '▶'}</span>
-          宛先を選択 <span className={styles.optional}>（任意）</span>
+          {t('recipient.title')}
         </h3>
         {/* 選択中の宛先をヘッダーに表示 */}
         {selectedPubkey && !isOpen && (
@@ -160,7 +162,7 @@ export function RecipientSelect({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="名前、display_name、npubで検索..."
+              placeholder={t('recipient.search')}
               className={styles.searchInput}
             />
           </div>
@@ -168,10 +170,10 @@ export function RecipientSelect({
           {/* フォロイーリスト */}
           <div className={styles.listContainer}>
             {isLoading ? (
-              <div className={styles.loading}>フォロイーを読み込み中...</div>
+              <div className={styles.loading}>{t('card.loading')}</div>
             ) : filteredFollowees.length === 0 ? (
               <div className={styles.empty}>
-                {searchQuery ? '該当するフォロイーが見つかりません' : 'フォロイーがいません'}
+                {t('recipient.followees')}
               </div>
             ) : (
               <ul className={styles.list}>

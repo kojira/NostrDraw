@@ -1,6 +1,7 @@
 // 認証コンポーネント
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AuthState } from '../../types';
 import styles from './Auth.module.css';
 
@@ -23,6 +24,7 @@ export function Auth({
   onLoginWithNpub,
   onLogout,
 }: AuthProps) {
+  const { t } = useTranslation();
   const [npubInput, setNpubInput] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export function Auth({
     return (
       <div className={styles.loggedIn}>
         <div className={styles.userInfo}>
-          <span className={styles.label}>ログイン中:</span>
+          <span className={styles.label}>{t('auth.login')}:</span>
           <span className={styles.npub} title={authState.npub || ''}>
             {authState.npub?.slice(0, 12)}...{authState.npub?.slice(-8)}
           </span>
@@ -59,7 +61,7 @@ export function Auth({
           )}
         </div>
         <button onClick={onLogout} className={styles.logoutButton}>
-          ログアウト
+          {t('auth.logout')}
         </button>
       </div>
     );
@@ -67,7 +69,7 @@ export function Auth({
 
   return (
     <div className={styles.auth}>
-      <h2 className={styles.title}>ログイン</h2>
+      <h2 className={styles.title}>{t('auth.login')}</h2>
       
       {/* NIP-07ログイン */}
       <div className={styles.section}>
@@ -76,23 +78,23 @@ export function Auth({
           disabled={!isNip07Available || isLoading}
           className={styles.nip07Button}
         >
-          {isLoading ? 'ログイン中...' : 'NIP-07でログイン'}
+          {isLoading ? '...' : t('auth.loginWithNip07')}
         </button>
         {!isNip07Available && (
           <p className={styles.hint}>
-            NIP-07拡張機能（nos2x、Albyなど）がインストールされていません
+            NIP-07 extension not installed (nos2x, Alby, etc.)
           </p>
         )}
       </div>
 
       <div className={styles.divider}>
-        <span>または</span>
+        <span>or</span>
       </div>
 
       {/* npub入力 */}
       <form onSubmit={handleNpubSubmit} className={styles.section}>
         <label htmlFor="npub-input" className={styles.label}>
-          npubで閲覧（送信機能は制限されます）
+          {t('auth.loginWithNpub')} {t('auth.npubHint')}
         </label>
         <div className={styles.inputGroup}>
           <input
@@ -100,11 +102,11 @@ export function Auth({
             type="text"
             value={npubInput}
             onChange={(e) => setNpubInput(e.target.value)}
-            placeholder="npub1..."
+            placeholder={t('auth.npubPlaceholder')}
             className={styles.input}
           />
           <button type="submit" className={styles.submitButton}>
-            閲覧
+            {t('auth.login')}
           </button>
         </div>
         {(error || inputError) && (

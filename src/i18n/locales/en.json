@@ -1,0 +1,120 @@
+{
+  "app": {
+    "title": "NostrDraw",
+    "subtitle": "Draw and share on Nostr",
+    "campaign": "New Year Campaign!",
+    "footer": "Powered by Nostr | kind: 31898"
+  },
+  "nav": {
+    "create": "🎨 Draw",
+    "inbox": "📬 Inbox"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "loginWithNip07": "Login with NIP-07",
+    "loginWithNpub": "Login with npub",
+    "npubPlaceholder": "npub1...",
+    "npubHint": "※ Sending is not available with npub login",
+    "nip07Required": "NIP-07 extension login is required"
+  },
+  "editor": {
+    "draw": "Draw",
+    "template": "Template",
+    "stamps": "Stamps",
+    "text": "Text",
+    "undo": "Undo",
+    "redo": "Redo",
+    "clear": "Clear",
+    "save": "💾 Use this drawing",
+    "penSize": "Pen size",
+    "eraserSize": "Eraser size",
+    "eraser": "Eraser",
+    "pen": "Pen",
+    "extending": "Extending drawing",
+    "cancelExtend": "Cancel"
+  },
+  "template": {
+    "basic": "Basic Templates",
+    "eto": "Zodiac Gallery",
+    "blank": "Blank",
+    "eto2025": "2025 Year of Snake",
+    "eto2026": "2026 Year of Horse"
+  },
+  "stamps": {
+    "builtin": "Built-in Stamps",
+    "custom": "Custom Emoji",
+    "noCustom": "No custom emoji in bookmarks"
+  },
+  "textBox": {
+    "placeholder": "Enter text",
+    "addNew": "➕ Add text box",
+    "font": "Font",
+    "fontSize": "Size",
+    "color": "Color"
+  },
+  "recipient": {
+    "title": "📮 Select recipient (optional)",
+    "noRecipient": "No recipient (public post)",
+    "search": "Search followees...",
+    "followees": "Followees"
+  },
+  "send": {
+    "button": "📤 Send",
+    "sending": "Sending...",
+    "allowExtend": "Allow others to extend",
+    "postToTimeline": "Post to timeline",
+    "success": "🎉 Sent successfully!",
+    "postTimeline": "📢 Post to timeline",
+    "posting": "Posting...",
+    "posted": "✅ Posted to timeline!",
+    "editTimeline": "Edit the timeline post:",
+    "shareHint": "Share on timeline to let everyone see!",
+    "copyUrl": "📋 Copy URL",
+    "copied": "✅ Copied!",
+    "useThisDrawing": "✏️ Use this drawing",
+    "close": "Close"
+  },
+  "viewer": {
+    "received": "Received",
+    "sent": "Sent",
+    "noReceived": "No messages received yet",
+    "noSent": "No messages sent yet",
+    "refresh": "Refresh",
+    "sharedCard": "🎨 Shared Card"
+  },
+  "card": {
+    "to": "To:",
+    "from": "From:",
+    "everyone": "Everyone",
+    "flipHint": "Click to see the back →",
+    "flipBack": "← Click to see the front",
+    "close": "Close",
+    "loading": "Loading..."
+  },
+  "reaction": {
+    "like": "Like!",
+    "liked": "Already liked"
+  },
+  "extend": {
+    "button": "✏️ Extend",
+    "label": "🔗 Extended work"
+  },
+  "sidebar": {
+    "popular": "🔥 Popular",
+    "popularSub": "Last 3 days",
+    "recent": "🆕 Recent",
+    "recentSub": "Latest posts"
+  },
+  "relay": {
+    "title": "Relay Settings",
+    "add": "Add",
+    "urlPlaceholder": "wss://relay.example.com"
+  },
+  "language": {
+    "label": "Language",
+    "ja": "日本語",
+    "en": "English"
+  }
+}
+

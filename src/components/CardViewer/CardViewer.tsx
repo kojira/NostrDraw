@@ -1,6 +1,7 @@
 // 年賀状ビューア統合コンポーネント
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { fetchProfile } from '../../services/profile';
@@ -39,6 +40,7 @@ export function CardViewer({
   signEvent,
   onExtend,
 }: CardViewerProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('received');
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
@@ -132,13 +134,13 @@ export function CardViewer({
           className={`${styles.tab} ${activeTab === 'received' ? styles.active : ''}`}
           onClick={() => setActiveTab('received')}
         >
-          📨 届いたお手紙 ({receivedCount})
+          📨 {t('viewer.received')} ({receivedCount})
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'sent' ? styles.active : ''}`}
           onClick={() => setActiveTab('sent')}
         >
-          📤 送ったお手紙 ({sentCount})
+          📤 {t('viewer.sent')} ({sentCount})
         </button>
       </div>
 

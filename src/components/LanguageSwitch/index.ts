@@ -1,0 +1,2 @@
+export { LanguageSwitch } from './LanguageSwitch';
+

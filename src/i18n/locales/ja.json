@@ -1,0 +1,120 @@
+{
+  "app": {
+    "title": "NostrDraw",
+    "subtitle": "Nostrで絵を描いて送ろう",
+    "campaign": "年賀状キャンペーン開催中！",
+    "footer": "Powered by Nostr | kind: 31898"
+  },
+  "nav": {
+    "create": "🎨 お絵かきする",
+    "inbox": "📬 お手紙を見る"
+  },
+  "auth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "loginWithNip07": "NIP-07でログイン",
+    "loginWithNpub": "npubでログイン",
+    "npubPlaceholder": "npub1...",
+    "npubHint": "※npubログインでは送信機能が使えません",
+    "nip07Required": "NIP-07拡張機能でのログインが必要です"
+  },
+  "editor": {
+    "draw": "お絵かき",
+    "template": "テンプレート",
+    "stamps": "スタンプ",
+    "text": "テキスト",
+    "undo": "戻す",
+    "redo": "やり直す",
+    "clear": "クリア",
+    "save": "💾 この絵を使う",
+    "penSize": "ペンサイズ",
+    "eraserSize": "消しゴムサイズ",
+    "eraser": "消しゴム",
+    "pen": "ペン",
+    "extending": "描き足し中",
+    "cancelExtend": "キャンセル"
+  },
+  "template": {
+    "basic": "基本テンプレート",
+    "eto": "干支ギャラリー",
+    "blank": "白紙",
+    "eto2025": "2025年 巳年",
+    "eto2026": "2026年 午年"
+  },
+  "stamps": {
+    "builtin": "内蔵スタンプ",
+    "custom": "カスタム絵文字",
+    "noCustom": "ブックマークにカスタム絵文字がありません"
+  },
+  "textBox": {
+    "placeholder": "テキストを入力",
+    "addNew": "➕ テキストボックス追加",
+    "font": "フォント",
+    "fontSize": "サイズ",
+    "color": "色"
+  },
+  "recipient": {
+    "title": "📮 宛先を選ぶ（任意）",
+    "noRecipient": "宛先なし（公開投稿）",
+    "search": "フォロイーから検索...",
+    "followees": "フォロイー"
+  },
+  "send": {
+    "button": "📤 送信する",
+    "sending": "送信中...",
+    "allowExtend": "描き足しを許可する",
+    "postToTimeline": "タイムラインにも投稿する",
+    "success": "🎉 送信完了！",
+    "postTimeline": "📢 タイムラインに投稿する",
+    "posting": "投稿中...",
+    "posted": "✅ タイムラインに投稿しました！",
+    "editTimeline": "タイムラインに投稿する内容を編集できます：",
+    "shareHint": "タイムラインで共有してみんなに見てもらおう！",
+    "copyUrl": "📋 URLをコピー",
+    "copied": "✅ コピーしました！",
+    "useThisDrawing": "✏️ この絵を使う",
+    "close": "閉じる"
+  },
+  "viewer": {
+    "received": "届いたお手紙",
+    "sent": "送ったお手紙",
+    "noReceived": "まだお手紙が届いていません",
+    "noSent": "まだお手紙を送っていません",
+    "refresh": "更新",
+    "sharedCard": "🎨 共有されたカード"
+  },
+  "card": {
+    "to": "To:",
+    "from": "From:",
+    "everyone": "みんな",
+    "flipHint": "クリックして裏面を見る →",
+    "flipBack": "← クリックして表面に戻る",
+    "close": "閉じる",
+    "loading": "読み込み中..."
+  },
+  "reaction": {
+    "like": "いいね！",
+    "liked": "リアクション済み"
+  },
+  "extend": {
+    "button": "✏️ 描き足す",
+    "label": "🔗 描き足し作品"
+  },
+  "sidebar": {
+    "popular": "🔥 人気",
+    "popularSub": "過去3日間",
+    "recent": "🆕 新着",
+    "recentSub": "最新の投稿"
+  },
+  "relay": {
+    "title": "リレー設定",
+    "add": "追加",
+    "urlPlaceholder": "wss://relay.example.com"
+  },
+  "language": {
+    "label": "言語",
+    "ja": "日本語",
+    "en": "English"
+  }
+}
+

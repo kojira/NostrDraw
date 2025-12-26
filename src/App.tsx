@@ -1,6 +1,7 @@
 // NostrDraw - Nostrで絵を描いて送るサービス
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SimplePool } from 'nostr-tools';
 import type { NewYearCard } from './types';
 import { Auth } from './components/Auth';
@@ -9,6 +10,7 @@ import { RecipientSelect } from './components/RecipientSelect';
 import { CardEditor } from './components/CardEditor';
 import { CardViewer } from './components/CardViewer';
 import { SidebarGallery } from './components/SidebarGallery';
+import { LanguageSwitch } from './components/LanguageSwitch';
 import { useAuth } from './hooks/useAuth';
 import { useNostr, useFollowees } from './hooks/useNostr';
 import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useCardEditor, useSendCard } from './hooks/useCards';
@@ -18,6 +20,8 @@ import { CardFlip } from './components/CardViewer/CardFlip';
 import './App.css';
 
 function App() {
+  const { t } = useTranslation();
+  
   const {
     authState,
     isLoading: authLoading,
@@ -264,11 +268,14 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1 className="logo">🎨 NostrDraw</h1>
-        <p className="tagline">Nostrで絵を描いて送ろう</p>
+        <div className="headerTop">
+          <h1 className="logo">🎨 {t('app.title')}</h1>
+          <LanguageSwitch />
+        </div>
+        <p className="tagline">{t('app.subtitle')}</p>
         <div className="campaign">
           <span className="campaignBadge">🎍 New Year 2026</span>
-          <span className="campaignText">年賀状キャンペーン開催中！ 🐴</span>
+          <span className="campaignText">{t('app.campaign')} 🐴</span>
         </div>
       </header>
 
@@ -291,9 +298,9 @@ function App() {
           {/* 共有カード表示（URLパラメータからeventidがある場合） */}
           {(sharedCard || isLoadingSharedCard) && (
             <section className="section sharedCardSection">
-              <h2 className="sharedCardTitle">🎨 共有されたカード</h2>
+              <h2 className="sharedCardTitle">{t('viewer.sharedCard')}</h2>
               {isLoadingSharedCard ? (
-                <p className="loading">読み込み中...</p>
+                <p className="loading">{t('card.loading')}</p>
               ) : sharedCard ? (
                 <>
                   <div className="sharedCardContainer">
@@ -313,12 +320,12 @@ function App() {
                       }}
                       className="closeButton"
                     >
-                      閉じる
+                      {t('card.close')}
                     </button>
                   </div>
                 </>
               ) : (
-                <p className="error">カードが見つかりませんでした</p>
+                <p className="error">{t('card.loading')}</p>
               )}
             </section>
           )}
@@ -357,13 +364,13 @@ function App() {
                   className={`viewButton ${activeView === 'create' ? 'active' : ''}`}
                   onClick={() => setActiveView('create')}
                 >
-                  ✍️ 絵を描く
+                  {t('nav.create')}
                 </button>
                 <button
                   className={`viewButton ${activeView === 'view' ? 'active' : ''}`}
                   onClick={() => setActiveView('view')}
                 >
-                  📬 受信ボックス ({receivedCount})
+                  {t('nav.inbox')} ({receivedCount})
                 </button>
               </div>
             </section>
@@ -403,12 +410,12 @@ function App() {
                   {/* 送信成功時の共有UI */}
                   {lastSentEventId && (
                     <div className="sendSuccess">
-                      <h3>🎉 送信完了！</h3>
+                      <h3>{t('send.success')}</h3>
                       
                       {/* タイムライン投稿セクション */}
                       {postToTimeline && timelineText && !timelinePosted && authState.isNip07 && (
                         <div className="timelinePostSection">
-                          <p>タイムラインに投稿する内容を編集できます：</p>
+                          <p>{t('send.editTimeline')}</p>
                           <textarea
                             className="shareTextarea"
                             value={timelineText}
@@ -420,7 +427,7 @@ function App() {
                             disabled={isPostingTimeline || !timelineText.trim()}
                             className="postTimelineButton"
                           >
-                            {isPostingTimeline ? '投稿中...' : '📢 タイムラインに投稿する'}
+                            {isPostingTimeline ? t('send.posting') : t('send.postTimeline')}
                           </button>
                         </div>
                       )}
@@ -428,21 +435,21 @@ function App() {
                       {/* NIP-07でない場合の説明 */}
                       {postToTimeline && timelineText && !timelinePosted && !authState.isNip07 && (
                         <div className="timelinePostSection">
-                          <p>⚠️ タイムライン投稿にはNIP-07拡張機能でのログインが必要です</p>
+                          <p>⚠️ {t('auth.nip07Required')}</p>
                         </div>
                       )}
 
                       {/* タイムライン投稿完了 */}
                       {timelinePosted && (
                         <div className="timelinePostedMessage">
-                          <p>✅ タイムラインに投稿しました！</p>
+                          <p>{t('send.posted')}</p>
                         </div>
                       )}
 
                       {/* タイムライン投稿しない場合の共有UI */}
                       {(!postToTimeline || !timelineText) && !timelinePosted && (
                         <div className="manualShareSection">
-                          <p>タイムラインで共有してみんなに見てもらおう！</p>
+                          <p>{t('send.shareHint')}</p>
                           <textarea
                             className="shareTextarea"
                             value={shareText}
@@ -453,7 +460,7 @@ function App() {
                             onClick={handleCopyShareText}
                             className="copyButton"
                           >
-                            {shareTextCopied ? '✅ コピーしました！' : '📋 テキストをコピー'}
+                            {shareTextCopied ? t('send.copied') : t('send.copyUrl')}
                           </button>
                         </div>
                       )}
@@ -462,7 +469,7 @@ function App() {
                         onClick={handleCloseSendSuccess}
                         className="closeButton"
                       >
-                        閉じる
+                        {t('send.close')}
                       </button>
                     </div>
                   )}
@@ -472,12 +479,12 @@ function App() {
                       {/* 描き足し中の表示 */}
                       {extendingCard && (
                         <div className="extendingInfo">
-                          <span>✏️ 描き足し中</span>
+                          <span>✏️ {t('editor.extending')}</span>
                           <button 
                             onClick={() => setExtendingCard(null)}
                             className="cancelExtendButton"
                           >
-                            キャンセル
+                            {t('editor.cancelExtend')}
                           </button>
                         </div>
                       )}
@@ -488,7 +495,7 @@ function App() {
                           checked={allowExtend}
                           onChange={(e) => setAllowExtend(e.target.checked)}
                         />
-                        <span>描き足しを許可する</span>
+                        <span>{t('send.allowExtend')}</span>
                       </label>
                       <label className="timelineOption">
                         <input
@@ -496,14 +503,14 @@ function App() {
                           checked={postToTimeline}
                           onChange={(e) => setPostToTimeline(e.target.checked)}
                         />
-                        <span>タイムラインにも投稿する</span>
+                        <span>{t('send.postToTimeline')}</span>
                       </label>
                       <button
                         onClick={handleSendCard}
                         disabled={!editorIsValid || isSending}
                         className="sendButton"
                       >
-                        {isSending ? '送信中...' : extendingCard ? '✏️ 描き足して送信' : '🎨 送信する'}
+                        {isSending ? t('send.sending') : t('send.button')}
                       </button>
                     </>
                   )}
@@ -556,12 +563,12 @@ function App() {
 
       <footer className="footer">
         <p>
-          <strong>NostrDraw</strong> - Powered by{' '}
+          <strong>{t('app.title')}</strong> - Powered by{' '}
           <a href="https://nostr.com" target="_blank" rel="noopener noreferrer">
             Nostr
           </a>
         </p>
-        <p className="footerNote">kind: 31898 | 🎍 New Year 2026 Campaign</p>
+        <p className="footerNote">{t('app.footer')}</p>
       </footer>
     </div>
   );

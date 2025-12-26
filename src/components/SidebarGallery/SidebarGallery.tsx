@@ -1,6 +1,7 @@
 // サイドバーギャラリーコンポーネント - 人気/新着の作品を表示
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NewYearCardWithReactions } from '../../services/card';
@@ -48,12 +49,13 @@ export function SidebarGallery({
   signEvent,
   onExtend,
 }: SidebarGalleryProps) {
+  const { t } = useTranslation();
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
 
-  const title = type === 'popular' ? '🔥 人気' : '🆕 新着';
-  const subtitle = type === 'popular' ? '過去3日間' : '最新の投稿';
+  const title = type === 'popular' ? t('sidebar.popular') : t('sidebar.recent');
+  const subtitle = type === 'popular' ? t('sidebar.popularSub') : t('sidebar.recentSub');
 
   // プロフィールを取得
   useEffect(() => {
@@ -125,7 +127,7 @@ export function SidebarGallery({
           onClick={onRefresh}
           disabled={isLoading}
           className={styles.refreshButton}
-          title="更新"
+          title={t('viewer.refresh')}
         >
           🔄
         </button>
@@ -133,7 +135,7 @@ export function SidebarGallery({
 
       <div className={styles.content}>
         {isLoading && (
-          <div className={styles.loading}>読み込み中...</div>
+          <div className={styles.loading}>{t('card.loading')}</div>
         )}
 
         {error && (
@@ -141,7 +143,7 @@ export function SidebarGallery({
         )}
 
         {!isLoading && !error && cards.length === 0 && (
-          <div className={styles.empty}>まだ作品がありません</div>
+          <div className={styles.empty}>{t('viewer.noReceived')}</div>
         )}
 
         {!isLoading && !error && cards.length > 0 && (

@@ -1,6 +1,7 @@
 // カードフリップアニメーションコンポーネント
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile} from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById } from '../../../services/card';
@@ -27,6 +28,7 @@ export function CardFlip({
   signEvent,
   onExtend,
 }: CardFlipProps) {
+  const { t } = useTranslation();
   // 宛先がない場合は最初から裏面（絵柄面）を表示
   const hasRecipient = !!card.recipientPubkey;
   const [isFlipped, setIsFlipped] = useState(!hasRecipient);
@@ -203,7 +205,7 @@ export function CardFlip({
               </div>
             </div>
             <div className={styles.date}>{formatDate(card.createdAt)}</div>
-            <div className={styles.flipHint}>クリックして裏面を見る →</div>
+            <div className={styles.flipHint}>{t('card.flipHint')}</div>
           </div>
         </div>
 
@@ -211,7 +213,7 @@ export function CardFlip({
         <div className={styles.cardFace + ' ' + styles.cardBack}>
           <CardContent card={card} animatedSvg={animatedSvg} isLoadingParent={isLoadingParent} />
           {hasRecipient && (
-            <div className={styles.flipHintBack}>← クリックして表面に戻る</div>
+            <div className={styles.flipHintBack}>{t('card.flipBack')}</div>
           )}
         </div>
       </div>
@@ -223,7 +225,7 @@ export function CardFlip({
           className={`${styles.reactionButton} ${hasReacted ? styles.reacted : ''} ${showReactionAnimation ? styles.animating : ''}`}
           onClick={handleReaction}
           disabled={!signEvent || !userPubkey || hasReacted || isReacting}
-          title={hasReacted ? 'リアクション済み' : 'いいね！'}
+          title={hasReacted ? t('reaction.liked') : t('reaction.like')}
         >
           <span className={styles.heartIcon}>
             {hasReacted ? '❤️' : '🤍'}
@@ -240,10 +242,10 @@ export function CardFlip({
               onExtend(card);
               onClose?.();
             }}
-            title="この絵に描き足す"
+            title={t('extend.button')}
           >
             <span>✏️</span>
-            <span>描き足す</span>
+            <span>{t('extend.button').replace('✏️ ', '')}</span>
           </button>
         )}
         
@@ -262,7 +264,7 @@ export function CardFlip({
       {/* 描き足し元の表示 */}
       {card.parentEventId && (
         <div className={styles.parentInfo}>
-          <span>🔗 描き足し作品</span>
+          <span>{t('extend.label')}</span>
         </div>
       )}
     </div>
@@ -310,6 +312,7 @@ function CardContent({
   animatedSvg?: string | null;
   isLoadingParent?: boolean;
 }) {
+  const { t } = useTranslation();
   const layoutClass = styles[`layout_${card.layoutId}`] || styles.layout_vertical;
   
   // 描き足しアニメーション付きSVGがあればそれを使用
@@ -321,7 +324,7 @@ function CardContent({
     <div className={`${styles.content} ${layoutClass}`}>
       {isLoadingParent && (
         <div className={styles.loadingOverlay}>
-          <span>読み込み中...</span>
+          <span>{t('card.loading')}</span>
         </div>
       )}
       {card.layoutId === 'fullscreen' ? (
