@@ -1,4 +1,4 @@
-// Nostr年賀状サービス メインアプリケーション
+// NostrDraw - Nostrで絵を描いて送るサービス
 
 import { useState, useCallback, useMemo } from 'react';
 import { nip19 } from 'nostr-tools';
@@ -87,7 +87,7 @@ function App() {
     
     const recipientNpub = nip19.npubEncode(editorState.recipientPubkey);
     const lines = [
-      '🎍 年賀状 🎍',
+      '🎨 NostrDraw 🎍 New Year 2026',
       '',
       `To: ${recipientName} (nostr:${recipientNpub})`,
       '',
@@ -99,7 +99,7 @@ function App() {
     }
     
     // 注意: SVGは直接埋め込めないので説明を追加
-    lines.push('💌 この年賀状は専用クライアントでご覧ください');
+    lines.push('💌 NostrDrawでご覧ください');
     
     return lines.join('\n');
   }, [editorState.recipientPubkey, editorState.svg, editorState.message, recipientName]);
@@ -141,7 +141,7 @@ function App() {
     if (success) {
       resetEditor();
       refreshSent();
-      alert('年賀状を送信しました！🎍');
+      alert('送信しました！🎨');
     }
   };
 
@@ -154,8 +154,12 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1 className="logo">🎍 Nostr年賀状 🎍</h1>
-        <p className="tagline">2026年 午年 🐴</p>
+        <h1 className="logo">🎨 NostrDraw</h1>
+        <p className="tagline">Nostrで絵を描いて送ろう</p>
+        <div className="campaign">
+          <span className="campaignBadge">🎍 New Year 2026</span>
+          <span className="campaignText">年賀状キャンペーン開催中！ 🐴</span>
+        </div>
       </header>
 
       <main className="main">
@@ -193,13 +197,13 @@ function App() {
                   className={`viewButton ${activeView === 'create' ? 'active' : ''}`}
                   onClick={() => setActiveView('create')}
                 >
-                  ✍️ 年賀状を作成
+                  ✍️ 絵を描く
                 </button>
                 <button
                   className={`viewButton ${activeView === 'view' ? 'active' : ''}`}
                   onClick={() => setActiveView('view')}
                 >
-                  📬 年賀状を見る ({receivedCount})
+                  📬 受信ボックス ({receivedCount})
                 </button>
               </div>
             </section>
@@ -244,7 +248,7 @@ function App() {
                       disabled={!editorIsValid || isSending}
                       className="sendButton"
                     >
-                      {isSending ? '送信中...' : '🎍 年賀状を送信する'}
+                      {isSending ? '送信中...' : '🎨 送信する'}
                     </button>
                   )}
                   
@@ -308,12 +312,12 @@ function App() {
 
       <footer className="footer">
         <p>
-          Powered by{' '}
+          <strong>NostrDraw</strong> - Powered by{' '}
           <a href="https://nostr.com" target="_blank" rel="noopener noreferrer">
             Nostr
           </a>
         </p>
-        <p className="footerNote">独自kind: 31989</p>
+        <p className="footerNote">kind: 31989 | 🎍 New Year 2026 Campaign</p>
       </footer>
     </div>
   );

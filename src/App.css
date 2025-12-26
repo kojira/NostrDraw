@@ -1,4 +1,4 @@
-/* Nostr年賀状サービス メインスタイル */
+/* NostrDraw - メインスタイル */
 
 /* フォントインポート */
 @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
@@ -31,6 +31,39 @@
   font-size: 1rem;
   color: #888;
   margin: 0.5rem 0 0 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+/* キャンペーンバッジ */
+.campaign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.campaignBadge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.campaignText {
+  font-size: 0.9rem;
+  color: #aaa;
   font-family: 'Shippori Mincho', serif;
 }
 
