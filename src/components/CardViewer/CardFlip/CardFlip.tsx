@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { NewYearCard, NostrProfile} from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
-import { sendReaction, hasUserReacted, fetchReactionCounts } from '../../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById } from '../../../services/card';
+import { addAnimationToNewElements, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import styles from './CardFlip.module.css';
 
@@ -35,6 +36,10 @@ export function CardFlip({
   const [reactionCount, setReactionCount] = useState(0);
   const [isReacting, setIsReacting] = useState(false);
   const [showReactionAnimation, setShowReactionAnimation] = useState(false);
+  
+  // 描き足しアニメーション用の状態
+  const [animatedSvg, setAnimatedSvg] = useState<string | null>(null);
+  const [isLoadingParent, setIsLoadingParent] = useState(false);
 
   // リアクション状態を取得
   useEffect(() => {
@@ -52,6 +57,39 @@ export function CardFlip({
     
     loadReactionState();
   }, [card.id, userPubkey]);
+
+  // 描き足し投稿の場合、親SVGを取得してアニメーション付きSVGを生成
+  useEffect(() => {
+    const loadParentAndAnimate = async () => {
+      if (!card.parentEventId || !card.svg) {
+        setAnimatedSvg(null);
+        return;
+      }
+      
+      setIsLoadingParent(true);
+      
+      try {
+        const parentCard = await fetchCardById(card.parentEventId);
+        
+        if (parentCard?.svg) {
+          // 差分検出してアニメーションクラスを追加
+          const svgWithAnimation = addAnimationToNewElements(card.svg, parentCard.svg);
+          // アニメーションスタイルを注入
+          const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
+          setAnimatedSvg(finalSvg);
+        } else {
+          setAnimatedSvg(null);
+        }
+      } catch (error) {
+        console.error('親イベントの取得に失敗:', error);
+        setAnimatedSvg(null);
+      } finally {
+        setIsLoadingParent(false);
+      }
+    };
+    
+    loadParentAndAnimate();
+  }, [card.parentEventId, card.svg]);
 
   const handleFlip = () => {
     // 宛先がない場合はフリップしない（常に裏面表示）
@@ -156,7 +194,7 @@ export function CardFlip({
 
         {/* 裏面（絵柄面） */}
         <div className={styles.cardFace + ' ' + styles.cardBack}>
-          <CardContent card={card} />
+          <CardContent card={card} animatedSvg={animatedSvg} isLoadingParent={isLoadingParent} />
           {hasRecipient && (
             <div className={styles.flipHintBack}>← クリックして表面に戻る</div>
           )}
@@ -217,12 +255,21 @@ export function CardFlip({
 }
 
 // SVGを安全にレンダリングするためのコンポーネント
-function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
+function SvgRenderer({ 
+  svg, 
+  className,
+  forceDirectRender = false 
+}: { 
+  svg: string; 
+  className?: string;
+  forceDirectRender?: boolean;
+}) {
   // SVGに外部画像参照が含まれているかチェック
   const hasExternalImage = svg.includes('<image') && svg.includes('href=');
   
-  if (hasExternalImage) {
-    // 外部画像を含むSVGは直接HTMLとしてレンダリング（imgタグだとブロックされる）
+  // 直接レンダリングが必要な場合（アニメーション用）または外部画像がある場合
+  if (hasExternalImage || forceDirectRender) {
+    // 外部画像を含むSVGまたはアニメーション付きSVGは直接HTMLとしてレンダリング
     return (
       <div 
         className={className}
@@ -239,14 +286,32 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
 }
 
 // カードコンテンツ表示（レイアウト対応）
-function CardContent({ card }: { card: NewYearCard }) {
+function CardContent({ 
+  card, 
+  animatedSvg, 
+  isLoadingParent 
+}: { 
+  card: NewYearCard; 
+  animatedSvg?: string | null;
+  isLoadingParent?: boolean;
+}) {
   const layoutClass = styles[`layout_${card.layoutId}`] || styles.layout_vertical;
+  
+  // 描き足しアニメーション付きSVGがあればそれを使用
+  const displaySvg = animatedSvg || card.svg;
+  // アニメーション付きSVGは常に直接レンダリング（CSS animationを適用するため）
+  const forceDirectRender = !!animatedSvg;
 
   return (
     <div className={`${styles.content} ${layoutClass}`}>
+      {isLoadingParent && (
+        <div className={styles.loadingOverlay}>
+          <span>読み込み中...</span>
+        </div>
+      )}
       {card.layoutId === 'fullscreen' ? (
         <div className={styles.fullscreenLayout}>
-          {card.svg && <SvgRenderer svg={card.svg} className={styles.fullscreenImage} />}
+          {displaySvg && <SvgRenderer svg={displaySvg} className={styles.fullscreenImage} forceDirectRender={forceDirectRender} />}
           <div className={styles.fullscreenMessage}>
             <p>{card.message}</p>
           </div>
@@ -255,7 +320,7 @@ function CardContent({ card }: { card: NewYearCard }) {
         <div className={styles.classicLayout}>
           <div className={styles.classicInner}>
             <div className={styles.imageArea}>
-              {card.svg && <SvgRenderer svg={card.svg} className={styles.image} />}
+              {displaySvg && <SvgRenderer svg={displaySvg} className={styles.image} forceDirectRender={forceDirectRender} />}
             </div>
             <div className={styles.messageArea}>
               <p>{card.message}</p>
@@ -265,7 +330,7 @@ function CardContent({ card }: { card: NewYearCard }) {
       ) : (
         <>
           <div className={styles.imageArea}>
-            {card.svg && <SvgRenderer svg={card.svg} className={styles.image} />}
+            {displaySvg && <SvgRenderer svg={displaySvg} className={styles.image} forceDirectRender={forceDirectRender} />}
           </div>
           <div className={styles.messageArea}>
             <p>{card.message}</p>
