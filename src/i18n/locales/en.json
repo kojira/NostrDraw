@@ -109,7 +109,14 @@
   "relay": {
     "title": "Relay Settings",
     "add": "Add",
-    "urlPlaceholder": "wss://relay.example.com"
+    "urlPlaceholder": "wss://relay.example.com",
+    "fetchFromNip65": "📡 Fetch Relay List",
+    "fetchFromNip07": "🔑 Fetch from NIP-07",
+    "reset": "Reset to Default",
+    "fetching": "Fetching...",
+    "noRelaysFound": "No relay information found",
+    "fetchError": "Failed to fetch relay information",
+    "alreadyAdded": "All relays are already added"
   },
   "language": {
     "label": "Language",

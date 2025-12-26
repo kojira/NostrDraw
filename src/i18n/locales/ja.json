@@ -109,7 +109,14 @@
   "relay": {
     "title": "リレー設定",
     "add": "追加",
-    "urlPlaceholder": "wss://relay.example.com"
+    "urlPlaceholder": "wss://relay.example.com",
+    "fetchFromNip65": "📡 リレーリストを取得",
+    "fetchFromNip07": "🔑 NIP-07からリレーを取得",
+    "reset": "デフォルトに戻す",
+    "fetching": "取得中...",
+    "noRelaysFound": "リレー情報が見つかりませんでした",
+    "fetchError": "リレー情報の取得に失敗しました",
+    "alreadyAdded": "全てのリレーは既に追加されています"
   },
   "language": {
     "label": "言語",

@@ -6,6 +6,31 @@ import { DEFAULT_RELAYS, type RelayConfig } from '../types';
 let pool: SimplePool | null = null;
 let activeRelays: RelayConfig[] = [...DEFAULT_RELAYS];
 
+// シードリレー（NIP-65取得用）
+// 日本語圏向け
+const SEED_RELAYS_JA: string[] = [
+  'wss://yabu.me',
+  'wss://r.kojira.io',
+  'wss://relay-jp.nostr.wirednet.jp',
+];
+
+// 英語圏向け
+const SEED_RELAYS_EN: string[] = [
+  'wss://relay.damus.io',
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://relay.snort.social',
+  'wss://purplepag.es',
+];
+
+// 言語に応じたシードリレーを取得
+export function getSeedRelays(language: string): string[] {
+  if (language.startsWith('ja')) {
+    return SEED_RELAYS_JA;
+  }
+  return [...SEED_RELAYS_EN, ...SEED_RELAYS_JA.slice(0, 1)]; // 英語圏 + yabu.me（国際リレー）
+}
+
 export function getPool(): SimplePool {
   if (!pool) {
     pool = new SimplePool();
@@ -58,6 +83,51 @@ export function closePool(): void {
   if (pool) {
     pool.close(getReadRelayUrls());
     pool = null;
+  }
+}
+
+// NIP-65: ユーザーのリレーリストを取得
+export async function fetchUserRelayList(pubkey: string, language: string = 'ja'): Promise<RelayConfig[]> {
+  const p = getPool();
+  const seedRelays = getSeedRelays(language);
+  
+  try {
+    // kind:10002 (NIP-65 Relay List Metadata) を取得
+    const events = await p.querySync(seedRelays, {
+      kinds: [10002],
+      authors: [pubkey],
+      limit: 1,
+    });
+    
+    if (events.length === 0) {
+      console.log('NIP-65 relay list not found for user');
+      return [];
+    }
+    
+    // 最新のイベントを使用
+    const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+    
+    const relays: RelayConfig[] = [];
+    
+    // "r" タグからリレーを抽出
+    for (const tag of latestEvent.tags) {
+      if (tag[0] === 'r' && tag[1]) {
+        const url = tag[1];
+        const marker = tag[2]; // "read" or "write" or undefined (both)
+        
+        relays.push({
+          url,
+          read: marker === undefined || marker === 'read',
+          write: marker === undefined || marker === 'write',
+        });
+      }
+    }
+    
+    console.log(`Found ${relays.length} relays from NIP-65`);
+    return relays;
+  } catch (error) {
+    console.error('Failed to fetch NIP-65 relay list:', error);
+    return [];
   }
 }
 

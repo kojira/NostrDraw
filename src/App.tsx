@@ -16,6 +16,7 @@ import { useNostr, useFollowees } from './hooks/useNostr';
 import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useCardEditor, useSendCard } from './hooks/useCards';
 import { fetchCardById } from './services/card';
 import { pubkeyToNpub } from './services/profile';
+import { fetchUserRelayList } from './services/relay';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import './App.css';
 
@@ -151,6 +152,14 @@ function App() {
       updateRelays([...relays, ...nip07Relays.filter(r => !relays.some(existing => existing.url === r.url))]);
     }
     return nip07Relays;
+  }, [getRelaysFromNip07, relays, updateRelays]);
+
+  // NIP-65からリレーを取得（npub紐づきリレーリスト）
+  const handleFetchRelaysFromNip65 = useCallback(async () => {
+    if (!authState.pubkey) return [];
+    const currentLang = t('language.label') === 'Language' ? 'en' : 'ja';
+    const nip65Relays = await fetchUserRelayList(authState.pubkey, currentLang);
+    return nip65Relays;
   }, [getRelaysFromNip07, relays, updateRelays]);
 
   // 送信後の共有テキストを生成
@@ -353,7 +362,9 @@ function App() {
                 onRemoveRelay={removeRelay}
                 onResetToDefault={resetToDefaultRelays}
                 onFetchFromNip07={authState.isNip07 ? handleFetchRelaysFromNip07 : undefined}
+                onFetchFromNip65={handleFetchRelaysFromNip65}
                 isNip07LoggedIn={authState.isNip07}
+                userPubkey={authState.pubkey}
               />
             </section>
 

@@ -1,6 +1,7 @@
 // リレー設定コンポーネント
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { RelayConfig } from '../../types';
 import styles from './RelaySettings.module.css';
 
@@ -10,7 +11,9 @@ interface RelaySettingsProps {
   onRemoveRelay: (url: string) => void;
   onResetToDefault: () => void;
   onFetchFromNip07?: () => Promise<RelayConfig[] | null>;
+  onFetchFromNip65?: () => Promise<RelayConfig[]>;
   isNip07LoggedIn: boolean;
+  userPubkey?: string | null;
 }
 
 export function RelaySettings({
@@ -19,12 +22,16 @@ export function RelaySettings({
   onRemoveRelay,
   onResetToDefault,
   onFetchFromNip07,
+  onFetchFromNip65,
   isNip07LoggedIn,
+  userPubkey,
 }: RelaySettingsProps) {
+  const { t } = useTranslation();
   const [newRelayUrl, setNewRelayUrl] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingNip65, setIsLoadingNip65] = useState(false);
 
   const handleAddRelay = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,12 +73,41 @@ export function RelaySettings({
           }
         });
       } else {
-        setError('リレー情報を取得できませんでした');
+        setError(t('relay.noRelaysFound'));
       }
     } catch {
-      setError('リレー情報の取得に失敗しました');
+      setError(t('relay.fetchError'));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFetchFromNip65 = async () => {
+    if (!onFetchFromNip65) return;
+
+    setIsLoadingNip65(true);
+    setError(null);
+
+    try {
+      const nip65Relays = await onFetchFromNip65();
+      if (nip65Relays && nip65Relays.length > 0) {
+        let addedCount = 0;
+        nip65Relays.forEach(relay => {
+          if (!relays.some(r => r.url === relay.url)) {
+            onAddRelay(relay);
+            addedCount++;
+          }
+        });
+        if (addedCount === 0) {
+          setError(t('relay.alreadyAdded'));
+        }
+      } else {
+        setError(t('relay.noRelaysFound'));
+      }
+    } catch {
+      setError(t('relay.fetchError'));
+    } finally {
+      setIsLoadingNip65(false);
     }
   };
 
@@ -81,7 +117,7 @@ export function RelaySettings({
         onClick={() => setIsExpanded(!isExpanded)}
         className={styles.toggleButton}
       >
-        <span>リレー設定</span>
+        <span>{t('relay.title')}</span>
         <span className={styles.count}>({relays.length})</span>
         <span className={`${styles.arrow} ${isExpanded ? styles.expanded : ''}`}>
           ▼
@@ -116,11 +152,11 @@ export function RelaySettings({
               type="text"
               value={newRelayUrl}
               onChange={(e) => setNewRelayUrl(e.target.value)}
-              placeholder="wss://relay.example.com"
+              placeholder={t('relay.urlPlaceholder')}
               className={styles.input}
             />
             <button type="submit" className={styles.addButton}>
-              追加
+              {t('relay.add')}
             </button>
           </form>
 
@@ -128,17 +164,28 @@ export function RelaySettings({
 
           {/* アクションボタン */}
           <div className={styles.actions}>
+            {/* NIP-65からリレーを取得（npub ログインでも使用可能） */}
+            {userPubkey && onFetchFromNip65 && (
+              <button
+                onClick={handleFetchFromNip65}
+                disabled={isLoadingNip65}
+                className={styles.actionButton}
+              >
+                {isLoadingNip65 ? t('relay.fetching') : t('relay.fetchFromNip65')}
+              </button>
+            )}
+            {/* NIP-07からリレーを取得（NIP-07ログイン時のみ） */}
             {isNip07LoggedIn && onFetchFromNip07 && (
               <button
                 onClick={handleFetchFromNip07}
                 disabled={isLoading}
                 className={styles.actionButton}
               >
-                {isLoading ? '取得中...' : 'NIP-07からリレーを取得'}
+                {isLoading ? t('relay.fetching') : t('relay.fetchFromNip07')}
               </button>
             )}
             <button onClick={onResetToDefault} className={styles.actionButton}>
-              デフォルトに戻す
+              {t('relay.reset')}
             </button>
           </div>
         </div>
