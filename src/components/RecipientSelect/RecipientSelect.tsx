@@ -22,6 +22,7 @@ export function RecipientSelect({
   error,
   onRefresh,
 }: RecipientSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [manualNpub, setManualNpub] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
@@ -85,121 +86,152 @@ export function RecipientSelect({
 
   return (
     <div className={styles.recipientSelect}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>宛先を選択 <span className={styles.optional}>（任意）</span></h3>
-        <button
-          onClick={onRefresh}
-          disabled={isLoading}
-          className={styles.refreshButton}
-          title="フォロイーを再読み込み"
-        >
-          {isLoading ? '読込中...' : '🔄'}
-        </button>
-      </div>
-
-      {error && <p className={styles.error}>{error}</p>}
-
-      {/* 選択中の宛先 */}
-      {selectedPubkey && (
-        <div className={styles.selected}>
-          <span className={styles.selectedLabel}>選択中:</span>
-          <div className={styles.selectedProfile}>
+      <div 
+        className={styles.header}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h3 className={styles.title}>
+          <span className={styles.toggleIcon}>{isOpen ? '▼' : '▶'}</span>
+          宛先を選択 <span className={styles.optional}>（任意）</span>
+        </h3>
+        {/* 選択中の宛先をヘッダーに表示 */}
+        {selectedPubkey && !isOpen && (
+          <div className={styles.selectedBadge}>
             {selectedProfile?.picture && (
               <img
                 src={selectedProfile.picture}
                 alt=""
-                className={styles.selectedAvatar}
+                className={styles.selectedBadgeAvatar}
               />
             )}
-            <span className={styles.selectedName}>
-              {selectedProfile ? getDisplayName(selectedProfile) : pubkeyToNpub(selectedPubkey).slice(0, 16) + '...'}
+            <span className={styles.selectedBadgeName}>
+              {selectedProfile ? getDisplayName(selectedProfile) : pubkeyToNpub(selectedPubkey).slice(0, 12) + '...'}
             </span>
           </div>
-          <button
-            onClick={() => onSelect(null)}
-            className={styles.clearButton}
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* 検索入力 */}
-      <div className={styles.searchContainer}>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="名前、display_name、npubで検索..."
-          className={styles.searchInput}
-        />
-      </div>
-
-      {/* フォロイーリスト */}
-      <div className={styles.listContainer}>
-        {isLoading ? (
-          <div className={styles.loading}>フォロイーを読み込み中...</div>
-        ) : filteredFollowees.length === 0 ? (
-          <div className={styles.empty}>
-            {searchQuery ? '該当するフォロイーが見つかりません' : 'フォロイーがいません'}
-          </div>
-        ) : (
-          <ul className={styles.list}>
-            {filteredFollowees.map((profile) => (
-              <li
-                key={profile.pubkey}
-                className={`${styles.item} ${profile.pubkey === selectedPubkey ? styles.itemSelected : ''}`}
-                onClick={() => onSelect(profile.pubkey)}
-              >
-                {profile.picture ? (
-                  <img
-                    src={profile.picture}
-                    alt=""
-                    className={styles.avatar}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className={styles.avatarPlaceholder}>👤</div>
-                )}
-                <div className={styles.profileInfo}>
-                  <span className={styles.name}>{getDisplayName(profile)}</span>
-                  {profile.name && profile.display_name && profile.name !== profile.display_name && (
-                    <span className={styles.subName}>@{profile.name}</span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
         )}
       </div>
 
-      {/* 手動入力トグル */}
-      <div className={styles.manualSection}>
-        <button
-          onClick={() => setShowManualInput(!showManualInput)}
-          className={styles.manualToggle}
-        >
-          {showManualInput ? '閉じる' : 'npubを直接入力'}
-        </button>
+      {isOpen && (
+        <div className={styles.content}>
+          <div className={styles.headerActions}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRefresh();
+              }}
+              disabled={isLoading}
+              className={styles.refreshButton}
+              title="フォロイーを再読み込み"
+            >
+              {isLoading ? '読込中...' : '🔄'}
+            </button>
+          </div>
 
-        {showManualInput && (
-          <form onSubmit={handleManualSubmit} className={styles.manualForm}>
+          {error && <p className={styles.error}>{error}</p>}
+
+          {/* 選択中の宛先 */}
+          {selectedPubkey && (
+            <div className={styles.selected}>
+              <span className={styles.selectedLabel}>選択中:</span>
+              <div className={styles.selectedProfile}>
+                {selectedProfile?.picture && (
+                  <img
+                    src={selectedProfile.picture}
+                    alt=""
+                    className={styles.selectedAvatar}
+                  />
+                )}
+                <span className={styles.selectedName}>
+                  {selectedProfile ? getDisplayName(selectedProfile) : pubkeyToNpub(selectedPubkey).slice(0, 16) + '...'}
+                </span>
+              </div>
+              <button
+                onClick={() => onSelect(null)}
+                className={styles.clearButton}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* 検索入力 */}
+          <div className={styles.searchContainer}>
             <input
               type="text"
-              value={manualNpub}
-              onChange={(e) => setManualNpub(e.target.value)}
-              placeholder="npub1..."
-              className={styles.manualInput}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="名前、display_name、npubで検索..."
+              className={styles.searchInput}
             />
-            <button type="submit" className={styles.manualSubmit}>
-              選択
+          </div>
+
+          {/* フォロイーリスト */}
+          <div className={styles.listContainer}>
+            {isLoading ? (
+              <div className={styles.loading}>フォロイーを読み込み中...</div>
+            ) : filteredFollowees.length === 0 ? (
+              <div className={styles.empty}>
+                {searchQuery ? '該当するフォロイーが見つかりません' : 'フォロイーがいません'}
+              </div>
+            ) : (
+              <ul className={styles.list}>
+                {filteredFollowees.map((profile) => (
+                  <li
+                    key={profile.pubkey}
+                    className={`${styles.item} ${profile.pubkey === selectedPubkey ? styles.itemSelected : ''}`}
+                    onClick={() => onSelect(profile.pubkey)}
+                  >
+                    {profile.picture ? (
+                      <img
+                        src={profile.picture}
+                        alt=""
+                        className={styles.avatar}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className={styles.avatarPlaceholder}>👤</div>
+                    )}
+                    <div className={styles.profileInfo}>
+                      <span className={styles.name}>{getDisplayName(profile)}</span>
+                      {profile.name && profile.display_name && profile.name !== profile.display_name && (
+                        <span className={styles.subName}>@{profile.name}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* 手動入力トグル */}
+          <div className={styles.manualSection}>
+            <button
+              onClick={() => setShowManualInput(!showManualInput)}
+              className={styles.manualToggle}
+            >
+              {showManualInput ? '閉じる' : 'npubを直接入力'}
             </button>
-          </form>
-        )}
-        {manualError && <p className={styles.error}>{manualError}</p>}
-      </div>
+
+            {showManualInput && (
+              <form onSubmit={handleManualSubmit} className={styles.manualForm}>
+                <input
+                  type="text"
+                  value={manualNpub}
+                  onChange={(e) => setManualNpub(e.target.value)}
+                  placeholder="npub1..."
+                  className={styles.manualInput}
+                />
+                <button type="submit" className={styles.manualSubmit}>
+                  選択
+                </button>
+              </form>
+            )}
+            {manualError && <p className={styles.error}>{manualError}</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

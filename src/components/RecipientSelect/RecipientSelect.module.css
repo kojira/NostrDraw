@@ -11,10 +11,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.header:hover {
+  opacity: 0.8;
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1rem;
   font-weight: 600;
   color: #e94560;
@@ -22,10 +32,67 @@
   font-family: 'Shippori Mincho', serif;
 }
 
+.toggleIcon {
+  font-size: 0.7rem;
+  color: #888;
+  transition: transform 0.2s ease;
+}
+
 .optional {
   font-size: 0.8rem;
   font-weight: 400;
   color: #888;
+}
+
+/* 閉じているときにヘッダーに表示する選択バッジ */
+.selectedBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(233, 69, 96, 0.15);
+  border-radius: 1rem;
+  max-width: 150px;
+}
+
+.selectedBadgeAvatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.selectedBadgeName {
+  font-size: 0.8rem;
+  color: #e94560;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* コンテンツ領域 */
+.content {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 0.5rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.headerActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
 }
 
 .refreshButton {
