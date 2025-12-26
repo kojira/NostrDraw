@@ -322,36 +322,71 @@
 /* リサイズハンドル */
 .resizeHandle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   background: #e94560;
   border: 2px solid #fff;
-  border-radius: 2px;
+  border-radius: 3px;
   z-index: 10;
+  touch-action: none;
 }
 
 .resizeNW {
-  top: -6px;
-  left: -6px;
+  top: -8px;
+  left: -8px;
   cursor: nwse-resize;
 }
 
 .resizeNE {
-  top: -6px;
-  right: -6px;
+  top: -8px;
+  right: -8px;
   cursor: nesw-resize;
 }
 
 .resizeSW {
-  bottom: -6px;
-  left: -6px;
+  bottom: -8px;
+  left: -8px;
   cursor: nesw-resize;
 }
 
 .resizeSE {
-  bottom: -6px;
-  right: -6px;
+  bottom: -8px;
+  right: -8px;
   cursor: nwse-resize;
+}
+
+/* スマホ向けにハンドルを大きく */
+@media (max-width: 768px) {
+  .resizeHandle {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+  }
+  
+  .resizeNW {
+    top: -12px;
+    left: -12px;
+  }
+  
+  .resizeNE {
+    top: -12px;
+    right: -12px;
+  }
+  
+  .resizeSW {
+    bottom: -12px;
+    left: -12px;
+  }
+  
+  .resizeSE {
+    bottom: -12px;
+    right: -12px;
+  }
+  
+  .moveHandle {
+    /* タッチ操作しやすいように */
+    min-height: 44px;
+  }
 }
 
 /* スタンプパレット */

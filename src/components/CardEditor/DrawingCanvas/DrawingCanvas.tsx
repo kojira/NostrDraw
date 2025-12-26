@@ -58,9 +58,9 @@ export function DrawingCanvas({
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
-    handleTextBoxMouseDown,
-    handleOverlayMouseMove,
-    handleOverlayMouseUp,
+    handleTextBoxPointerDown,
+    handleOverlayPointerMove,
+    handleOverlayPointerUp,
   } = useDrawingCanvas({ width, height, initialMessage });
 
   const handleSave = useCallback(() => {
@@ -194,9 +194,11 @@ export function DrawingCanvas({
         <div
           ref={overlayRef}
           className={styles.canvasOverlay}
-          onMouseMove={handleOverlayMouseMove}
-          onMouseUp={handleOverlayMouseUp}
-          onMouseLeave={handleOverlayMouseUp}
+          onPointerMove={handleOverlayPointerMove}
+          onPointerUp={handleOverlayPointerUp}
+          onPointerLeave={handleOverlayPointerUp}
+          onTouchMove={handleOverlayPointerMove}
+          onTouchEnd={handleOverlayPointerUp}
           style={{ pointerEvents: tool === 'text' ? 'auto' : 'none' }}
         >
           {textBoxes.map((tb) => {
@@ -228,23 +230,28 @@ export function DrawingCanvas({
                   <>
                     <div
                       className={styles.moveHandle}
-                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'move')}
+                      onPointerDown={(e) => handleTextBoxPointerDown(e, tb.id, 'move')}
+                      onTouchStart={(e) => handleTextBoxPointerDown(e, tb.id, 'move')}
                     />
                     <div
                       className={`${styles.resizeHandle} ${styles.resizeNW}`}
-                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-nw')}
+                      onPointerDown={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-nw')}
+                      onTouchStart={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-nw')}
                     />
                     <div
                       className={`${styles.resizeHandle} ${styles.resizeNE}`}
-                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-ne')}
+                      onPointerDown={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-ne')}
+                      onTouchStart={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-ne')}
                     />
                     <div
                       className={`${styles.resizeHandle} ${styles.resizeSW}`}
-                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-sw')}
+                      onPointerDown={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-sw')}
+                      onTouchStart={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-sw')}
                     />
                     <div
                       className={`${styles.resizeHandle} ${styles.resizeSE}`}
-                      onMouseDown={(e) => handleTextBoxMouseDown(e, tb.id, 'resize-se')}
+                      onPointerDown={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-se')}
+                      onTouchStart={(e) => handleTextBoxPointerDown(e, tb.id, 'resize-se')}
                     />
                   </>
                 )}

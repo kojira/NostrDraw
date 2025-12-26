@@ -432,29 +432,54 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
 </svg>`;
   }, [strokes, placedStamps, width, height, pointsToPath, selectedTemplate, textBoxes]);
 
-  // テキストボックスのドラッグハンドラ
-  const handleTextBoxMouseDown = useCallback((e: React.MouseEvent, id: string, mode: DragMode) => {
+  // テキストボックスのドラッグハンドラ（マウス・タッチ両対応）
+  const handleTextBoxPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: DragMode) => {
     e.stopPropagation();
     e.preventDefault();
     setSelectedTextBoxId(id);
     setDragMode(mode);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    
+    // タッチとマウス両方に対応
+    let clientX: number, clientY: number;
+    if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ('clientX' in e) {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      return;
+    }
+    
+    setDragStart({ x: clientX, y: clientY });
     const tb = textBoxes.find(t => t.id === id);
     if (tb) setTextBoxStart({ ...tb });
   }, [textBoxes]);
 
-  const handleOverlayMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleOverlayPointerMove = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
     if (dragMode === 'none' || !dragStart || !textBoxStart || !selectedTextBoxId) return;
 
     const overlay = overlayRef.current;
     if (!overlay) return;
 
+    // タッチとマウス両方に対応
+    let clientX: number, clientY: number;
+    if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ('clientX' in e) {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      return;
+    }
+
     const rect = overlay.getBoundingClientRect();
     const scaleX = width / rect.width;
     const scaleY = height / rect.height;
 
-    const dx = (e.clientX - dragStart.x) * scaleX;
-    const dy = (e.clientY - dragStart.y) * scaleY;
+    const dx = (clientX - dragStart.x) * scaleX;
+    const dy = (clientY - dragStart.y) * scaleY;
 
     const updateBox = (updates: Partial<TextBox>) => {
       setTextBoxes(prev => prev.map(tb =>
@@ -489,18 +514,16 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     }
   }, [dragMode, dragStart, textBoxStart, selectedTextBoxId, width, height]);
 
-  const handleOverlayMouseUp = useCallback(() => {
+  const handleOverlayPointerUp = useCallback(() => {
     setDragMode('none');
     setDragStart(null);
     setTextBoxStart(null);
   }, []);
 
   // 後方互換性のためのエイリアス
-  const handleMessageBoxMouseDown = useCallback((e: React.MouseEvent, mode: DragMode) => {
-    if (selectedTextBoxId) {
-      handleTextBoxMouseDown(e, selectedTextBoxId, mode);
-    }
-  }, [selectedTextBoxId, handleTextBoxMouseDown]);
+  const handleTextBoxMouseDown = handleTextBoxPointerDown;
+  const handleOverlayMouseMove = handleOverlayPointerMove;
+  const handleOverlayMouseUp = handleOverlayPointerUp;
 
   // ツール変更時のリセット
   const selectTool = useCallback((newTool: ToolType) => {
@@ -568,9 +591,11 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handleTextBoxPointerDown,
     handleTextBoxMouseDown,
-    handleMessageBoxMouseDown,
+    handleOverlayPointerMove,
     handleOverlayMouseMove,
+    handleOverlayPointerUp,
     handleOverlayMouseUp,
   };
 }
