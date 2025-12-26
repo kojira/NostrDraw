@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SimplePool } from 'nostr-tools';
 import type { NewYearCard } from './types';
 import { Auth } from './components/Auth';
 import { RelaySettings } from './components/RelaySettings';
@@ -16,7 +15,7 @@ import { useNostr, useFollowees } from './hooks/useNostr';
 import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useCardEditor, useSendCard } from './hooks/useCards';
 import { fetchCardById } from './services/card';
 import { pubkeyToNpub } from './services/profile';
-import { fetchUserRelayList } from './services/relay';
+import { fetchUserRelayList, publishEvent } from './services/relay';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import './App.css';
 
@@ -238,29 +237,43 @@ function App() {
       }
 
       console.log('タイムライン投稿開始:', { timelineText, tags });
+      console.log('NIP-07状態:', { isNip07: authState.isNip07, hasNostr: !!window.nostr });
       
-      const timelineEvent = await signEvent({
-        kind: 1,
-        content: timelineText,
-        tags,
-        created_at: Math.floor(Date.now() / 1000),
-      });
+      if (!window.nostr) {
+        throw new Error('NIP-07拡張機能が利用できません。デスクトップブラウザでnos2xやAlbyなどの拡張機能を使用してください。');
+      }
+      
+      let timelineEvent;
+      try {
+        timelineEvent = await signEvent({
+          kind: 1,
+          content: timelineText,
+          tags,
+          created_at: Math.floor(Date.now() / 1000),
+        });
+      } catch (signError) {
+        console.error('署名エラー:', signError);
+        throw new Error(`署名に失敗しました: ${signError instanceof Error ? signError.message : '不明なエラー'}`);
+      }
       
       console.log('署名済みイベント:', timelineEvent);
 
-      // タイムラインイベントを発行
-      const relayUrls = relays.map(r => r.url);
-      console.log('リレーに発行:', relayUrls);
+      // タイムラインイベントを発行（sendCardと同じpublishEvent関数を使用）
+      console.log('リレーに発行');
       
-      const pool = new SimplePool();
-      await Promise.any(pool.publish(relayUrls, timelineEvent));
-      pool.close(relayUrls);
+      try {
+        await publishEvent(timelineEvent);
+      } catch (publishError) {
+        console.error('発行エラー:', publishError);
+        throw new Error('リレーへの発行に失敗しました。ネットワーク接続を確認してください。');
+      }
       
       console.log('タイムライン投稿成功');
       setTimelinePosted(true);
     } catch (err) {
       console.error('タイムライン投稿に失敗:', err);
-      alert('タイムライン投稿に失敗しました。もう一度お試しください。');
+      const errorMessage = err instanceof Error ? err.message : 'タイムライン投稿に失敗しました';
+      alert(errorMessage);
     } finally {
       setIsPostingTimeline(false);
     }
