@@ -54,6 +54,17 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
   }
 }
 
+// イベントIDからカードを取得
+export async function fetchCardById(eventId: string): Promise<NewYearCard | null> {
+  const events = await fetchEvents({
+    ids: [eventId],
+    kinds: [NEW_YEAR_CARD_KIND],
+  });
+
+  if (events.length === 0) return null;
+  return parseNewYearCard(events[0]);
+}
+
 export async function fetchReceivedCards(pubkey: string): Promise<NewYearCard[]> {
   const events = await fetchEvents({
     kinds: [NEW_YEAR_CARD_KIND],

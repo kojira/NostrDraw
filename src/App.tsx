@@ -1,7 +1,8 @@
 // NostrDraw - Nostrで絵を描いて送るサービス
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { nip19 } from 'nostr-tools';
+import type { NewYearCard } from './types';
 import { Auth } from './components/Auth';
 import { RelaySettings } from './components/RelaySettings';
 import { RecipientSelect } from './components/RecipientSelect';
@@ -10,6 +11,8 @@ import { CardViewer } from './components/CardViewer';
 import { useAuth } from './hooks/useAuth';
 import { useNostr, useFollowees } from './hooks/useNostr';
 import { useReceivedCards, useSentCards, useCardEditor, useSendCard } from './hooks/useCards';
+import { fetchCardById } from './services/card';
+import { CardFlip } from './components/CardViewer/CardFlip';
 import { ETO_IMAGES } from './data/etoGallery';
 import './App.css';
 
@@ -71,6 +74,35 @@ function App() {
 
   const [activeView, setActiveView] = useState<'create' | 'view'>('create');
   const [copied, setCopied] = useState(false);
+  const [lastSentEventId, setLastSentEventId] = useState<string | null>(null);
+  const [shareTextCopied, setShareTextCopied] = useState(false);
+  
+  // URLパラメータからeventidを取得して表示するカード
+  const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
+  const [isLoadingSharedCard, setIsLoadingSharedCard] = useState(false);
+
+  // NostrDrawのベースURL
+  const BASE_URL = 'https://kojira.github.io/NostrDraw';
+
+  // URLパラメータのeventidをチェック
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('eventid');
+    
+    if (eventId) {
+      setIsLoadingSharedCard(true);
+      fetchCardById(eventId)
+        .then((card) => {
+          setSharedCard(card);
+        })
+        .catch((err) => {
+          console.error('カードの読み込みに失敗:', err);
+        })
+        .finally(() => {
+          setIsLoadingSharedCard(false);
+        });
+    }
+  }, []);
 
   // 宛先のプロフィール名を取得
   const recipientName = useMemo(() => {
@@ -124,25 +156,48 @@ function App() {
     return nip07Relays;
   }, [getRelaysFromNip07, relays, updateRelays]);
 
-  // 年賀状を送信（SVGをイベントに直接埋め込み）
+  // 送信後の共有テキストを生成
+  const shareText = useMemo(() => {
+    if (!lastSentEventId) return '';
+    const url = `${BASE_URL}?eventid=${lastSentEventId}`;
+    return `🎨 NostrDraw 🎍 New Year 2026\n\n${editorState.message || ''}\n\n${url}\n\n#NostrDraw #年賀状 #NewYear2026`;
+  }, [lastSentEventId, editorState.message, BASE_URL]);
+
+  // 共有テキストをコピー
+  const handleCopyShareText = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setShareTextCopied(true);
+      setTimeout(() => setShareTextCopied(false), 2000);
+    } catch (err) {
+      console.error('コピーに失敗しました:', err);
+    }
+  }, [shareText]);
+
+  // 送信（SVGをイベントに直接埋め込み）
   const handleSendCard = async () => {
     if (!editorState.recipientPubkey || !editorState.svg) {
       return;
     }
 
-    const success = await sendCard({
+    const eventId = await sendCard({
       recipientPubkey: editorState.recipientPubkey,
       svg: editorState.svg,
       message: editorState.message,
       layoutId: editorState.layoutId,
-      year: 2026, // 2026年の年賀状
+      year: 2026,
     });
 
-    if (success) {
-      resetEditor();
+    if (eventId) {
+      setLastSentEventId(eventId);
       refreshSent();
-      alert('送信しました！🎨');
     }
+  };
+
+  // 送信完了ダイアログを閉じる
+  const handleCloseSendSuccess = () => {
+    setLastSentEventId(null);
+    resetEditor();
   };
 
   // カード一覧を更新
@@ -163,6 +218,36 @@ function App() {
       </header>
 
       <main className="main">
+        {/* 共有カード表示（URLパラメータからeventidがある場合） */}
+        {(sharedCard || isLoadingSharedCard) && (
+          <section className="section sharedCardSection">
+            <h2 className="sharedCardTitle">🎨 共有されたカード</h2>
+            {isLoadingSharedCard ? (
+              <p className="loading">読み込み中...</p>
+            ) : sharedCard ? (
+              <>
+                <div className="sharedCardContainer">
+                  <CardFlip card={sharedCard} />
+                </div>
+                <div className="sharedCardActions">
+                  <button
+                    onClick={() => {
+                      // URLパラメータを削除
+                      window.history.replaceState({}, '', window.location.pathname);
+                      setSharedCard(null);
+                    }}
+                    className="closeButton"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="error">カードが見つかりませんでした</p>
+            )}
+          </section>
+        )}
+
         {/* 認証セクション */}
         <section className="section">
           <Auth
@@ -242,7 +327,35 @@ function App() {
                     <p className="error">{sendError}</p>
                   )}
                   
-                  {authState.isNip07 && (
+                  {/* 送信成功時の共有UI */}
+                  {lastSentEventId && (
+                    <div className="sendSuccess">
+                      <h3>🎉 送信完了！</h3>
+                      <p>タイムラインで共有してみんなに見てもらおう！</p>
+                      <textarea
+                        className="shareTextarea"
+                        value={shareText}
+                        readOnly
+                        rows={6}
+                      />
+                      <div className="shareButtons">
+                        <button
+                          onClick={handleCopyShareText}
+                          className="copyButton"
+                        >
+                          {shareTextCopied ? '✅ コピーしました！' : '📋 テキストをコピー'}
+                        </button>
+                        <button
+                          onClick={handleCloseSendSuccess}
+                          className="closeButton"
+                        >
+                          閉じる
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {authState.isNip07 && !lastSentEventId && (
                     <button
                       onClick={handleSendCard}
                       disabled={!editorIsValid || isSending}

@@ -82,17 +82,20 @@ export function useSentCards(pubkey: string | null) {
 export function useSendCard(signEvent: (event: EventTemplate) => Promise<Event>) {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
-  const send = useCallback(async (params: SendCardParams): Promise<boolean> => {
+  const send = useCallback(async (params: SendCardParams): Promise<string | null> => {
     setIsSending(true);
     setError(null);
+    setLastEventId(null);
 
     try {
-      await sendCard(params, signEvent);
-      return true;
+      const event = await sendCard(params, signEvent);
+      setLastEventId(event.id);
+      return event.id;
     } catch (err) {
-      setError(err instanceof Error ? err.message : '年賀状の送信に失敗しました');
-      return false;
+      setError(err instanceof Error ? err.message : '送信に失敗しました');
+      return null;
     } finally {
       setIsSending(false);
     }
@@ -102,6 +105,7 @@ export function useSendCard(signEvent: (event: EventTemplate) => Promise<Event>)
     send,
     isSending,
     error,
+    lastEventId,
   };
 }
 

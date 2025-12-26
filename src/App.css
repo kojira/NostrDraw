@@ -80,6 +80,39 @@
   margin-bottom: 2rem;
 }
 
+/* 共有カードセクション */
+.sharedCardSection {
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.1) 0%, rgba(107, 203, 119, 0.1) 100%);
+  border: 2px solid rgba(233, 69, 96, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.sharedCardTitle {
+  color: #e94560;
+  font-size: 1.3rem;
+  margin: 0 0 1rem 0;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.sharedCardContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.sharedCardActions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.loading {
+  color: #888;
+  padding: 2rem;
+}
+
 /* ビュー切り替え */
 .viewToggle {
   display: flex;
@@ -116,6 +149,63 @@
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
+}
+
+/* 送信成功UI */
+.sendSuccess {
+  background: rgba(107, 203, 119, 0.1);
+  border: 2px solid rgba(107, 203, 119, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sendSuccess h3 {
+  color: #6bcb77;
+  margin: 0 0 0.75rem 0;
+  font-size: 1.3rem;
+}
+
+.sendSuccess p {
+  color: #aaa;
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+}
+
+.shareTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  resize: none;
+  margin-bottom: 1rem;
+}
+
+.shareButtons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.closeButton {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .error {
