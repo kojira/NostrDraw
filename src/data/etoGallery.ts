@@ -154,6 +154,385 @@ export const HORSE_EMA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
   </g>
 </svg>`;
 
+// 走る馬（躍動感あふれる）
+export const HORSE_RUNNING = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB"/>
+      <stop offset="100%" style="stop-color:#E0F6FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#skyGrad)"/>
+  <ellipse cx="100" cy="185" rx="90" ry="15" fill="#90EE90" opacity="0.6"/>
+  <g fill="#8B4513">
+    <ellipse cx="95" cy="95" rx="45" ry="28" transform="rotate(-10 95 95)"/>
+    <path d="M55 85 Q35 60 40 40 Q45 30 55 35 Q65 40 65 55 Q65 70 60 85" fill="#A0522D"/>
+    <ellipse cx="48" cy="42" rx="15" ry="12" fill="#A0522D"/>
+    <circle cx="42" cy="40" r="3" fill="#fff"/>
+    <circle cx="43" cy="41" r="1.5" fill="#333"/>
+    <path d="M38 32 Q32 22 38 18 Q45 22 42 32" fill="#8B4513"/>
+    <path d="M52 30 Q58 20 65 22 Q60 30 55 34" fill="#8B4513"/>
+    <path d="M45 28 Q30 35 25 50 Q35 42 40 38 Q28 52 28 68 Q38 55 48 48" fill="#5D3A1A"/>
+    <path d="M65 110 Q55 130 40 155 Q38 165 45 168" stroke="#8B4513" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M85 115 Q95 140 110 160 Q115 170 108 175" stroke="#8B4513" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M115 100 Q135 85 160 75 Q170 72 175 78" stroke="#8B4513" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M130 108 Q150 120 170 140 Q178 148 172 155" stroke="#8B4513" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M140 90 Q165 80 180 85 Q170 78 165 88 Q180 82 190 92" fill="#5D3A1A"/>
+  </g>
+  <g fill="none" stroke="#5D3A1A" stroke-width="2" opacity="0.5">
+    <path d="M30 100 Q15 100 5 95"/>
+    <path d="M25 105 Q10 108 0 105"/>
+    <path d="M28 110 Q12 115 0 112"/>
+  </g>
+  <circle cx="170" cy="30" r="20" fill="#FFD700" opacity="0.8"/>
+  <text x="100" y="195" font-family="sans-serif" font-size="12" fill="#666" text-anchor="middle">2026</text>
+</svg>`;
+
+// 親子馬（ほのぼの）
+export const HORSE_FAMILY = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="180" rx="95" ry="20" fill="#DEB887" opacity="0.4"/>
+  <g fill="#A0522D">
+    <ellipse cx="70" cy="110" rx="35" ry="25"/>
+    <path d="M45 100 Q30 75 35 55 Q40 45 50 48 Q58 52 56 65 Q54 80 50 95"/>
+    <ellipse cx="42" cy="55" rx="14" ry="11"/>
+    <circle cx="37" cy="53" r="2.5" fill="#fff"/>
+    <circle cx="38" cy="54" r="1.2" fill="#333"/>
+    <path d="M34 46 Q28 38 34 34 Q40 38 38 46"/>
+    <path d="M48 44 Q54 36 60 40 Q56 46 50 48"/>
+    <path d="M38 42 Q25 50 22 65 Q30 55 35 52 Q23 65 25 80 Q33 68 42 62" fill="#8B4513"/>
+    <rect x="45" y="128" width="8" height="28" rx="3"/>
+    <rect x="60" y="130" width="7" height="26" rx="3"/>
+    <rect x="80" y="128" width="8" height="28" rx="3"/>
+    <rect x="92" y="130" width="7" height="26" rx="3"/>
+    <path d="M105 105 Q120 100 130 108 Q120 102 118 110 Q128 105 135 115" fill="#8B4513"/>
+  </g>
+  <g fill="#DEB887">
+    <ellipse cx="145" cy="130" rx="22" ry="16"/>
+    <path d="M130 125 Q118 108 122 95 Q126 88 133 92 Q138 96 136 105 Q134 115 132 122"/>
+    <ellipse cx="128" cy="98" rx="10" ry="8"/>
+    <circle cx="124" cy="96" r="2" fill="#fff"/>
+    <circle cx="125" cy="97" r="1" fill="#333"/>
+    <path d="M122 92 Q118 86 122 84 Q127 86 125 92"/>
+    <path d="M132 90 Q136 84 140 88 Q137 92 133 94"/>
+    <path d="M125 88 Q115 95 114 105 Q120 98 124 96 Q116 106 118 115 Q124 106 130 102" fill="#C4A574"/>
+    <rect x="132" y="142" width="6" height="18" rx="2"/>
+    <rect x="142" y="143" width="5" height="17" rx="2"/>
+    <rect x="152" y="142" width="6" height="18" rx="2"/>
+    <rect x="160" y="143" width="5" height="17" rx="2"/>
+    <path d="M167 128 Q175 125 180 130 Q173 127 172 132 Q178 128 182 135" fill="#C4A574"/>
+  </g>
+  <circle cx="55" cy="95" r="6" fill="#FFB6C1" opacity="0.5"/>
+  <circle cx="135" cy="118" r="4" fill="#FFB6C1" opacity="0.5"/>
+  <g transform="translate(15, 25)">
+    <circle cx="0" cy="0" r="8" fill="#e94560"/>
+    <circle cx="0" cy="-10" r="4" fill="#FFB6C1"/>
+    <circle cx="9.5" cy="-3" r="4" fill="#FFB6C1"/>
+    <circle cx="5.9" cy="8" r="4" fill="#FFB6C1"/>
+    <circle cx="-5.9" cy="8" r="4" fill="#FFB6C1"/>
+    <circle cx="-9.5" cy="-3" r="4" fill="#FFB6C1"/>
+    <circle cx="0" cy="0" r="3" fill="#FFD700"/>
+  </g>
+  <text x="170" y="35" font-family="serif" font-size="18" fill="#e94560">午</text>
+</svg>`;
+
+// 金箔風（豪華）
+export const HORSE_GOLD = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="25%" style="stop-color:#FFA500"/>
+      <stop offset="50%" style="stop-color:#FFD700"/>
+      <stop offset="75%" style="stop-color:#DAA520"/>
+      <stop offset="100%" style="stop-color:#FFD700"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B0000"/>
+      <stop offset="100%" style="stop-color:#5C0000"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#redGrad)"/>
+  <g opacity="0.1">
+    <circle cx="30" cy="30" r="40" fill="#FFD700"/>
+    <circle cx="170" cy="170" r="50" fill="#FFD700"/>
+    <circle cx="180" cy="40" r="30" fill="#FFD700"/>
+    <circle cx="20" cy="160" r="35" fill="#FFD700"/>
+  </g>
+  <g fill="url(#goldGrad)" stroke="#DAA520" stroke-width="1">
+    <ellipse cx="100" cy="110" rx="45" ry="32"/>
+    <path d="M70 95 Q50 65 55 45 Q60 32 75 38 Q88 45 83 65 Q78 85 75 100"/>
+    <ellipse cx="62" cy="48" rx="18" ry="15"/>
+    <circle cx="56" cy="45" r="4" fill="#8B0000"/>
+    <circle cx="57" cy="44" r="1.5" fill="#fff"/>
+    <path d="M52 35 Q45 22 52 18 Q60 22 58 35"/>
+    <path d="M70 32 Q78 20 86 25 Q80 35 73 38"/>
+    <path d="M56 32 Q40 42 35 60 Q48 50 53 45 Q38 62 42 80 Q52 65 62 58" fill="#DAA520"/>
+    <rect x="70" y="135" width="12" height="35" rx="5"/>
+    <rect x="88" y="138" width="10" height="32" rx="4"/>
+    <rect x="108" y="135" width="12" height="35" rx="5"/>
+    <rect x="125" y="138" width="10" height="32" rx="4"/>
+    <path d="M145 105 Q165 95 175 105 Q162 98 160 108 Q172 102 180 115" fill="#DAA520"/>
+  </g>
+  <text x="165" y="45" font-family="serif" font-size="32" font-weight="bold" fill="#FFD700" stroke="#DAA520" stroke-width="1">午</text>
+  <text x="20" y="185" font-family="serif" font-size="14" fill="#FFD700">謹賀新年</text>
+  <g fill="#FFD700" opacity="0.6">
+    <circle cx="25" cy="50" r="2"/>
+    <circle cx="45" cy="30" r="1.5"/>
+    <circle cx="155" cy="150" r="2"/>
+    <circle cx="175" cy="130" r="1.5"/>
+    <circle cx="95" cy="20" r="2"/>
+    <circle cx="120" cy="180" r="1.5"/>
+  </g>
+</svg>`;
+
+// 富士山と馬
+export const HORSE_FUJI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="fujiSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B6B"/>
+      <stop offset="30%" style="stop-color:#FFB347"/>
+      <stop offset="60%" style="stop-color:#FFE5B4"/>
+      <stop offset="100%" style="stop-color:#E0F6FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#fujiSky)"/>
+  <circle cx="170" cy="40" r="25" fill="#FF4500" opacity="0.9"/>
+  <path d="M60 180 L100 60 L140 180 Z" fill="#4169E1" opacity="0.8"/>
+  <path d="M75 140 L100 75 L125 140 Q100 130 75 140 Z" fill="#fff"/>
+  <ellipse cx="100" cy="175" rx="90" ry="15" fill="#228B22" opacity="0.5"/>
+  <g fill="#333" transform="translate(25, 100) scale(0.7)">
+    <ellipse cx="100" cy="90" rx="40" ry="28"/>
+    <path d="M70 80 Q55 55 60 40 Q65 30 78 35 Q88 42 84 58 Q80 72 76 82"/>
+    <ellipse cx="67" cy="42" rx="15" ry="12"/>
+    <circle cx="62" cy="40" r="2.5" fill="#fff"/>
+    <circle cx="63" cy="41" r="1.2" fill="#111"/>
+    <path d="M58 32 Q52 22 58 18 Q65 22 62 32"/>
+    <path d="M72 30 Q80 20 87 25 Q82 32 75 35"/>
+    <path d="M62 28 Q48 38 45 55 Q55 45 60 42 Q46 58 50 75 Q58 62 68 55" fill="#222"/>
+    <rect x="68" y="112" width="10" height="32" rx="4"/>
+    <rect x="83" y="115" width="8" height="29" rx="3"/>
+    <rect x="108" y="112" width="10" height="32" rx="4"/>
+    <rect x="122" y="115" width="8" height="29" rx="3"/>
+    <path d="M140 85 Q158 78 165 88 Q155 82 152 90 Q162 85 168 98" fill="#222"/>
+  </g>
+  <g fill="#FFB6C1" opacity="0.8">
+    <circle cx="25" cy="160" r="5"/>
+    <circle cx="35" cy="155" r="4"/>
+    <circle cx="30" cy="168" r="3"/>
+    <circle cx="175" cy="165" r="5"/>
+    <circle cx="165" cy="160" r="4"/>
+    <circle cx="180" cy="172" r="3"/>
+  </g>
+  <text x="15" y="30" font-family="serif" font-size="16" fill="#8B0000">2026</text>
+</svg>`;
+
+// ポップアート風
+export const HORSE_POP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#FF69B4"/>
+  <g fill="none" stroke="#fff" stroke-width="3" opacity="0.3">
+    <circle cx="40" cy="40" r="30"/>
+    <circle cx="160" cy="40" r="25"/>
+    <circle cx="40" cy="160" r="25"/>
+    <circle cx="160" cy="160" r="30"/>
+  </g>
+  <g fill="#00CED1" stroke="#fff" stroke-width="2">
+    <ellipse cx="100" cy="105" rx="42" ry="30"/>
+    <path d="M68 92 Q50 62 55 42 Q62 28 78 35 Q90 45 84 62 Q78 80 74 95"/>
+    <ellipse cx="64" cy="45" rx="17" ry="14"/>
+    <path d="M55 35 Q48 22 56 16 Q65 22 60 35"/>
+    <path d="M72 32 Q82 18 92 25 Q84 35 75 40"/>
+    <rect x="68" y="128" width="11" height="32" rx="4"/>
+    <rect x="84" y="130" width="9" height="30" rx="3"/>
+    <rect x="106" y="128" width="11" height="32" rx="4"/>
+    <rect x="122" y="130" width="9" height="30" rx="3"/>
+    <path d="M142 100 Q162 92 172 102 Q160 95 157 105 Q168 98 175 112"/>
+  </g>
+  <g fill="#FFD700">
+    <circle cx="58" cy="42" r="4"/>
+    <circle cx="60" cy="40" r="1.5" fill="#000"/>
+  </g>
+  <path d="M56 30 Q38 42 34 60 Q48 48 54 44 Q36 62 42 82 Q52 66 64 58" fill="#FF1493"/>
+  <g fill="#FFD700" font-family="sans-serif" font-weight="bold">
+    <text x="8" y="30" font-size="24">午</text>
+    <text x="160" y="190" font-size="18">2026</text>
+  </g>
+  <g fill="#fff">
+    <polygon points="170,30 173,38 182,38 175,43 178,52 170,47 162,52 165,43 158,38 167,38"/>
+    <polygon points="30,170 32,175 38,175 34,179 36,185 30,181 24,185 26,179 22,175 28,175"/>
+  </g>
+</svg>`;
+
+// 切り絵風
+export const HORSE_KIRIE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#FDF5E6"/>
+  <g fill="#e94560">
+    <rect x="10" y="10" width="180" height="180" rx="5" fill="none" stroke="#e94560" stroke-width="3"/>
+    <rect x="18" y="18" width="164" height="164" rx="3" fill="none" stroke="#e94560" stroke-width="1"/>
+  </g>
+  <g fill="#e94560">
+    <ellipse cx="100" cy="108" rx="40" ry="28"/>
+    <path d="M70 95 Q52 65 58 45 Q65 30 80 38 Q92 48 86 65 Q80 82 76 98"/>
+    <ellipse cx="68" cy="48" rx="16" ry="13"/>
+    <path d="M58 38 Q50 25 58 20 Q68 25 64 38"/>
+    <path d="M76 35 Q86 22 95 28 Q88 38 78 42"/>
+    <path d="M62 32 Q45 45 42 65 Q55 52 60 48 Q44 68 50 88 Q60 72 72 64"/>
+    <rect x="68" y="130" width="10" height="30" rx="4"/>
+    <rect x="83" y="132" width="8" height="28" rx="3"/>
+    <rect x="108" y="130" width="10" height="30" rx="4"/>
+    <rect x="122" y="132" width="8" height="28" rx="3"/>
+    <path d="M140 103 Q158 95 168 105 Q156 98 153 108 Q164 102 172 115"/>
+  </g>
+  <circle cx="62" cy="45" r="3" fill="#FDF5E6"/>
+  <circle cx="63" cy="44" r="1.5" fill="#e94560"/>
+  <g transform="translate(25, 160)">
+    <circle cx="0" cy="0" r="10" fill="none" stroke="#e94560" stroke-width="2"/>
+    <circle cx="0" cy="-12" r="4" fill="#e94560"/>
+    <circle cx="11.4" cy="-3.7" r="4" fill="#e94560"/>
+    <circle cx="7" cy="9.7" r="4" fill="#e94560"/>
+    <circle cx="-7" cy="9.7" r="4" fill="#e94560"/>
+    <circle cx="-11.4" cy="-3.7" r="4" fill="#e94560"/>
+  </g>
+  <text x="145" y="175" font-family="serif" font-size="28" fill="#e94560">午</text>
+  <text x="145" y="45" font-family="serif" font-size="14" fill="#e94560">2026</text>
+</svg>`;
+
+// 花札風
+export const HORSE_HANAFUDA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#1a1a1a"/>
+  <rect x="10" y="10" width="180" height="180" fill="#2d2d2d" rx="8"/>
+  <g fill="#e94560">
+    <path d="M30 180 Q40 160 35 140 Q42 155 50 145 Q48 165 55 180"/>
+    <path d="M145 180 Q155 160 150 140 Q157 155 165 145 Q163 165 170 180"/>
+  </g>
+  <circle cx="160" cy="50" r="25" fill="#FFD700"/>
+  <circle cx="160" cy="50" r="20" fill="#FFA500"/>
+  <g fill="#C0C0C0" stroke="#888" stroke-width="0.5">
+    <ellipse cx="90" cy="115" rx="38" ry="26"/>
+    <path d="M62 102 Q48 75 52 58 Q58 45 72 52 Q82 60 78 75 Q72 90 68 105"/>
+    <ellipse cx="60" cy="60" rx="14" ry="11"/>
+    <path d="M52 52 Q46 40 52 36 Q60 40 56 52"/>
+    <path d="M68 48 Q76 38 84 44 Q78 52 70 55"/>
+    <path d="M55 48 Q42 58 40 75 Q52 65 56 62 Q42 80 48 95 Q56 82 66 75" fill="#999"/>
+    <rect x="58" y="135" width="9" height="28" rx="3"/>
+    <rect x="72" y="137" width="7" height="26" rx="2"/>
+    <rect x="98" y="135" width="9" height="28" rx="3"/>
+    <rect x="112" y="137" width="7" height="26" rx="2"/>
+    <path d="M128 110 Q145 102 155 112 Q143 106 140 115 Q150 110 158 122" fill="#999"/>
+  </g>
+  <circle cx="55" cy="58" r="2.5" fill="#1a1a1a"/>
+  <g fill="#e94560">
+    <path d="M25 60 Q30 50 28 40 Q35 48 40 42 Q38 55 45 62 Q35 58 25 60"/>
+    <path d="M165 140 Q170 130 168 120 Q175 128 180 122 Q178 135 185 142 Q175 138 165 140"/>
+  </g>
+  <text x="30" y="45" font-family="serif" font-size="20" fill="#FFD700">午</text>
+  <text x="140" y="180" font-family="sans-serif" font-size="12" fill="#888">2026</text>
+</svg>`;
+
+// ピクセルアート風（レトロゲーム）
+export const HORSE_PIXEL = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#0f380f"/>
+  <g fill="#306230">
+    <rect x="0" y="160" width="200" height="40"/>
+  </g>
+  <g fill="#8bac0f">
+    <rect x="60" y="50" width="8" height="8"/>
+    <rect x="68" y="42" width="8" height="8"/>
+    <rect x="68" y="50" width="8" height="8"/>
+    <rect x="76" y="50" width="8" height="8"/>
+    <rect x="52" y="58" width="8" height="8"/>
+    <rect x="60" y="58" width="8" height="8"/>
+    <rect x="68" y="58" width="8" height="8"/>
+    <rect x="76" y="58" width="8" height="8"/>
+    <rect x="44" y="66" width="8" height="8"/>
+    <rect x="52" y="66" width="8" height="8"/>
+    <rect x="60" y="66" width="8" height="8"/>
+    <rect x="68" y="66" width="8" height="8"/>
+    <rect x="76" y="66" width="8" height="8"/>
+    <rect x="84" y="66" width="8" height="8"/>
+    <rect x="36" y="74" width="8" height="8"/>
+    <rect x="44" y="74" width="8" height="8"/>
+    <rect x="52" y="74" width="8" height="8"/>
+    <rect x="60" y="74" width="8" height="8"/>
+    <rect x="68" y="82" width="8" height="8"/>
+    <rect x="76" y="82" width="8" height="8"/>
+    <rect x="84" y="82" width="8" height="8"/>
+    <rect x="92" y="82" width="8" height="8"/>
+    <rect x="100" y="82" width="8" height="8"/>
+    <rect x="108" y="82" width="8" height="8"/>
+    <rect x="60" y="90" width="8" height="8"/>
+    <rect x="68" y="90" width="8" height="8"/>
+    <rect x="76" y="90" width="8" height="8"/>
+    <rect x="84" y="90" width="8" height="8"/>
+    <rect x="92" y="90" width="8" height="8"/>
+    <rect x="100" y="90" width="8" height="8"/>
+    <rect x="108" y="90" width="8" height="8"/>
+    <rect x="116" y="90" width="8" height="8"/>
+    <rect x="68" y="98" width="8" height="8"/>
+    <rect x="76" y="98" width="8" height="8"/>
+    <rect x="84" y="98" width="8" height="8"/>
+    <rect x="92" y="98" width="8" height="8"/>
+    <rect x="100" y="98" width="8" height="8"/>
+    <rect x="108" y="98" width="8" height="8"/>
+    <rect x="116" y="98" width="8" height="8"/>
+    <rect x="124" y="98" width="8" height="8"/>
+    <rect x="76" y="106" width="8" height="8"/>
+    <rect x="84" y="106" width="8" height="8"/>
+    <rect x="92" y="106" width="8" height="8"/>
+    <rect x="100" y="106" width="8" height="8"/>
+    <rect x="108" y="106" width="8" height="8"/>
+    <rect x="116" y="106" width="8" height="8"/>
+    <rect x="132" y="98" width="8" height="8"/>
+    <rect x="140" y="98" width="8" height="8"/>
+    <rect x="140" y="106" width="8" height="8"/>
+    <rect x="148" y="106" width="8" height="8"/>
+    <rect x="68" y="114" width="8" height="8"/>
+    <rect x="76" y="114" width="8" height="8"/>
+    <rect x="100" y="114" width="8" height="8"/>
+    <rect x="108" y="114" width="8" height="8"/>
+    <rect x="60" y="122" width="8" height="8"/>
+    <rect x="68" y="122" width="8" height="8"/>
+    <rect x="100" y="122" width="8" height="8"/>
+    <rect x="108" y="122" width="8" height="8"/>
+    <rect x="52" y="130" width="8" height="8"/>
+    <rect x="60" y="130" width="8" height="8"/>
+    <rect x="100" y="130" width="8" height="8"/>
+    <rect x="108" y="130" width="8" height="8"/>
+    <rect x="52" y="138" width="8" height="8"/>
+    <rect x="60" y="138" width="8" height="8"/>
+    <rect x="100" y="138" width="8" height="8"/>
+    <rect x="108" y="138" width="8" height="8"/>
+    <rect x="44" y="146" width="8" height="8"/>
+    <rect x="52" y="146" width="8" height="8"/>
+    <rect x="60" y="146" width="8" height="8"/>
+    <rect x="100" y="146" width="8" height="8"/>
+    <rect x="108" y="146" width="8" height="8"/>
+    <rect x="116" y="146" width="8" height="8"/>
+  </g>
+  <g fill="#0f380f">
+    <rect x="52" y="58" width="8" height="8"/>
+  </g>
+  <g fill="#9bbc0f">
+    <rect x="44" y="58" width="8" height="8"/>
+    <rect x="36" y="66" width="8" height="8"/>
+  </g>
+  <g fill="#9bbc0f">
+    <rect x="160" y="20" width="8" height="8"/>
+    <rect x="168" y="20" width="8" height="8"/>
+    <rect x="152" y="28" width="8" height="8"/>
+    <rect x="160" y="28" width="8" height="8"/>
+    <rect x="168" y="28" width="8" height="8"/>
+    <rect x="176" y="28" width="8" height="8"/>
+    <rect x="152" y="36" width="8" height="8"/>
+    <rect x="160" y="36" width="8" height="8"/>
+    <rect x="168" y="36" width="8" height="8"/>
+    <rect x="176" y="36" width="8" height="8"/>
+    <rect x="160" y="44" width="8" height="8"/>
+    <rect x="168" y="44" width="8" height="8"/>
+  </g>
+  <text x="20" y="185" font-family="monospace" font-size="14" fill="#9bbc0f">2026</text>
+  <text x="140" y="185" font-family="monospace" font-size="14" fill="#9bbc0f">午年</text>
+</svg>`;
+
 import type { EtoImage } from '../types';
 
 export const ETO_IMAGES: EtoImage[] = [
@@ -161,5 +540,13 @@ export const ETO_IMAGES: EtoImage[] = [
   { id: 'horse-japanese', name: '和風（水墨画）', svg: HORSE_JAPANESE, year: 2026 },
   { id: 'horse-modern', name: 'モダン', svg: HORSE_MODERN, year: 2026 },
   { id: 'horse-ema', name: '絵馬風', svg: HORSE_EMA, year: 2026 },
+  { id: 'horse-running', name: '走る馬', svg: HORSE_RUNNING, year: 2026 },
+  { id: 'horse-family', name: '親子馬', svg: HORSE_FAMILY, year: 2026 },
+  { id: 'horse-gold', name: '金箔風', svg: HORSE_GOLD, year: 2026 },
+  { id: 'horse-fuji', name: '富士と馬', svg: HORSE_FUJI, year: 2026 },
+  { id: 'horse-pop', name: 'ポップアート', svg: HORSE_POP, year: 2026 },
+  { id: 'horse-kirie', name: '切り絵風', svg: HORSE_KIRIE, year: 2026 },
+  { id: 'horse-hanafuda', name: '花札風', svg: HORSE_HANAFUDA, year: 2026 },
+  { id: 'horse-pixel', name: 'ピクセルアート', svg: HORSE_PIXEL, year: 2026 },
 ];
 
