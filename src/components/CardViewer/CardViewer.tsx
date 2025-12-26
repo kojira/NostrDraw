@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { NewYearCard, NostrProfile } from '../../types';
+import type { Event, EventTemplate } from 'nostr-tools';
 import { fetchProfile } from '../../services/profile';
 import { CardList } from './CardList';
 import { CardFlip } from './CardFlip';
@@ -17,6 +18,8 @@ interface CardViewerProps {
   errorReceived: string | null;
   errorSent: string | null;
   onRefresh: () => void;
+  userPubkey?: string | null;
+  signEvent?: (event: EventTemplate) => Promise<Event>;
 }
 
 type TabType = 'received' | 'sent';
@@ -31,6 +34,8 @@ export function CardViewer({
   errorReceived,
   errorSent,
   onRefresh,
+  userPubkey,
+  signEvent,
 }: CardViewerProps) {
   const [activeTab, setActiveTab] = useState<TabType>('received');
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
@@ -95,7 +100,7 @@ export function CardViewer({
     <div className={styles.cardViewer}>
       {/* ヘッダー */}
       <div className={styles.header}>
-        <h2 className={styles.title}>年賀状</h2>
+        <h2 className={styles.title}>お手紙</h2>
         <button
           onClick={onRefresh}
           disabled={isLoadingReceived || isLoadingSent}
@@ -167,6 +172,8 @@ export function CardViewer({
               senderProfile={senderProfile}
               recipientProfile={recipientProfile}
               onClose={handleCloseCard}
+              userPubkey={userPubkey}
+              signEvent={signEvent}
             />
           </div>
         </div>

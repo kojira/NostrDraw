@@ -398,7 +398,56 @@
   color: #555;
 }
 
+/* 3カラムレイアウト */
+.mainLayout {
+  display: flex;
+  gap: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  align-items: flex-start;
+}
+
+.sidebarLeft,
+.sidebarRight {
+  position: sticky;
+  top: 1rem;
+  flex-shrink: 0;
+}
+
+.sidebarLeft {
+  order: 1;
+}
+
+.main {
+  order: 2;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebarRight {
+  order: 3;
+}
+
 /* レスポンシブ */
+@media (max-width: 1200px) {
+  /* タブレット: 左サイドバーを非表示 */
+  .sidebarLeft {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* スマホ横向き: 右サイドバーも非表示 */
+  .sidebarRight {
+    display: none;
+  }
+  
+  .mainLayout {
+    padding: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .logo {
     font-size: 1.5rem;

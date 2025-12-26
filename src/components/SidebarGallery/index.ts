@@ -1,0 +1,2 @@
+export { SidebarGallery } from './SidebarGallery';
+

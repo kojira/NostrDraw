@@ -32,7 +32,7 @@ interface CardListProps {
   onSelectCard: (card: NewYearCard) => void;
   isLoading: boolean;
   error: string | null;
-  type: 'received' | 'sent';
+  type: 'gallery' | 'received' | 'sent';
 }
 
 export function CardList({
@@ -79,9 +79,14 @@ export function CardList({
   }
 
   if (cards.length === 0) {
+    const emptyMessages = {
+      gallery: 'まだ作品がありません',
+      received: '届いたお手紙はありません',
+      sent: '送ったお手紙はありません',
+    };
     return (
       <div className={styles.empty}>
-        {type === 'received' ? '届いたお手紙はありません' : '送ったお手紙はありません'}
+        {emptyMessages[type]}
       </div>
     );
   }
@@ -90,9 +95,14 @@ export function CardList({
     <div className={styles.cardList}>
       <ul className={styles.list}>
         {cards.map((card) => {
-          const otherPubkey = type === 'received' ? card.pubkey : card.recipientPubkey;
-          const picture = otherPubkey ? getProfilePicture(otherPubkey) : null;
-          const name = otherPubkey ? getProfileName(otherPubkey) : 'みんな';
+          // galleryの場合は投稿者を表示
+          const displayPubkey = type === 'gallery' 
+            ? card.pubkey 
+            : type === 'received' 
+              ? card.pubkey 
+              : card.recipientPubkey;
+          const picture = displayPubkey ? getProfilePicture(displayPubkey) : null;
+          const name = displayPubkey ? getProfileName(displayPubkey) : 'みんな';
 
           return (
             <li

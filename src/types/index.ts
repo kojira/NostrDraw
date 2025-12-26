@@ -55,8 +55,15 @@ export const DEFAULT_RELAYS: RelayConfig[] = [
   { url: 'wss://x.kojira.io', read: true, write: true },
 ];
 
-// 年賀状用の独自kind
-export const NEW_YEAR_CARD_KIND = 31989;
+// NostrDraw用の独自kind（ユニークな番号を使用）
+// 30000-39999はAddressable Events (NIP-33)
+export const NOSTRDRAW_KIND = 31898;
+
+// アプリ識別タグ（フィルタリング用）
+export const NOSTRDRAW_CLIENT_TAG = 'nostrdraw';
+
+// バージョン
+export const NOSTRDRAW_VERSION = '1';
 
 export interface AuthState {
   isLoggedIn: boolean;

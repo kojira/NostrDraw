@@ -1,8 +1,10 @@
 // カードフリップアニメーションコンポーネント
 
-import { useState } from 'react';
-import type { NewYearCard, NostrProfile } from '../../../types';
+import { useState, useEffect, useCallback } from 'react';
+import type { NewYearCard, NostrProfile} from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
+import { sendReaction, hasUserReacted, fetchReactionCounts } from '../../../services/card';
+import type { Event, EventTemplate } from 'nostr-tools';
 import styles from './CardFlip.module.css';
 
 interface CardFlipProps {
@@ -10,6 +12,8 @@ interface CardFlipProps {
   senderProfile?: NostrProfile | null;
   recipientProfile?: NostrProfile | null;
   onClose?: () => void;
+  userPubkey?: string | null;
+  signEvent?: (event: EventTemplate) => Promise<Event>;
 }
 
 export function CardFlip({
@@ -17,16 +21,63 @@ export function CardFlip({
   senderProfile,
   recipientProfile,
   onClose,
+  userPubkey,
+  signEvent,
 }: CardFlipProps) {
   // 宛先がない場合は最初から裏面（絵柄面）を表示
   const hasRecipient = !!card.recipientPubkey;
   const [isFlipped, setIsFlipped] = useState(!hasRecipient);
+  
+  // リアクション関連の状態
+  const [hasReacted, setHasReacted] = useState(false);
+  const [reactionCount, setReactionCount] = useState(0);
+  const [isReacting, setIsReacting] = useState(false);
+  const [showReactionAnimation, setShowReactionAnimation] = useState(false);
+
+  // リアクション状態を取得
+  useEffect(() => {
+    const loadReactionState = async () => {
+      // リアクション数を取得
+      const counts = await fetchReactionCounts([card.id]);
+      setReactionCount(counts.get(card.id) || 0);
+      
+      // 自分がリアクション済みかチェック
+      if (userPubkey) {
+        const reacted = await hasUserReacted(card.id, userPubkey);
+        setHasReacted(reacted);
+      }
+    };
+    
+    loadReactionState();
+  }, [card.id, userPubkey]);
 
   const handleFlip = () => {
     // 宛先がない場合はフリップしない（常に裏面表示）
     if (!hasRecipient) return;
     setIsFlipped(!isFlipped);
   };
+
+  const handleReaction = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation(); // フリップを防ぐ
+    
+    if (!signEvent || !userPubkey || hasReacted || isReacting) return;
+    
+    setIsReacting(true);
+    
+    try {
+      await sendReaction(card.id, card.pubkey, '❤️', signEvent);
+      setHasReacted(true);
+      setReactionCount(prev => prev + 1);
+      
+      // アニメーション開始
+      setShowReactionAnimation(true);
+      setTimeout(() => setShowReactionAnimation(false), 1000);
+    } catch (error) {
+      console.error('リアクション送信失敗:', error);
+    } finally {
+      setIsReacting(false);
+    }
+  }, [signEvent, userPubkey, hasReacted, isReacting, card.id, card.pubkey]);
 
   const getSenderName = () => {
     if (senderProfile?.display_name) return senderProfile.display_name;
@@ -104,8 +155,36 @@ export function CardFlip({
         {/* 裏面（絵柄面） */}
         <div className={styles.cardFace + ' ' + styles.cardBack}>
           <CardContent card={card} />
-          <div className={styles.flipHintBack}>← クリックして表面に戻る</div>
+          {hasRecipient && (
+            <div className={styles.flipHintBack}>← クリックして表面に戻る</div>
+          )}
         </div>
+      </div>
+
+      {/* リアクションボタン */}
+      <div className={styles.reactionArea}>
+        <button
+          className={`${styles.reactionButton} ${hasReacted ? styles.reacted : ''} ${showReactionAnimation ? styles.animating : ''}`}
+          onClick={handleReaction}
+          disabled={!signEvent || !userPubkey || hasReacted || isReacting}
+          title={hasReacted ? 'リアクション済み' : 'いいね！'}
+        >
+          <span className={styles.heartIcon}>
+            {hasReacted ? '❤️' : '🤍'}
+          </span>
+          <span className={styles.reactionCount}>{reactionCount}</span>
+        </button>
+        
+        {/* アニメーション用のハートパーティクル */}
+        {showReactionAnimation && (
+          <div className={styles.heartParticles}>
+            {[...Array(8)].map((_, i) => (
+              <span key={i} className={styles.particle} style={{ '--i': i } as React.CSSProperties}>
+                ❤️
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

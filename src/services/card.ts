@@ -1,11 +1,29 @@
-// 年賀状送受信サービス
+// NostrDraw 送受信サービス
 
 import { type Event, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import { fetchEvents, publishEvent } from './relay';
-import { NEW_YEAR_CARD_KIND, type NewYearCard, type LayoutType } from '../types';
+import { 
+  NOSTRDRAW_KIND, 
+  NOSTRDRAW_CLIENT_TAG, 
+  NOSTRDRAW_VERSION,
+  type NewYearCard, 
+  type LayoutType 
+} from '../types';
+
+// NostrDrawのイベントかどうかをチェック
+export function isNostrDrawEvent(event: Event): boolean {
+  // clientタグでNostrDrawのイベントか確認
+  const clientTag = event.tags.find(tag => tag[0] === 'client' && tag[1] === NOSTRDRAW_CLIENT_TAG);
+  return !!clientTag;
+}
 
 export function parseNewYearCard(event: Event): NewYearCard | null {
   try {
+    // NostrDrawのイベントでない場合はスキップ
+    if (!isNostrDrawEvent(event)) {
+      return null;
+    }
+
     const tags = new Map<string, string>();
     let recipientPubkey: string | null = null;
     
@@ -58,7 +76,7 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
 export async function fetchCardById(eventId: string): Promise<NewYearCard | null> {
   const events = await fetchEvents({
     ids: [eventId],
-    kinds: [NEW_YEAR_CARD_KIND],
+    kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
   });
 
   if (events.length === 0) return null;
@@ -67,7 +85,7 @@ export async function fetchCardById(eventId: string): Promise<NewYearCard | null
 
 export async function fetchReceivedCards(pubkey: string): Promise<NewYearCard[]> {
   const events = await fetchEvents({
-    kinds: [NEW_YEAR_CARD_KIND],
+    kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     '#p': [pubkey],
   });
 
@@ -85,7 +103,7 @@ export async function fetchReceivedCards(pubkey: string): Promise<NewYearCard[]>
 
 export async function fetchSentCards(pubkey: string): Promise<NewYearCard[]> {
   const events = await fetchEvents({
-    kinds: [NEW_YEAR_CARD_KIND],
+    kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     authors: [pubkey],
   });
 
@@ -99,6 +117,99 @@ export async function fetchSentCards(pubkey: string): Promise<NewYearCard[]> {
 
   // 新しい順にソート
   return cards.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+// 公開ギャラリー（宛先なしの投稿）を取得
+export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYearCard[]> {
+  const events = await fetchEvents({
+    kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
+    limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
+  });
+
+  const cards: NewYearCard[] = [];
+  for (const event of events) {
+    const card = parseNewYearCard(event);
+    // 宛先なし（公開）のカードのみ
+    if (card && !card.recipientPubkey) {
+      cards.push(card);
+    }
+  }
+
+  // 新しい順にソートしてlimit件数に制限
+  return cards.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+}
+
+// リアクション数付きのカード型
+export interface NewYearCardWithReactions extends NewYearCard {
+  reactionCount: number;
+}
+
+// 特定のイベントIDに対するリアクション数を取得
+export async function fetchReactionCounts(eventIds: string[]): Promise<Map<string, number>> {
+  if (eventIds.length === 0) return new Map();
+
+  const reactions = await fetchEvents({
+    kinds: [7], // リアクション
+    '#e': eventIds,
+  });
+
+  const counts = new Map<string, number>();
+  
+  for (const reaction of reactions) {
+    // eタグからリアクション対象のイベントIDを取得
+    const eTag = reaction.tags.find(tag => tag[0] === 'e');
+    if (eTag && eTag[1]) {
+      const eventId = eTag[1];
+      counts.set(eventId, (counts.get(eventId) || 0) + 1);
+    }
+  }
+
+  return counts;
+}
+
+// 過去N日間の人気投稿を取得（リアクション数順）
+export async function fetchPopularCards(days: number = 3, limit: number = 20): Promise<NewYearCardWithReactions[]> {
+  const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+
+  // 過去N日間の公開投稿を取得
+  const events = await fetchEvents({
+    kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
+    since: sinceTimestamp,
+    limit: 100, // 十分な数を取得
+  });
+
+  const cards: NewYearCard[] = [];
+  for (const event of events) {
+    const card = parseNewYearCard(event);
+    // 宛先なし（公開）のカードのみ
+    if (card && !card.recipientPubkey) {
+      cards.push(card);
+    }
+  }
+
+  if (cards.length === 0) return [];
+
+  // リアクション数を取得
+  const eventIds = cards.map(card => card.id);
+  const reactionCounts = await fetchReactionCounts(eventIds);
+
+  // リアクション数を付与し、1以上のもののみフィルタ
+  const cardsWithReactions: NewYearCardWithReactions[] = cards
+    .map(card => ({
+      ...card,
+      reactionCount: reactionCounts.get(card.id) || 0,
+    }))
+    .filter(card => card.reactionCount >= 1); // リアクション1以上のみ
+
+  // リアクション数でソート（多い順）、同数なら新しい順
+  cardsWithReactions.sort((a, b) => {
+    if (b.reactionCount !== a.reactionCount) {
+      return b.reactionCount - a.reactionCount;
+    }
+    return b.createdAt - a.createdAt;
+  });
+
+  return cardsWithReactions.slice(0, limit);
 }
 
 export interface SendCardParams {
@@ -124,6 +235,8 @@ export async function sendCard(
   // タグを構築
   const tags: string[][] = [
     ['d', dTag],
+    ['client', NOSTRDRAW_CLIENT_TAG], // アプリ識別タグ
+    ['v', NOSTRDRAW_VERSION], // バージョンタグ
     ['message', params.message],
     ['layout', params.layoutId],
     ['year', year.toString()],
@@ -136,7 +249,7 @@ export async function sendCard(
 
   // SVGデータはcontentに含める（タグには長すぎる可能性がある）
   const eventTemplate: EventTemplate = {
-    kind: NEW_YEAR_CARD_KIND,
+    kind: NOSTRDRAW_KIND,
     created_at: timestamp,
     tags,
     content: JSON.stringify({
@@ -144,6 +257,7 @@ export async function sendCard(
       svg: params.svg,
       layoutId: params.layoutId,
       year,
+      version: NOSTRDRAW_VERSION,
       isPublic: !params.recipientPubkey, // 宛先なしの場合はpublicフラグ
     }),
   };
@@ -160,5 +274,42 @@ export function signEventWithPrivateKey(
   privateKey: Uint8Array
 ): Event {
   return finalizeEvent(eventTemplate, privateKey);
+}
+
+// リアクションを送信（NIP-25）
+export async function sendReaction(
+  targetEventId: string,
+  targetEventPubkey: string,
+  content: string = '❤️',
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<Event> {
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  const eventTemplate: EventTemplate = {
+    kind: 7, // リアクション
+    created_at: timestamp,
+    tags: [
+      ['e', targetEventId],
+      ['p', targetEventPubkey],
+    ],
+    content,
+  };
+
+  const signedEvent = await signEvent(eventTemplate);
+  await publishEvent(signedEvent);
+  
+  return signedEvent;
+}
+
+// 自分がリアクションしたかどうかをチェック
+export async function hasUserReacted(eventId: string, userPubkey: string): Promise<boolean> {
+  const reactions = await fetchEvents({
+    kinds: [7],
+    authors: [userPubkey],
+    '#e': [eventId],
+    limit: 1,
+  });
+  
+  return reactions.length > 0;
 }
 

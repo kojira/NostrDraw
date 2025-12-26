@@ -2,7 +2,15 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { NewYearCard, LayoutType } from '../types';
-import { fetchReceivedCards, fetchSentCards, sendCard, type SendCardParams } from '../services/card';
+import { 
+  fetchReceivedCards, 
+  fetchSentCards, 
+  fetchPublicGalleryCards, 
+  fetchPopularCards,
+  sendCard, 
+  type SendCardParams,
+  type NewYearCardWithReactions,
+} from '../services/card';
 import type { Event, EventTemplate } from 'nostr-tools';
 
 export function useReceivedCards(pubkey: string | null) {
@@ -65,6 +73,72 @@ export function useSentCards(pubkey: string | null) {
       setIsLoading(false);
     }
   }, [pubkey]);
+
+  useEffect(() => {
+    loadCards();
+  }, [loadCards]);
+
+  return {
+    cards,
+    count: cards.length,
+    isLoading,
+    error,
+    refresh: loadCards,
+  };
+}
+
+// 公開ギャラリー（みんなの作品・新着）を取得
+export function usePublicGalleryCards() {
+  const [cards, setCards] = useState<NewYearCard[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCards = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const galleryCards = await fetchPublicGalleryCards(50);
+      setCards(galleryCards);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '作品の取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCards();
+  }, [loadCards]);
+
+  return {
+    cards,
+    count: cards.length,
+    isLoading,
+    error,
+    refresh: loadCards,
+  };
+}
+
+// 人気投稿（過去N日間でリアクション多い順）を取得
+export function usePopularCards(days: number = 3) {
+  const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCards = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const popularCards = await fetchPopularCards(days, 20);
+      setCards(popularCards);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '人気作品の取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [days]);
 
   useEffect(() => {
     loadCards();

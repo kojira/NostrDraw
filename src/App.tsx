@@ -8,9 +8,10 @@ import { RelaySettings } from './components/RelaySettings';
 import { RecipientSelect } from './components/RecipientSelect';
 import { CardEditor } from './components/CardEditor';
 import { CardViewer } from './components/CardViewer';
+import { SidebarGallery } from './components/SidebarGallery';
 import { useAuth } from './hooks/useAuth';
 import { useNostr, useFollowees } from './hooks/useNostr';
-import { useReceivedCards, useSentCards, useCardEditor, useSendCard } from './hooks/useCards';
+import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useCardEditor, useSendCard } from './hooks/useCards';
 import { fetchCardById } from './services/card';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import './App.css';
@@ -58,6 +59,20 @@ function App() {
     error: sentError,
     refresh: refreshSent,
   } = useSentCards(authState.pubkey);
+
+  const {
+    cards: recentCards,
+    isLoading: recentLoading,
+    error: recentError,
+    refresh: refreshRecent,
+  } = usePublicGalleryCards();
+
+  const {
+    cards: popularCards,
+    isLoading: popularLoading,
+    error: popularError,
+    refresh: refreshPopular,
+  } = usePopularCards(3); // 過去3日間
 
   const {
     state: editorState,
@@ -209,12 +224,6 @@ function App() {
     resetEditor();
   };
 
-  // カード一覧を更新
-  const handleRefreshCards = () => {
-    refreshReceived();
-    refreshSent();
-  };
-
   return (
     <div className="app">
       <header className="header">
@@ -226,36 +235,54 @@ function App() {
         </div>
       </header>
 
-      <main className="main">
-        {/* 共有カード表示（URLパラメータからeventidがある場合） */}
-        {(sharedCard || isLoadingSharedCard) && (
-          <section className="section sharedCardSection">
-            <h2 className="sharedCardTitle">🎨 共有されたカード</h2>
-            {isLoadingSharedCard ? (
-              <p className="loading">読み込み中...</p>
-            ) : sharedCard ? (
-              <>
-                <div className="sharedCardContainer">
-                  <CardFlip card={sharedCard} />
-                </div>
-                <div className="sharedCardActions">
-                  <button
-                    onClick={() => {
-                      // URLパラメータを削除
-                      window.history.replaceState({}, '', window.location.pathname);
-                      setSharedCard(null);
-                    }}
-                    className="closeButton"
-                  >
-                    閉じる
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="error">カードが見つかりませんでした</p>
-            )}
-          </section>
-        )}
+      <div className="mainLayout">
+        {/* 左サイドバー: 人気の投稿 */}
+        <aside className="sidebarLeft">
+          <SidebarGallery
+            type="popular"
+            cards={popularCards}
+            isLoading={popularLoading}
+            error={popularError}
+            onRefresh={refreshPopular}
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+          />
+        </aside>
+
+        <main className="main">
+          {/* 共有カード表示（URLパラメータからeventidがある場合） */}
+          {(sharedCard || isLoadingSharedCard) && (
+            <section className="section sharedCardSection">
+              <h2 className="sharedCardTitle">🎨 共有されたカード</h2>
+              {isLoadingSharedCard ? (
+                <p className="loading">読み込み中...</p>
+              ) : sharedCard ? (
+                <>
+                  <div className="sharedCardContainer">
+                    <CardFlip 
+                      card={sharedCard} 
+                      userPubkey={authState.pubkey}
+                      signEvent={authState.isNip07 ? signEvent : undefined}
+                    />
+                  </div>
+                  <div className="sharedCardActions">
+                    <button
+                      onClick={() => {
+                        // URLパラメータを削除
+                        window.history.replaceState({}, '', window.location.pathname);
+                        setSharedCard(null);
+                      }}
+                      className="closeButton"
+                    >
+                      閉じる
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="error">カードが見つかりませんでした</p>
+              )}
+            </section>
+          )}
 
         {/* 認証セクション */}
         <section className="section">
@@ -422,7 +449,7 @@ function App() {
                 </section>
               </>
             ) : (
-              /* 年賀状ビューア */
+              /* お手紙ビューア */
               <section className="section">
                 <CardViewer
                   receivedCards={receivedCards}
@@ -433,13 +460,29 @@ function App() {
                   isLoadingSent={sentLoading}
                   errorReceived={receivedError}
                   errorSent={sentError}
-                  onRefresh={handleRefreshCards}
+                  onRefresh={() => { refreshReceived(); refreshSent(); }}
+                  userPubkey={authState.pubkey}
+                  signEvent={authState.isNip07 ? signEvent : undefined}
                 />
               </section>
             )}
           </>
         )}
-      </main>
+        </main>
+
+        {/* 右サイドバー: 新着投稿 */}
+        <aside className="sidebarRight">
+          <SidebarGallery
+            type="recent"
+            cards={recentCards}
+            isLoading={recentLoading}
+            error={recentError}
+            onRefresh={refreshRecent}
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+          />
+        </aside>
+      </div>
 
       <footer className="footer">
         <p>
@@ -448,7 +491,7 @@ function App() {
             Nostr
           </a>
         </p>
-        <p className="footerNote">kind: 31989 | 🎍 New Year 2026 Campaign</p>
+        <p className="footerNote">kind: 31898 | 🎍 New Year 2026 Campaign</p>
       </footer>
     </div>
   );
