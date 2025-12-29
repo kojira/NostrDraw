@@ -113,10 +113,14 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const [stampDragOriginal, setStampDragOriginal] = useState<PlacedStamp | null>(null);
   const [stampDragMode, setStampDragMode] = useState<'move' | 'resize' | null>(null);
 
-  // ピンチズーム
+  // ピンチズーム・パン
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
   const pinchStartDistanceRef = useRef<number | null>(null);
   const pinchStartZoomRef = useRef<number>(1);
+  const pinchStartCenterRef = useRef<Point | null>(null);
+  const panStartOffsetRef = useRef<Point>({ x: 0, y: 0 });
+  const isPinchingRef = useRef(false);
 
   // テキストボックス（複数対応）
   const createTextBox = useCallback((overrides: Partial<TextBox> = {}): TextBox => ({
@@ -241,6 +245,9 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
 
   // キャンバスイベントハンドラ
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    // ピンチ操作中は描画しない
+    if (isPinchingRef.current) return;
+    
     const point = getPointerPosition(e);
     const ctx = contextRef.current;
 
@@ -287,6 +294,9 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   }, [getPointerPosition, tool, selectedStamp, selectedCustomEmoji, stampScale, strokes, redrawCanvas]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    // ピンチ操作中は描画しない
+    if (isPinchingRef.current) return;
+    
     const ctx = contextRef.current;
     if (!isDrawing || !ctx || !lastPointRef.current || tool === 'stamp') return;
 
@@ -756,26 +766,46 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     }
   }, []);
 
-  // ピンチズームハンドラー
+  // ピンチズーム・パンハンドラー
   const handlePinchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       e.preventDefault();
+      
+      // ピンチ開始: 描画を中止
+      isPinchingRef.current = true;
+      if (isDrawing) {
+        setIsDrawing(false);
+        // 現在のストロークをキャンセル
+        currentStrokeRef.current = [];
+        lastPointRef.current = null;
+      }
+      
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
+      
+      // ピンチ用の距離
       const distance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
       pinchStartDistanceRef.current = distance;
       pinchStartZoomRef.current = zoomLevel;
+      
+      // パン用の中心点
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+      pinchStartCenterRef.current = { x: centerX, y: centerY };
+      panStartOffsetRef.current = { ...panOffset };
     }
-  }, [zoomLevel]);
+  }, [zoomLevel, panOffset]);
 
   const handlePinchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2 && pinchStartDistanceRef.current !== null) {
+    if (e.touches.length === 2 && pinchStartDistanceRef.current !== null && pinchStartCenterRef.current !== null) {
       e.preventDefault();
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
+      
+      // ズーム計算
       const distance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
@@ -783,15 +813,33 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
       const scale = distance / pinchStartDistanceRef.current;
       const newZoom = Math.max(0.5, Math.min(3, pinchStartZoomRef.current * scale));
       setZoomLevel(newZoom);
+      
+      // パン計算（ズーム中のみ有効）
+      if (pinchStartZoomRef.current > 1 || newZoom > 1) {
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const centerY = (touch1.clientY + touch2.clientY) / 2;
+        const dx = centerX - pinchStartCenterRef.current.x;
+        const dy = centerY - pinchStartCenterRef.current.y;
+        setPanOffset({
+          x: panStartOffsetRef.current.x + dx,
+          y: panStartOffsetRef.current.y + dy,
+        });
+      }
     }
   }, []);
 
   const handlePinchEnd = useCallback(() => {
     pinchStartDistanceRef.current = null;
+    pinchStartCenterRef.current = null;
+    // 少し遅延してフラグを解除（誤タップ防止）
+    setTimeout(() => {
+      isPinchingRef.current = false;
+    }, 100);
   }, []);
 
   const resetZoom = useCallback(() => {
     setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
   }, []);
 
   return {
@@ -868,8 +916,9 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     handleOverlayPointerUp,
     handleOverlayMouseUp,
     
-    // ピンチズーム
+    // ピンチズーム・パン
     zoomLevel,
+    panOffset,
     handlePinchStart,
     handlePinchMove,
     handlePinchEnd,

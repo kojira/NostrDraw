@@ -71,6 +71,7 @@ export function DrawingCanvas({
     handleOverlayPointerMove,
     handleOverlayPointerUp,
     zoomLevel,
+    panOffset,
     handlePinchStart,
     handlePinchMove,
     handlePinchEnd,
@@ -219,7 +220,7 @@ export function DrawingCanvas({
         <div 
           className={styles.canvasWrapper}
           style={{
-            transform: `scale(${zoomLevel})`,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
             transformOrigin: 'center center',
           }}
         >
