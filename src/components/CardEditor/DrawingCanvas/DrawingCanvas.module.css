@@ -433,6 +433,7 @@
   border-radius: 4px;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
+  touch-action: none;
 }
 
 .placedStamp:hover {
@@ -515,6 +516,7 @@
   width: 100%;
   height: 100%;
   border-radius: 4px;
+  touch-action: none;
 }
 
 /* メッセージボックス */
@@ -528,6 +530,7 @@
   border: 2px dashed rgba(233, 69, 96, 0.5);
   background: rgba(255, 255, 255, 0.9);
   border-radius: 4px;
+  touch-action: none;
 }
 
 .messageBox.editable {
@@ -561,6 +564,7 @@
   right: 0;
   bottom: 0;
   cursor: move;
+  touch-action: none;
 }
 
 /* リサイズハンドル */

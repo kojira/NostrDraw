@@ -494,6 +494,10 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const handleStampPointerMove = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
     if (!stampDragStart || !stampDragOriginal || !selectedPlacedStampId || !stampDragMode) return;
     
+    // スマホでのスクロールを防止
+    e.preventDefault();
+    e.stopPropagation();
+    
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
@@ -668,6 +672,10 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
 
   const handleOverlayPointerMove = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
     if (dragMode === 'none' || !dragStart || !textBoxStart || !selectedTextBoxId) return;
+
+    // スマホでのスクロールを防止
+    e.preventDefault();
+    e.stopPropagation();
 
     const overlay = overlayRef.current;
     if (!overlay) return;
