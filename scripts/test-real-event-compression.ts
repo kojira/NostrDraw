@@ -127,3 +127,4 @@ const finalEventSize = eventSize - Buffer.byteLength(realEvent.content, 'utf8') 
 console.log(`\n🎯 最適化版イベントサイズ: ${finalEventSize.toLocaleString()} bytes`);
 console.log(`   (元の ${((finalEventSize / eventSize) * 100).toFixed(1)}%、${((1 - finalEventSize / eventSize) * 100).toFixed(1)}% 削減)`);
 
+

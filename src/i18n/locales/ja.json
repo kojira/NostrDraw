@@ -122,6 +122,25 @@
     "label": "言語",
     "ja": "日本語",
     "en": "English"
+  },
+  "gallery": {
+    "viewAll": "すべて見る",
+    "title": "ギャラリー",
+    "popular": "人気の投稿",
+    "recent": "新着投稿",
+    "all": "すべて",
+    "filter": "フィルター",
+    "period": "期間",
+    "author": "投稿者",
+    "allPeriod": "すべての期間",
+    "lastDay": "24時間",
+    "lastWeek": "1週間",
+    "lastMonth": "1ヶ月",
+    "loadMore": "もっと見る",
+    "noResults": "投稿が見つかりません",
+    "userGallery": "の投稿",
+    "backToGallery": "ギャラリーに戻る",
+    "backToHome": "ホームに戻る"
   }
 }
 

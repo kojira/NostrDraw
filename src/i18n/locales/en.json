@@ -122,6 +122,25 @@
     "label": "Language",
     "ja": "日本語",
     "en": "English"
+  },
+  "gallery": {
+    "viewAll": "View All",
+    "title": "Gallery",
+    "popular": "Popular",
+    "recent": "Recent",
+    "all": "All",
+    "filter": "Filter",
+    "period": "Period",
+    "author": "Author",
+    "allPeriod": "All time",
+    "lastDay": "Last 24h",
+    "lastWeek": "Last week",
+    "lastMonth": "Last month",
+    "loadMore": "Load more",
+    "noResults": "No posts found",
+    "userGallery": "'s Posts",
+    "backToGallery": "Back to Gallery",
+    "backToHome": "Back to Home"
   }
 }
 

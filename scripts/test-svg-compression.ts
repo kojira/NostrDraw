@@ -148,3 +148,4 @@ console.log(`| 複雑（50ストローク）   | ${result2.originalSize.toString
 console.log(`| 描き足し後            | ${result3.originalSize.toString().padStart(5)} | ${result3.optimizedSize.toString().padStart(6)} | ${result3.compressedSize.toString().padStart(6)} | ${((1 - result3.compressedSize / result3.originalSize) * 100).toFixed(0).padStart(4)}%  |`);
 console.log('━'.repeat(60));
 
+

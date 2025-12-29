@@ -1,0 +1,310 @@
+/* ユーザーギャラリーページのスタイル */
+
+.userGallery {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.navigation {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.backButton,
+.galleryButton {
+  background: transparent;
+  border: 1px solid var(--text-secondary);
+  color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.backButton:hover,
+.galleryButton:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+/* ユーザー情報 */
+.userInfo {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  background: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.userAvatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 3px solid #e94560;
+}
+
+.userDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-family: 'Shippori Mincho', serif;
+}
+
+.userNpub {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem 0;
+  font-family: monospace;
+}
+
+.userAbout {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-family: 'Shippori Mincho', serif;
+}
+
+/* コンテンツ */
+.content {
+  min-height: 400px;
+}
+
+.loading,
+.error,
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.loadingMore {
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* グリッドレイアウト */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.item {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.thumbnail {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.thumbnailImage svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.placeholderEmoji {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.info {
+  padding: 0.75rem;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reactionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: 1px solid var(--bg-tertiary);
+  border-radius: 16px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reactionButton:hover:not(:disabled) {
+  background: rgba(233, 69, 96, 0.1);
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.reactionButton:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.reactionButton.reacted {
+  background: rgba(233, 69, 96, 0.15);
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.message {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin: 0.5rem 0 0 0;
+  line-height: 1.4;
+}
+
+/* もっと見るボタン */
+.loadMoreContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.loadMoreButton {
+  background: var(--bg-secondary);
+  border: 1px solid var(--text-secondary);
+  color: var(--text-primary);
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.loadMoreButton:hover {
+  background: var(--bg-tertiary);
+  border-color: #e94560;
+  color: #e94560;
+}
+
+/* モーダル */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* レスポンシブ */
+@media (max-width: 640px) {
+  .userGallery {
+    padding: 0.75rem;
+  }
+  
+  .navigation {
+    flex-direction: column;
+  }
+  
+  .backButton,
+  .galleryButton {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+  }
+  
+  .userInfo {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .userAvatar {
+    width: 64px;
+    height: 64px;
+  }
+  
+  .userName {
+    font-size: 1.2rem;
+  }
+  
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .info {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+

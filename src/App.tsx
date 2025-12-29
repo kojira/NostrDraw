@@ -17,10 +17,15 @@ import { fetchCardById } from './services/card';
 import { pubkeyToNpub } from './services/profile';
 import { fetchUserRelayList, publishEvent } from './services/relay';
 import { CardFlip } from './components/CardViewer/CardFlip';
+import { MobileCarousel } from './components/MobileCarousel';
+import { Gallery } from './components/Gallery';
+import { UserGallery } from './components/UserGallery';
+import { useRouter } from './hooks/useRouter';
 import './App.css';
 
 function App() {
   const { t } = useTranslation();
+  const { route, goHome, goToGallery, goToUser } = useRouter();
   
   const {
     authState,
@@ -287,11 +292,45 @@ function App() {
     resetEditor();
   };
 
+  // ギャラリーページ
+  if (route.page === 'gallery') {
+    return (
+      <div className="app">
+        <Gallery
+          initialTab={route.params.tab}
+          initialPeriod={route.params.period}
+          initialAuthor={route.params.author}
+          userPubkey={authState.pubkey}
+          signEvent={authState.isNip07 ? signEvent : undefined}
+          onExtend={handleExtend}
+          onBack={goHome}
+          onUserClick={goToUser}
+        />
+      </div>
+    );
+  }
+
+  // ユーザーページ
+  if (route.page === 'user' && route.params.npub) {
+    return (
+      <div className="app">
+        <UserGallery
+          npub={route.params.npub}
+          userPubkey={authState.pubkey}
+          signEvent={authState.isNip07 ? signEvent : undefined}
+          onExtend={handleExtend}
+          onBack={goHome}
+          onGalleryClick={() => goToGallery()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="header">
         <div className="headerTop">
-          <h1 className="logo">🎨 {t('app.title')}</h1>
+          <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
           <LanguageSwitch />
         </div>
         <p className="tagline">{t('app.subtitle')}</p>
@@ -310,6 +349,7 @@ function App() {
             isLoading={popularLoading}
             error={popularError}
             onRefresh={refreshPopular}
+            onViewAll={() => goToGallery({ tab: 'popular' })}
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
             onExtend={handleExtend}
@@ -351,6 +391,32 @@ function App() {
               )}
             </section>
           )}
+
+        {/* モバイル用カルーセル（スマホで表示） */}
+        <section className="section mobileCarouselSection">
+          <MobileCarousel
+            type="popular"
+            cards={popularCards}
+            isLoading={popularLoading}
+            error={popularError}
+            onRefresh={refreshPopular}
+            onViewAll={() => goToGallery({ tab: 'popular' })}
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+            onExtend={handleExtend}
+          />
+          <MobileCarousel
+            type="recent"
+            cards={recentCards}
+            isLoading={recentLoading}
+            error={recentError}
+            onRefresh={refreshRecent}
+            onViewAll={() => goToGallery({ tab: 'recent' })}
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+            onExtend={handleExtend}
+          />
+        </section>
 
         {/* 認証セクション */}
         <section className="section">
@@ -578,6 +644,7 @@ function App() {
             isLoading={recentLoading}
             error={recentError}
             onRefresh={refreshRecent}
+            onViewAll={() => goToGallery({ tab: 'recent' })}
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
             onExtend={handleExtend}

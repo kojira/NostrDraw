@@ -1,13 +1,13 @@
-// サイドバーギャラリーコンポーネント - 人気/新着の作品を表示
+// モバイル向けカルーセルコンポーネント - 横スワイプで作品を閲覧
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NewYearCardWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
-import styles from './SidebarGallery.module.css';
+import styles from './MobileCarousel.module.css';
 
 // SVGを安全にレンダリングするためのコンポーネント
 function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
@@ -28,7 +28,7 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
   return <img src={dataUri} alt="" className={className} />;
 }
 
-interface SidebarGalleryProps {
+interface MobileCarouselProps {
   type: 'popular' | 'recent';
   cards: (NewYearCard | NewYearCardWithReactions)[];
   isLoading: boolean;
@@ -40,7 +40,7 @@ interface SidebarGalleryProps {
   onExtend?: (card: NewYearCard) => void;
 }
 
-export function SidebarGallery({
+export function MobileCarousel({
   type,
   cards,
   isLoading,
@@ -50,11 +50,13 @@ export function SidebarGallery({
   userPubkey,
   signEvent,
   onExtend,
-}: SidebarGalleryProps) {
+}: MobileCarouselProps) {
   const { t } = useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const title = type === 'popular' ? t('sidebar.popular') : t('sidebar.recent');
   const subtitle = type === 'popular' ? t('sidebar.popularSub') : t('sidebar.recentSub');
@@ -75,6 +77,22 @@ export function SidebarGallery({
       }
     });
   }, [cards]);
+
+  // スクロール位置を監視してインデックスを更新
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollLeft = container.scrollLeft;
+      const itemWidth = container.firstElementChild?.clientWidth || 150;
+      const newIndex = Math.round(scrollLeft / (itemWidth + 12)); // 12 = gap
+      setCurrentIndex(Math.min(newIndex, cards.length - 1));
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [cards.length]);
 
   // 選択されたカードの送信者プロフィールを取得
   useEffect(() => {
@@ -110,7 +128,7 @@ export function SidebarGallery({
     setSelectedCard(null);
   };
 
-  // リアクション数を取得（NewYearCardWithReactionsの場合）
+  // リアクション数を取得
   const getReactionCount = (card: NewYearCard | NewYearCardWithReactions): number | undefined => {
     if ('reactionCount' in card) {
       return card.reactionCount;
@@ -118,43 +136,45 @@ export function SidebarGallery({
     return undefined;
   };
 
+  if (cards.length === 0 && !isLoading && !error) {
+    return null;
+  }
+
   return (
-    <div className={styles.sidebar}>
+    <div className={styles.carousel}>
       <div className={styles.header}>
-        <div 
-          className={`${styles.titleGroup} ${onViewAll ? styles.clickable : ''}`}
-          onClick={onViewAll}
-          role={onViewAll ? 'button' : undefined}
-          tabIndex={onViewAll ? 0 : undefined}
-        >
+        <div className={styles.titleGroup}>
           <h3 className={styles.title}>{title}</h3>
           <span className={styles.subtitle}>{subtitle}</span>
         </div>
-        <button
-          onClick={onRefresh}
-          disabled={isLoading}
-          className={styles.refreshButton}
-          title={t('viewer.refresh')}
-        >
-          🔄
-        </button>
+        <div className={styles.actions}>
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className={styles.refreshButton}
+            title={t('viewer.refresh')}
+          >
+            🔄
+          </button>
+          {onViewAll && (
+            <button onClick={onViewAll} className={styles.viewAllButton}>
+              {t('gallery.viewAll')} →
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className={styles.content}>
-        {isLoading && (
-          <div className={styles.loading}>{t('card.loading')}</div>
-        )}
+      {isLoading && (
+        <div className={styles.loading}>{t('card.loading')}</div>
+      )}
 
-        {error && (
-          <div className={styles.error}>{error}</div>
-        )}
+      {error && (
+        <div className={styles.error}>{error}</div>
+      )}
 
-        {!isLoading && !error && cards.length === 0 && (
-          <div className={styles.empty}>{t('viewer.noReceived')}</div>
-        )}
-
-        {!isLoading && !error && cards.length > 0 && (
-          <div className={styles.list}>
+      {!isLoading && !error && cards.length > 0 && (
+        <>
+          <div className={styles.scrollContainer} ref={scrollRef}>
             {cards.map((card) => {
               const picture = getProfilePicture(card.pubkey);
               const name = getProfileName(card.pubkey);
@@ -188,8 +208,20 @@ export function SidebarGallery({
               );
             })}
           </div>
-        )}
-      </div>
+
+          {/* インジケーター */}
+          {cards.length > 1 && (
+            <div className={styles.indicators}>
+              {cards.map((_, index) => (
+                <span
+                  key={index}
+                  className={`${styles.indicator} ${index === currentIndex ? styles.active : ''}`}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* カード詳細モーダル */}
       {selectedCard && (
