@@ -70,6 +70,11 @@ export function DrawingCanvas({
     handleTextBoxPointerDown,
     handleOverlayPointerMove,
     handleOverlayPointerUp,
+    zoomLevel,
+    handlePinchStart,
+    handlePinchMove,
+    handlePinchEnd,
+    resetZoom,
   } = useDrawingCanvas({ width, height, initialMessage });
 
   // 描き足し元のSVGが渡されたらテンプレートとして設定
@@ -195,8 +200,29 @@ export function DrawingCanvas({
       )}
 
       {/* キャンバス */}
-      <div className={styles.canvasContainer}>
-        <div className={styles.canvasWrapper}>
+      <div 
+        className={styles.canvasContainer}
+        onTouchStart={handlePinchStart}
+        onTouchMove={handlePinchMove}
+        onTouchEnd={handlePinchEnd}
+      >
+        {/* ズームリセットボタン（ズーム中のみ表示） */}
+        {zoomLevel !== 1 && (
+          <button 
+            className={styles.zoomResetButton}
+            onClick={resetZoom}
+            type="button"
+          >
+            🔍 {Math.round(zoomLevel * 100)}% → リセット
+          </button>
+        )}
+        <div 
+          className={styles.canvasWrapper}
+          style={{
+            transform: `scale(${zoomLevel})`,
+            transformOrigin: 'center center',
+          }}
+        >
           <canvas
             ref={canvasRef}
             width={width}

@@ -113,6 +113,11 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
   const [stampDragOriginal, setStampDragOriginal] = useState<PlacedStamp | null>(null);
   const [stampDragMode, setStampDragMode] = useState<'move' | 'resize' | null>(null);
 
+  // ピンチズーム
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const pinchStartDistanceRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1);
+
   // テキストボックス（複数対応）
   const createTextBox = useCallback((overrides: Partial<TextBox> = {}): TextBox => ({
     id: `textbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -751,6 +756,44 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     }
   }, []);
 
+  // ピンチズームハンドラー
+  const handlePinchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      pinchStartDistanceRef.current = distance;
+      pinchStartZoomRef.current = zoomLevel;
+    }
+  }, [zoomLevel]);
+
+  const handlePinchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartDistanceRef.current !== null) {
+      e.preventDefault();
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      const scale = distance / pinchStartDistanceRef.current;
+      const newZoom = Math.max(0.5, Math.min(3, pinchStartZoomRef.current * scale));
+      setZoomLevel(newZoom);
+    }
+  }, []);
+
+  const handlePinchEnd = useCallback(() => {
+    pinchStartDistanceRef.current = null;
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    setZoomLevel(1);
+  }, []);
+
   return {
     // refs
     canvasRef,
@@ -824,6 +867,13 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     handleOverlayMouseMove,
     handleOverlayPointerUp,
     handleOverlayMouseUp,
+    
+    // ピンチズーム
+    zoomLevel,
+    handlePinchStart,
+    handlePinchMove,
+    handlePinchEnd,
+    resetZoom,
   };
 }
 
