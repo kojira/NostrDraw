@@ -115,10 +115,36 @@ function App() {
     resetEditor();
   }, [resetEditor]);
 
+  // サイドナビゲーションのハンドラ
+  const handleNavigation = useCallback((page: string) => {
+    switch (page) {
+      case 'home':
+        goHome();
+        break;
+      case 'notifications':
+        // TODO: 通知ページを実装
+        break;
+      case 'profile':
+        if (authState.pubkey) {
+          goToUser(pubkeyToNpub(authState.pubkey));
+        }
+        break;
+      case 'settings':
+        // TODO: 設定ページを実装
+        break;
+    }
+  }, [goHome, goToUser, authState.pubkey]);
+
   // 投稿画面
   if (route.page === 'create') {
     return (
       <div className="app">
+        {/* 左サイドナビゲーション */}
+        <SideNav
+          currentPage="home"
+          onNavigate={handleNavigation}
+          userPubkey={authState.pubkey}
+        />
         <div className="createPage">
           <header className="createHeader">
             <button className="backButton" onClick={goHome}>
@@ -269,26 +295,6 @@ function App() {
       </div>
     );
   }
-
-  // サイドナビゲーションのハンドラ
-  const handleNavigation = useCallback((page: string) => {
-    switch (page) {
-      case 'home':
-        goHome();
-        break;
-      case 'notifications':
-        // TODO: 通知ページを実装
-        break;
-      case 'profile':
-        if (authState.pubkey) {
-          goToUser(pubkeyToNpub(authState.pubkey));
-        }
-        break;
-      case 'settings':
-        // TODO: 設定ページを実装
-        break;
-    }
-  }, [goHome, goToUser, authState.pubkey]);
 
   return (
     <div className="app">
