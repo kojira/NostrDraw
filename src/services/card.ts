@@ -366,6 +366,34 @@ export async function sendCard(
   const signedEvent = await signEvent(eventTemplate);
   await publishEvent(signedEvent);
   
+  // kind 1（タイムライン）にも投稿する場合
+  if (params.isPublic) {
+    const kind1Tags: string[][] = [
+      ['client', NOSTRDRAW_CLIENT_TAG],
+      ['e', signedEvent.id, '', 'mention'], // kind 31898への参照
+    ];
+    
+    // 描き足し元への参照
+    if (params.parentEventId) {
+      kind1Tags.push(['e', params.parentEventId, '', 'reply']);
+    }
+    if (params.parentPubkey) {
+      kind1Tags.push(['p', params.parentPubkey]);
+    }
+    
+    const kind1EventTemplate: EventTemplate = {
+      kind: 1, // テキストノート
+      created_at: timestamp,
+      tags: kind1Tags,
+      content: params.message 
+        ? `${params.message}\n\nnostr:${signedEvent.id}`
+        : `NostrDrawで絵を投稿しました！\n\nnostr:${signedEvent.id}`,
+    };
+    
+    const signedKind1Event = await signEvent(kind1EventTemplate);
+    await publishEvent(signedKind1Event);
+  }
+  
   return signedEvent;
 }
 
