@@ -85,11 +85,21 @@ function App() {
   const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
   const [isLoadingSharedCard, setIsLoadingSharedCard] = useState(false);
 
+  // 新規投稿を開始
+  const handleCreatePost = useCallback(() => {
+    setLastSentEventId(null); // 前回の投稿成功状態をクリア
+    resetEditor(); // エディタの状態をリセット
+    setExtendingCard(null); // 描き足し元をクリア
+    goToCreate();
+  }, [goToCreate, resetEditor]);
+
   // 描き足しを開始
   const handleExtend = useCallback((card: NewYearCard) => {
+    setLastSentEventId(null); // 前回の投稿成功状態をクリア
+    resetEditor(); // エディタの状態をリセット
     setExtendingCard(card);
     goToCreate();
-  }, [goToCreate]);
+  }, [goToCreate, resetEditor]);
 
   // URLパラメータのeventidをチェック
   useEffect(() => {
@@ -349,7 +359,7 @@ function App() {
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
             onUserClick={goToUser}
-            onCreatePost={goToCreate}
+            onCreatePost={handleCreatePost}
             onExtend={handleExtend}
           />
         </main>
