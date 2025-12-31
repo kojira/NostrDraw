@@ -179,6 +179,14 @@ function App() {
                     postToTimeline={postToTimeline}
                     onPostToTimelineChange={setPostToTimeline}
                     isPosting={isSending}
+                    postSuccess={!!lastSentEventId}
+                    onNewPost={() => {
+                      handleCloseSendSuccess();
+                    }}
+                    onGoHome={() => {
+                      handleCloseSendSuccess();
+                      goHome();
+                    }}
                     onPost={async (svg, msg) => {
                       if (!authState.isNip07) {
                         alert(t('auth.nip07Required'));
@@ -202,17 +210,6 @@ function App() {
                 
                 {/* エラー表示 */}
                 {sendError && <p className="error">{sendError}</p>}
-                
-                {/* 送信成功ダイアログ */}
-                {lastSentEventId && (
-                  <div className="successMessage">
-                    <p>✅ {t('send.success')}</p>
-                    <button onClick={() => {
-                      handleCloseSendSuccess();
-                      goHome();
-                    }}>{t('send.close')}</button>
-                  </div>
-                )}
               </>
             )}
           </main>

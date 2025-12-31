@@ -50,6 +50,9 @@ export interface DrawingCanvasProps {
   onSave: (svg: string, message: string) => void;
   onPost?: (svg: string, message: string) => Promise<void>; // 投稿処理
   isPosting?: boolean; // 投稿中フラグ
+  postSuccess?: boolean; // 投稿成功フラグ
+  onNewPost?: () => void; // 新規投稿開始時のコールバック
+  onGoHome?: () => void; // ホームに戻る時のコールバック
   width?: number;
   height?: number;
   initialMessage?: string;

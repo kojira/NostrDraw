@@ -14,6 +14,9 @@ export function DrawingCanvas({
   onSave,
   onPost,
   isPosting = false,
+  postSuccess = false,
+  onNewPost,
+  onGoHome,
   width = 400,
   height = 300,
   initialMessage = '',
@@ -216,6 +219,34 @@ export function DrawingCanvas({
         onTouchMove={handlePinchMove}
         onTouchEnd={handlePinchEnd}
       >
+        {/* 投稿成功オーバーレイ */}
+        {postSuccess && (
+          <div className={styles.successOverlay}>
+            <div className={styles.successContent}>
+              <div className={styles.successIcon}>🎉</div>
+              <h3 className={styles.successTitle}>投稿完了！</h3>
+              <p className={styles.successMessage}>あなたの作品が投稿されました</p>
+              <div className={styles.successActions}>
+                <button 
+                  className={styles.successButtonPrimary}
+                  onClick={() => {
+                    clearCanvas();
+                    onNewPost?.();
+                  }}
+                >
+                  ✏️ もう一枚描く
+                </button>
+                <button 
+                  className={styles.successButtonSecondary}
+                  onClick={onGoHome}
+                >
+                  🏠 ホームに戻る
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ズームリセットボタン（ズーム中のみ表示） */}
         {zoomLevel !== 1 && (
           <button 
