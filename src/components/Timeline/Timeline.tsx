@@ -48,7 +48,7 @@ export function Timeline({
   onCreatePost,
 }: TimelineProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabType>('global');
+  const [activeTab, setActiveTab] = useState<TabType>('follow'); // デフォルトはフォロータブ
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   // 既に取得中または取得済みのpubkeyを追跡（重複フェッチ防止）
   const fetchedPubkeysRef = useRef<Set<string>>(new Set());
@@ -116,30 +116,6 @@ export function Timeline({
 
   return (
     <div className={styles.timeline}>
-      {/* タブ切り替え */}
-      <div className={styles.tabs}>
-        <button
-          className={`${styles.tab} ${activeTab === 'follow' ? styles.active : ''}`}
-          onClick={() => setActiveTab('follow')}
-          disabled={!userPubkey}
-        >
-          👥 {t('timeline.follow')}
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'global' ? styles.active : ''}`}
-          onClick={() => setActiveTab('global')}
-        >
-          🌐 {t('timeline.global')}
-        </button>
-        <button
-          className={styles.refreshButton}
-          onClick={onRefresh}
-          disabled={isLoading}
-        >
-          🔄
-        </button>
-      </div>
-
       {/* ログイン促し（フォロータブでログインしていない場合） */}
       {activeTab === 'follow' && !userPubkey && (
         <div className={styles.loginPrompt}>
@@ -218,16 +194,44 @@ export function Timeline({
         </div>
       )}
 
-      {/* FABボタン */}
-      {onCreatePost && (
-        <button 
-          className={styles.fab}
-          onClick={onCreatePost}
-          title={t('timeline.createPost')}
+      {/* 下部固定タブバー */}
+      <div className={styles.bottomTabs}>
+        <button
+          className={`${styles.bottomTab} ${activeTab === 'follow' ? styles.active : ''}`}
+          onClick={() => setActiveTab('follow')}
+          disabled={!userPubkey}
         >
-          ✏️
+          <span className={styles.tabIcon}>👥</span>
+          <span className={styles.tabLabel}>{t('timeline.follow')}</span>
         </button>
-      )}
+        
+        {onCreatePost && (
+          <button 
+            className={styles.createButton}
+            onClick={onCreatePost}
+            title={t('timeline.createPost')}
+          >
+            <span className={styles.createIcon}>✏️</span>
+          </button>
+        )}
+        
+        <button
+          className={`${styles.bottomTab} ${activeTab === 'global' ? styles.active : ''}`}
+          onClick={() => setActiveTab('global')}
+        >
+          <span className={styles.tabIcon}>🌐</span>
+          <span className={styles.tabLabel}>{t('timeline.global')}</span>
+        </button>
+        
+        <button
+          className={styles.bottomTab}
+          onClick={onRefresh}
+          disabled={isLoading}
+        >
+          <span className={styles.tabIcon}>🔄</span>
+          <span className={styles.tabLabel}>更新</span>
+        </button>
+      </div>
     </div>
   );
 }

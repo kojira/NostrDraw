@@ -117,6 +117,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
+  padding-bottom: 70px; /* 下部タブバーの高さ分 */
 }
 
 /* 各投稿 */
@@ -229,31 +230,86 @@
   flex: 1;
 }
 
-/* FABボタン */
-.fab {
+/* 下部固定タブバー */
+.bottomTabs {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--bg-secondary, #1a1a2e);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 0;
+  z-index: 100;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.bottomTab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.bottomTab:hover:not(:disabled) {
+  color: var(--text-primary, #fff);
+}
+
+.bottomTab.active {
+  color: #e94560;
+}
+
+.bottomTab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tabIcon {
+  font-size: 1.25rem;
+}
+
+.tabLabel {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* 投稿ボタン（中央） */
+.createButton {
   width: 56px;
   height: 56px;
   border-radius: 50%;
   background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
   border: none;
   color: #fff;
-  font-size: 1.5rem;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(233, 69, 96, 0.4);
   transition: transform 0.2s, box-shadow 0.2s;
-  z-index: 100;
+  margin-top: -20px; /* 上に突き出す */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.fab:hover {
+.createButton:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
 }
 
-.fab:active {
+.createButton:active {
   transform: scale(0.95);
+}
+
+.createIcon {
+  font-size: 1.5rem;
 }
 
 /* モーダル */
@@ -280,21 +336,8 @@
 
 /* レスポンシブ */
 @media (max-width: 640px) {
-  .tabs {
-    padding: 0.5rem;
-  }
-
-  .tab {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-  }
-
-  .fab {
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 48px;
-    height: 48px;
-    font-size: 1.25rem;
+  .posts {
+    padding-bottom: 80px; /* モバイルでは少し大きめに */
   }
 
   .post {
@@ -314,6 +357,24 @@
 
   .postFooter {
     padding: 0.5rem;
+  }
+
+  .createButton {
+    width: 48px;
+    height: 48px;
+    margin-top: -15px;
+  }
+
+  .createIcon {
+    font-size: 1.25rem;
+  }
+
+  .tabIcon {
+    font-size: 1.1rem;
+  }
+
+  .tabLabel {
+    font-size: 0.65rem;
   }
 }
 
