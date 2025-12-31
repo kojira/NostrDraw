@@ -1,6 +1,6 @@
 // タイムラインコンポーネント - フォロー/グローバルタブ切り替え
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import type { NewYearCardWithReactions } from '../../services/card';
@@ -50,6 +50,8 @@ export function Timeline({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('global');
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
+  // 既に取得中または取得済みのpubkeyを追跡（重複フェッチ防止）
+  const fetchedPubkeysRef = useRef<Set<string>>(new Set());
 
   const cards = activeTab === 'follow' ? followCards : globalCards;
   const isLoading = activeTab === 'follow' ? isLoadingFollow : isLoadingGlobal;
@@ -58,17 +60,18 @@ export function Timeline({
 
   // プロフィールを取得
   useEffect(() => {
-    const pubkeysToFetch = new Set<string>();
-    cards.forEach(card => {
-      pubkeysToFetch.add(card.pubkey);
-    });
-
-    pubkeysToFetch.forEach(async (pubkey) => {
-      if (!profiles.has(pubkey)) {
-        const profile = await fetchProfile(pubkey);
-        if (profile) {
-          setProfiles(prev => new Map(prev).set(pubkey, profile));
-        }
+    cards.forEach(async (card) => {
+      const pubkey = card.pubkey;
+      // 既に取得中または取得済みならスキップ
+      if (fetchedPubkeysRef.current.has(pubkey)) {
+        return;
+      }
+      // 取得中としてマーク
+      fetchedPubkeysRef.current.add(pubkey);
+      
+      const profile = await fetchProfile(pubkey);
+      if (profile) {
+        setProfiles(prev => new Map(prev).set(pubkey, profile));
       }
     });
   }, [cards]);
