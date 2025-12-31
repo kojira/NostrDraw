@@ -134,6 +134,7 @@
     grid-template-columns: repeat(2, 1fr); /* 常に2列 */
     gap: 1rem;
     padding: 1rem;
+    padding-bottom: 100px; /* 下部タブバーの高さ分 */
     align-content: start;
   }
 }
