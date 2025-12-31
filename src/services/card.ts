@@ -368,9 +368,13 @@ export async function sendCard(
   
   // kind 1（タイムライン）にも投稿する場合
   if (params.isPublic) {
+    // NostrDrawで閲覧するためのURL
+    const viewUrl = `https://kojira.github.io/NostrDraw/?eventid=${signedEvent.id}`;
+    
     const kind1Tags: string[][] = [
       ['client', NOSTRDRAW_CLIENT_TAG],
       ['e', signedEvent.id, '', 'mention'], // kind 31898への参照
+      ['r', viewUrl], // URLタグ
     ];
     
     // 描き足し元への参照
@@ -386,8 +390,8 @@ export async function sendCard(
       created_at: timestamp,
       tags: kind1Tags,
       content: params.message 
-        ? `${params.message}\n\nnostr:${signedEvent.id}`
-        : `NostrDrawで絵を投稿しました！\n\nnostr:${signedEvent.id}`,
+        ? `${params.message}\n\n${viewUrl}`
+        : `NostrDrawで絵を投稿しました！\n\n${viewUrl}`,
     };
     
     const signedKind1Event = await signEvent(kind1EventTemplate);
