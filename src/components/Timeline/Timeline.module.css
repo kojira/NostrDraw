@@ -234,7 +234,7 @@
 .bottomTabs {
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: 220px; /* サイドメニューの幅分 */
   right: 0;
   display: flex;
   align-items: stretch;
@@ -357,7 +357,13 @@
   overflow: auto;
 }
 
-/* レスポンシブ */
+/* レスポンシブ - タブレット以下ではサイドメニュー非表示 */
+@media (max-width: 1024px) {
+  .bottomTabs {
+    left: 0; /* サイドメニューが非表示なので左端から */
+  }
+}
+
 @media (max-width: 640px) {
   .posts {
     padding-bottom: 80px; /* モバイルでは少し大きめに */

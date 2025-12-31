@@ -47,11 +47,6 @@ export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
 
       {/* サイドナビゲーション */}
       <nav className={`${styles.sideNav} ${isOpen ? styles.open : ''}`}>
-        <div className={styles.navHeader}>
-          <span className={styles.navLogo}>🎨</span>
-          <span className={styles.navTitle}>NostrDraw</span>
-        </div>
-
         <ul className={styles.navList}>
           {menuItems.map((item) => {
             const isDisabled = item.requiresAuth && !userPubkey;
