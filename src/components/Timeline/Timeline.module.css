@@ -255,6 +255,8 @@
   padding: 0.6rem 0.25rem;
   background: transparent;
   border: none;
+  border-radius: 12px;
+  margin: 0.4rem 0.25rem;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -262,11 +264,13 @@
 
 .bottomTab:hover:not(:disabled) {
   color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .bottomTab.active {
-  color: #e94560;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.8) 0%, rgba(255, 107, 107, 0.7) 100%);
+  box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
 }
 
 .bottomTab.active .tabIcon {
