@@ -32,6 +32,7 @@ interface TimelineProps {
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onUserClick?: (npub: string) => void;
   onCreatePost?: () => void;
+  onExtend?: (card: NewYearCard) => void; // 描き足しボタン押下時
 }
 
 type TabType = 'follow' | 'global';
@@ -49,6 +50,7 @@ export function Timeline({
   signEvent,
   onUserClick,
   onCreatePost,
+  onExtend,
 }: TimelineProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('follow'); // デフォルトはフォロータブ
@@ -228,16 +230,27 @@ export function Timeline({
                     )}
                   </div>
 
-                  {/* フッター（リアクション） */}
+                  {/* フッター（リアクション・描き足し） */}
                   <div className={styles.postFooter}>
-                    <button
-                      className={`${styles.reactionButton} ${getUserReacted(card) ? styles.reacted : ''}`}
-                      onClick={() => handleReaction(card)}
-                      disabled={!signEvent || !userPubkey || getUserReacted(card) || reactingIds.has(card.id)}
-                      title={getUserReacted(card) ? t('viewer.reacted') : t('viewer.reaction')}
-                    >
-                      {reactingIds.has(card.id) ? '💓' : getUserReacted(card) ? '❤️' : '🤍'} {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
-                    </button>
+                    <div className={styles.footerActions}>
+                      <button
+                        className={`${styles.reactionButton} ${getUserReacted(card) ? styles.reacted : ''}`}
+                        onClick={() => handleReaction(card)}
+                        disabled={!signEvent || !userPubkey || getUserReacted(card) || reactingIds.has(card.id)}
+                        title={getUserReacted(card) ? t('viewer.reacted') : t('viewer.reaction')}
+                      >
+                        {reactingIds.has(card.id) ? '💓' : getUserReacted(card) ? '❤️' : '🤍'} {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
+                      </button>
+                      {card.allowExtend && onExtend && (
+                        <button
+                          className={styles.extendButton}
+                          onClick={() => onExtend(card)}
+                          title={t('viewer.extend')}
+                        >
+                          ✏️ {t('viewer.extend')}
+                        </button>
+                      )}
+                    </div>
                     {card.message && (
                       <span className={styles.message}>{card.message}</span>
                     )}

@@ -79,13 +79,15 @@ function App() {
   const [lastSentEventId, setLastSentEventId] = useState<string | null>(null);
   const [allowExtend, setAllowExtend] = useState(true); // 描き足しを許可
   const [postToTimeline, setPostToTimeline] = useState(true); // kind 1にも投稿
+  const [extendingCard, setExtendingCard] = useState<NewYearCard | null>(null); // 描き足し元のカード
   
   // URLパラメータからeventidを取得して表示するカード
   const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
   const [isLoadingSharedCard, setIsLoadingSharedCard] = useState(false);
 
   // 描き足しを開始
-  const handleExtend = useCallback((_card: NewYearCard) => {
+  const handleExtend = useCallback((card: NewYearCard) => {
+    setExtendingCard(card);
     goToCreate();
   }, [goToCreate]);
 
@@ -174,6 +176,7 @@ function App() {
                     onSvgChange={setSvg}
                     onMessageChange={setMessage}
                     userPubkey={authState.pubkey}
+                    extendingCard={extendingCard}
                     allowExtend={allowExtend}
                     onAllowExtendChange={setAllowExtend}
                     postToTimeline={postToTimeline}
@@ -182,9 +185,11 @@ function App() {
                     postSuccess={!!lastSentEventId}
                     onNewPost={() => {
                       handleCloseSendSuccess();
+                      setExtendingCard(null); // 描き足し元をクリア
                     }}
                     onGoHome={() => {
                       handleCloseSendSuccess();
+                      setExtendingCard(null); // 描き足し元をクリア
                       goHome();
                     }}
                     onPost={async (svg, msg) => {
@@ -200,6 +205,8 @@ function App() {
                         recipientPubkey: null,
                         allowExtend,
                         isPublic: postToTimeline,
+                        parentEventId: extendingCard?.id || null,
+                        parentPubkey: extendingCard?.pubkey || null,
                       });
                       if (result) {
                         setLastSentEventId(result);
@@ -343,6 +350,7 @@ function App() {
             signEvent={authState.isNip07 ? signEvent : undefined}
             onUserClick={goToUser}
             onCreatePost={goToCreate}
+            onExtend={handleExtend}
           />
         </main>
 
