@@ -10,6 +10,7 @@ import {
   type LayoutType 
 } from '../types';
 import { compressSvg, decompressSvg } from '../utils/compression';
+import { BASE_URL } from '../config';
 
 // NostrDrawのイベントかどうかをチェック
 export function isNostrDrawEvent(event: Event): boolean {
@@ -369,7 +370,7 @@ export async function sendCard(
   // kind 1（タイムライン）にも投稿する場合
   if (params.isPublic) {
     // NostrDrawで閲覧するためのURL
-    const viewUrl = `https://kojira.github.io/NostrDraw/?eventid=${signedEvent.id}`;
+    const viewUrl = `${BASE_URL}/?eventid=${signedEvent.id}`;
     
     const kind1Tags: string[][] = [
       ['client', NOSTRDRAW_CLIENT_TAG],
