@@ -392,7 +392,7 @@ export function DrawingCanvas({
           クリア
         </button>
         <button onClick={handleSave} className={styles.saveButton}>
-          ✅ 確定する
+          📤 投稿する
         </button>
       </div>
     </div>
