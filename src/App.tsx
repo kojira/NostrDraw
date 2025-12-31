@@ -12,7 +12,7 @@ import { SidebarGallery } from './components/SidebarGallery';
 import { LanguageSwitch } from './components/LanguageSwitch';
 import { useAuth } from './hooks/useAuth';
 import { useNostr, useFollowees } from './hooks/useNostr';
-import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useCardEditor, useSendCard } from './hooks/useCards';
+import { useReceivedCards, useSentCards, usePublicGalleryCards, usePopularCards, useFollowCards, useCardEditor, useSendCard } from './hooks/useCards';
 import { fetchCardById } from './services/card';
 import { pubkeyToNpub } from './services/profile';
 import { fetchUserRelayList, publishEvent } from './services/relay';
@@ -20,12 +20,13 @@ import { CardFlip } from './components/CardViewer/CardFlip';
 import { MobileCarousel } from './components/MobileCarousel';
 import { Gallery } from './components/Gallery';
 import { UserGallery } from './components/UserGallery';
+import { Timeline } from './components/Timeline';
 import { useRouter } from './hooks/useRouter';
 import './App.css';
 
 function App() {
   const { t } = useTranslation();
-  const { route, goHome, goToGallery, goToUser } = useRouter();
+  const { route, goHome, goToGallery, goToUser, goToCreate } = useRouter();
   
   const {
     authState,
@@ -83,6 +84,20 @@ function App() {
     error: popularError,
     refresh: refreshPopular,
   } = usePopularCards(3); // 過去3日間
+
+  // フォロー中のユーザーのpubkeyリスト
+  const followeePubkeys = useMemo(() => 
+    followees.map(f => f.pubkey), 
+    [followees]
+  );
+
+  // フォロータイムライン用
+  const {
+    cards: followCards,
+    isLoading: followCardsLoading,
+    error: followCardsError,
+    refresh: refreshFollowCards,
+  } = useFollowCards(followeePubkeys);
 
   const {
     state: editorState,
@@ -292,6 +307,88 @@ function App() {
     resetEditor();
   };
 
+  // 投稿画面
+  if (route.page === 'create') {
+    return (
+      <div className="app">
+        <div className="createPage">
+          <header className="createHeader">
+            <button className="backButton" onClick={goHome}>
+              ← {t('gallery.backToHome')}
+            </button>
+            <h1 className="createTitle">✏️ {t('timeline.createPost')}</h1>
+          </header>
+          <main className="createMain">
+            {!authState.isLoggedIn ? (
+              <section className="section">
+                <Auth
+                  authState={authState}
+                  isNip07Available={isNip07Available}
+                  isLoading={authLoading}
+                  error={authError}
+                  onLoginWithNip07={loginWithNip07}
+                  onLoginWithNpub={loginWithNpub}
+                  onLogout={logout}
+                />
+              </section>
+            ) : (
+              <>
+                <section className="section">
+                  <CardEditor
+                    svg={editorState.svg}
+                    message={editorState.message}
+                    onSvgChange={setSvg}
+                    onMessageChange={setMessage}
+                    userPubkey={authState.pubkey}
+                  />
+                </section>
+                {editorState.svg && (
+                  <section className="section sendSection">
+                    <h2>📤 {t('send.title')}</h2>
+                    {/* 送信ボタン */}
+                    <button
+                      className="sendButton"
+                      onClick={async () => {
+                        if (!authState.isNip07) {
+                          alert(t('auth.nip07Required'));
+                          return;
+                        }
+                        const result = await sendCard({
+                          svg: editorState.svg!,
+                          message: editorState.message,
+                          year: new Date().getFullYear() + 1,
+                          layoutId: 'vertical',
+                          recipientPubkey: null, // 公開投稿（宛先なし）
+                        });
+                        if (result) {
+                          setLastSentEventId(result);
+                        }
+                      }}
+                      disabled={!editorState.svg || isSending}
+                    >
+                      {isSending ? t('send.sending') : t('send.post')}
+                    </button>
+                    {sendError && <p className="error">{sendError}</p>}
+                    {/* 送信成功ダイアログ */}
+                    {lastSentEventId && (
+                      <div className="successMessage">
+                        <p>✅ {t('send.success')}</p>
+                        <button onClick={() => {
+                          handleCloseSendSuccess();
+                          goHome();
+                        }}>{t('send.close')}</button>
+                      </div>
+                    )}
+                  </section>
+                )}
+              </>
+            )}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   // ギャラリーページ
   if (route.page === 'gallery') {
     return (
@@ -391,6 +488,25 @@ function App() {
               )}
             </section>
           )}
+
+          {/* タイムライン（メインコンテンツ） */}
+          <section className="section timelineSection">
+            <Timeline
+              followCards={followCards}
+              globalCards={recentCards}
+              isLoadingFollow={followCardsLoading}
+              isLoadingGlobal={recentLoading}
+              errorFollow={followCardsError}
+              errorGlobal={recentError}
+              onRefreshFollow={refreshFollowCards}
+              onRefreshGlobal={refreshRecent}
+              userPubkey={authState.pubkey}
+              signEvent={authState.isNip07 ? signEvent : undefined}
+              onExtend={handleExtend}
+              onUserClick={goToUser}
+              onCreatePost={goToCreate}
+            />
+          </section>
 
         {/* モバイル用カルーセル（スマホで表示） */}
         <section className="section mobileCarouselSection">

@@ -627,3 +627,87 @@
     padding: 0.75rem;
   }
 }
+
+/* ===========================================
+   投稿画面（createページ）
+   =========================================== */
+.createPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+.createHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(26, 26, 46, 0.95);
+  border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.backButton {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.createTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.createMain {
+  flex: 1;
+  padding: 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* タイムラインセクション */
+.timelineSection {
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+  background: transparent;
+  border: none;
+  flex: 1;
+  min-height: 400px;
+}
+
+@media (max-width: 640px) {
+  .createHeader {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .backButton {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .createTitle {
+    font-size: 1.1rem;
+  }
+
+  .createMain {
+    padding: 0.5rem;
+  }
+}
