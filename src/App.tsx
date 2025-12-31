@@ -8,6 +8,7 @@ import { useAuth } from './hooks/useAuth';
 import { useFollowees } from './hooks/useNostr';
 import { usePublicGalleryCards, useFollowCards, usePopularCards, useSendCard, useCardEditor } from './hooks/useCards';
 import { fetchCardById } from './services/card';
+import { pubkeyToNpub } from './services/profile';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import { Gallery } from './components/Gallery';
 import { UserGallery } from './components/UserGallery';
@@ -15,6 +16,7 @@ import { Timeline } from './components/Timeline';
 import { CardEditor } from './components/CardEditor';
 import { Auth } from './components/Auth';
 import { SidebarGallery } from './components/SidebarGallery';
+import { SideNav } from './components/SideNav';
 import { useRouter } from './hooks/useRouter';
 import './App.css';
 
@@ -227,8 +229,35 @@ function App() {
     );
   }
 
+  // サイドナビゲーションのハンドラ
+  const handleNavigation = useCallback((page: string) => {
+    switch (page) {
+      case 'home':
+        goHome();
+        break;
+      case 'notifications':
+        // TODO: 通知ページを実装
+        break;
+      case 'profile':
+        if (authState.pubkey) {
+          goToUser(pubkeyToNpub(authState.pubkey));
+        }
+        break;
+      case 'settings':
+        // TODO: 設定ページを実装
+        break;
+    }
+  }, [goHome, goToUser, authState.pubkey]);
+
   return (
     <div className="app">
+      {/* 左サイドナビゲーション */}
+      <SideNav
+        currentPage="home"
+        onNavigate={handleNavigation}
+        userPubkey={authState.pubkey}
+      />
+
       <header className="header">
         <div className="headerTop">
           <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>

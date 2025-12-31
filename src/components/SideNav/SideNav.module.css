@@ -1,0 +1,167 @@
+/* ハンバーガーボタン（モバイル用） */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1001;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.hamburgerLine {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.hamburger .hamburgerLine.open:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger .hamburgerLine.open:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger .hamburgerLine.open:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* オーバーレイ（モバイル用） */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* サイドナビゲーション */
+.sideNav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 100vh;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  border-right: 1px solid rgba(233, 69, 96, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  padding-top: 1rem;
+}
+
+.navHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+}
+
+.navLogo {
+  font-size: 1.5rem;
+}
+
+.navTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #e94560;
+  font-family: 'Shippori Mincho', serif;
+}
+
+.navList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.navItem:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.navItem.active {
+  background: linear-gradient(90deg, rgba(233, 69, 96, 0.2) 0%, transparent 100%);
+  color: #e94560;
+  border-left: 3px solid #e94560;
+}
+
+.navItem:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.navIcon {
+  font-size: 1.25rem;
+  width: 28px;
+  text-align: center;
+}
+
+.navLabel {
+  font-weight: 500;
+}
+
+.navFooter {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footerText {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+/* モバイル対応 */
+@media (max-width: 1024px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .overlay {
+    display: block;
+  }
+
+  .sideNav {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sideNav.open {
+    transform: translateX(0);
+  }
+}
+

@@ -7,7 +7,11 @@
   },
   "nav": {
     "create": "🎨 Draw",
-    "inbox": "📬 Inbox"
+    "inbox": "📬 Inbox",
+    "home": "Home",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings"
   },
   "auth": {
     "login": "Login",

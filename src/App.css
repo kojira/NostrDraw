@@ -10,6 +10,13 @@
   font-family: 'Noto Sans JP', sans-serif;
   overflow-x: hidden;
   max-width: 100vw;
+  margin-left: 220px; /* サイドナビの幅 */
+}
+
+@media (max-width: 1024px) {
+  .app {
+    margin-left: 0; /* モバイルではサイドナビなし */
+  }
 }
 
 /* ヘッダー */
