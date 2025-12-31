@@ -501,8 +501,6 @@ function App() {
               onRefreshFollow={refreshFollowCards}
               onRefreshGlobal={refreshRecent}
               userPubkey={authState.pubkey}
-              signEvent={authState.isNip07 ? signEvent : undefined}
-              onExtend={handleExtend}
               onUserClick={goToUser}
               onCreatePost={goToCreate}
             />

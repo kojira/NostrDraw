@@ -3,29 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
-import type { Event, EventTemplate } from 'nostr-tools';
 import type { NewYearCardWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
-import { CardFlip } from '../CardViewer/CardFlip';
 import styles from './Timeline.module.css';
 
 // SVGを安全にレンダリングするためのコンポーネント
+// dangerouslySetInnerHTMLを使用してフォントを正しく表示
 function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
-  const hasExternalImage = svg.includes('<image') && svg.includes('href=');
-  
-  if (hasExternalImage) {
-    return (
-      <div 
-        className={className}
-        dangerouslySetInnerHTML={{ __html: svg }}
-        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-      />
-    );
-  }
-  
-  const encoded = btoa(unescape(encodeURIComponent(svg)));
-  const dataUri = `data:image/svg+xml;base64,${encoded}`;
-  return <img src={dataUri} alt="" className={className} />;
+  return (
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
 }
 
 interface TimelineProps {
@@ -38,8 +28,6 @@ interface TimelineProps {
   onRefreshFollow: () => void;
   onRefreshGlobal: () => void;
   userPubkey?: string | null;
-  signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void;
   onUserClick?: (npub: string) => void;
   onCreatePost?: () => void;
 }
@@ -56,16 +44,12 @@ export function Timeline({
   onRefreshFollow,
   onRefreshGlobal,
   userPubkey,
-  signEvent,
-  onExtend,
   onUserClick,
   onCreatePost,
 }: TimelineProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('global');
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
-  const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
 
   const cards = activeTab === 'follow' ? followCards : globalCards;
   const isLoading = activeTab === 'follow' ? isLoadingFollow : isLoadingGlobal;
@@ -89,21 +73,6 @@ export function Timeline({
     });
   }, [cards]);
 
-  // 選択されたカードの送信者プロフィールを取得
-  useEffect(() => {
-    if (!selectedCard) {
-      setSenderProfile(null);
-      return;
-    }
-
-    const loadProfile = async () => {
-      const sender = await fetchProfile(selectedCard.pubkey);
-      setSenderProfile(sender);
-    };
-
-    loadProfile();
-  }, [selectedCard]);
-
   const getProfileName = (pubkey: string) => {
     const profile = profiles.get(pubkey);
     if (profile?.display_name) return profile.display_name;
@@ -114,14 +83,6 @@ export function Timeline({
   const getProfilePicture = (pubkey: string) => {
     const profile = profiles.get(pubkey);
     return profile?.picture || null;
-  };
-
-  const handleCardClick = (card: NewYearCard) => {
-    setSelectedCard(card);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedCard(null);
   };
 
   const handleAuthorClick = (pubkey: string) => {
@@ -229,10 +190,7 @@ export function Timeline({
                   </div>
 
                   {/* 画像 */}
-                  <div 
-                    className={styles.postImage}
-                    onClick={() => handleCardClick(card)}
-                  >
+                  <div className={styles.postImage}>
                     {card.svg ? (
                       <SvgRenderer svg={card.svg} className={styles.svg} />
                     ) : (
@@ -265,22 +223,6 @@ export function Timeline({
         >
           ✏️
         </button>
-      )}
-
-      {/* カード詳細モーダル */}
-      {selectedCard && (
-        <div className={styles.modal} onClick={handleCloseModal}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <CardFlip
-              card={selectedCard}
-              senderProfile={senderProfile}
-              onClose={handleCloseModal}
-              userPubkey={userPubkey}
-              signEvent={signEvent}
-              onExtend={onExtend}
-            />
-          </div>
-        </div>
       )}
     </div>
   );
