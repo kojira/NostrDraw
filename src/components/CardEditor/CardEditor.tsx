@@ -15,6 +15,10 @@ interface CardEditorProps {
   onMessageChange: (message: string) => void;
   userPubkey?: string | null;
   extendingCard?: NewYearCard | null; // 描き足し元のカード
+  allowExtend?: boolean;
+  onAllowExtendChange?: (allow: boolean) => void;
+  postToTimeline?: boolean;
+  onPostToTimelineChange?: (post: boolean) => void;
 }
 
 export function CardEditor({
@@ -23,6 +27,10 @@ export function CardEditor({
   onMessageChange,
   userPubkey,
   extendingCard,
+  allowExtend = true,
+  onAllowExtendChange,
+  postToTimeline = true,
+  onPostToTimelineChange,
 }: CardEditorProps) {
   const { t } = useTranslation();
   const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
@@ -89,6 +97,27 @@ export function CardEditor({
           etoImages={ETO_IMAGES}
           baseImageSvg={extendingCard?.svg}
         />
+      </div>
+      
+      {/* 投稿オプション */}
+      <div className={styles.options}>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={allowExtend}
+            onChange={(e) => onAllowExtendChange?.(e.target.checked)}
+          />
+          <span>{t('send.allowExtend')}</span>
+        </label>
+        
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={postToTimeline}
+            onChange={(e) => onPostToTimelineChange?.(e.target.checked)}
+          />
+          <span>{t('send.postToTimeline')}</span>
+        </label>
       </div>
     </div>
   );

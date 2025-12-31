@@ -174,47 +174,14 @@ function App() {
                     onSvgChange={setSvg}
                     onMessageChange={setMessage}
                     userPubkey={authState.pubkey}
+                    allowExtend={allowExtend}
+                    onAllowExtendChange={setAllowExtend}
+                    postToTimeline={postToTimeline}
+                    onPostToTimelineChange={setPostToTimeline}
                   />
                 </section>
                 {editorState.svg && (
                   <section className="section sendSection">
-                    <h2>📤 {t('send.title')}</h2>
-                    
-                    {/* メッセージ入力 */}
-                    <div className="formGroup">
-                      <label>{t('send.message')}</label>
-                      <input
-                        type="text"
-                        value={editorState.message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder={t('send.messagePlaceholder')}
-                        className="messageInput"
-                      />
-                    </div>
-                    
-                    {/* オプション */}
-                    <div className="formGroup">
-                      <label className="checkboxLabel">
-                        <input
-                          type="checkbox"
-                          checked={allowExtend}
-                          onChange={(e) => setAllowExtend(e.target.checked)}
-                        />
-                        <span>{t('send.allowExtend')}</span>
-                      </label>
-                    </div>
-                    
-                    <div className="formGroup">
-                      <label className="checkboxLabel">
-                        <input
-                          type="checkbox"
-                          checked={postToTimeline}
-                          onChange={(e) => setPostToTimeline(e.target.checked)}
-                        />
-                        <span>{t('send.postToTimeline')}</span>
-                      </label>
-                    </div>
-                    
                     {/* 投稿ボタン */}
                     <button
                       className="sendButton"
