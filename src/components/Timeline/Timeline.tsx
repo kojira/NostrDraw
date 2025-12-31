@@ -56,7 +56,9 @@ export function Timeline({
   const cards = activeTab === 'follow' ? followCards : globalCards;
   const isLoading = activeTab === 'follow' ? isLoadingFollow : isLoadingGlobal;
   const error = activeTab === 'follow' ? errorFollow : errorGlobal;
-  const onRefresh = activeTab === 'follow' ? onRefreshFollow : onRefreshGlobal;
+  // 更新関数は将来のプルトゥリフレッシュ実装時に使用
+  void onRefreshFollow;
+  void onRefreshGlobal;
 
   // プロフィールを取得
   useEffect(() => {
@@ -209,9 +211,9 @@ export function Timeline({
           <button 
             className={styles.createButton}
             onClick={onCreatePost}
-            title={t('timeline.createPost')}
           >
-            <span className={styles.createIcon}>✏️</span>
+            <span className={styles.createIcon}>＋</span>
+            <span className={styles.tabLabel}>{t('timeline.createPost')}</span>
           </button>
         )}
         
@@ -221,15 +223,6 @@ export function Timeline({
         >
           <span className={styles.tabIcon}>🌐</span>
           <span className={styles.tabLabel}>{t('timeline.global')}</span>
-        </button>
-        
-        <button
-          className={styles.bottomTab}
-          onClick={onRefresh}
-          disabled={isLoading}
-        >
-          <span className={styles.tabIcon}>🔄</span>
-          <span className={styles.tabLabel}>更新</span>
         </button>
       </div>
     </div>
