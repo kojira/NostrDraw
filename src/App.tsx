@@ -77,6 +77,8 @@ function App() {
   const { send: sendCard, isSending, error: sendError } = useSendCard(signEvent);
 
   const [lastSentEventId, setLastSentEventId] = useState<string | null>(null);
+  const [allowExtend, setAllowExtend] = useState(true); // 描き足しを許可
+  const [postToTimeline, setPostToTimeline] = useState(true); // kind 1にも投稿
   
   // URLパラメータからeventidを取得して表示するカード
   const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
@@ -151,7 +153,43 @@ function App() {
                 {editorState.svg && (
                   <section className="section sendSection">
                     <h2>📤 {t('send.title')}</h2>
-                    {/* 送信ボタン */}
+                    
+                    {/* メッセージ入力 */}
+                    <div className="formGroup">
+                      <label>{t('send.message')}</label>
+                      <input
+                        type="text"
+                        value={editorState.message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder={t('send.messagePlaceholder')}
+                        className="messageInput"
+                      />
+                    </div>
+                    
+                    {/* オプション */}
+                    <div className="formGroup">
+                      <label className="checkboxLabel">
+                        <input
+                          type="checkbox"
+                          checked={allowExtend}
+                          onChange={(e) => setAllowExtend(e.target.checked)}
+                        />
+                        <span>{t('send.allowExtend')}</span>
+                      </label>
+                    </div>
+                    
+                    <div className="formGroup">
+                      <label className="checkboxLabel">
+                        <input
+                          type="checkbox"
+                          checked={postToTimeline}
+                          onChange={(e) => setPostToTimeline(e.target.checked)}
+                        />
+                        <span>{t('send.postToTimeline')}</span>
+                      </label>
+                    </div>
+                    
+                    {/* 投稿ボタン */}
                     <button
                       className="sendButton"
                       onClick={async () => {
@@ -164,7 +202,9 @@ function App() {
                           message: editorState.message,
                           year: new Date().getFullYear() + 1,
                           layoutId: 'vertical',
-                          recipientPubkey: null, // 公開投稿（宛先なし）
+                          recipientPubkey: null,
+                          allowExtend,
+                          isPublic: postToTimeline,
                         });
                         if (result) {
                           setLastSentEventId(result);
@@ -172,9 +212,10 @@ function App() {
                       }}
                       disabled={!editorState.svg || isSending}
                     >
-                      {isSending ? t('send.sending') : t('send.post')}
+                      {isSending ? t('send.sending') : t('send.button')}
                     </button>
                     {sendError && <p className="error">{sendError}</p>}
+                    
                     {/* 送信成功ダイアログ */}
                     {lastSentEventId && (
                       <div className="successMessage">

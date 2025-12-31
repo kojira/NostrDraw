@@ -288,6 +288,7 @@ export interface SendCardParams {
   allowExtend?: boolean; // 描き足し許可
   parentEventId?: string | null; // 描き足し元のイベントID
   parentPubkey?: string | null; // 描き足し元の投稿者
+  isPublic?: boolean; // kind 1にも投稿するか
 }
 
 export async function sendCard(

@@ -64,11 +64,14 @@
     "followees": "Followees"
   },
   "send": {
-    "button": "📤 Send",
-    "sending": "Sending...",
+    "title": "Post Options",
+    "button": "📤 Post",
+    "sending": "Posting...",
+    "message": "Message",
+    "messagePlaceholder": "Add a message...",
     "allowExtend": "Allow others to extend",
-    "postToTimeline": "Post to timeline",
-    "success": "🎉 Sent successfully!",
+    "postToTimeline": "Also post to timeline (kind 1)",
+    "success": "🎉 Posted successfully!",
     "postTimeline": "📢 Post to timeline",
     "posting": "Posting...",
     "posted": "✅ Posted to timeline!",
@@ -76,7 +79,6 @@
     "shareHint": "Share on timeline to let everyone see!",
     "copyUrl": "📋 Copy URL",
     "copied": "✅ Copied!",
-    "useThisDrawing": "✏️ Use this drawing",
     "close": "Close"
   },
   "viewer": {

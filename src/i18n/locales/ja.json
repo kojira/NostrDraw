@@ -64,11 +64,14 @@
     "followees": "フォロイー"
   },
   "send": {
-    "button": "📤 送信する",
-    "sending": "送信中...",
+    "title": "投稿オプション",
+    "button": "📤 投稿する",
+    "sending": "投稿中...",
+    "message": "メッセージ",
+    "messagePlaceholder": "ひとことメッセージを添えて...",
     "allowExtend": "描き足しを許可する",
-    "postToTimeline": "タイムラインにも投稿する",
-    "success": "🎉 送信完了！",
+    "postToTimeline": "タイムライン(kind 1)にも投稿する",
+    "success": "🎉 投稿完了！",
     "postTimeline": "📢 タイムラインに投稿する",
     "posting": "投稿中...",
     "posted": "✅ タイムラインに投稿しました！",
@@ -76,7 +79,6 @@
     "shareHint": "タイムラインで共有してみんなに見てもらおう！",
     "copyUrl": "📋 URLをコピー",
     "copied": "✅ コピーしました！",
-    "useThisDrawing": "✏️ この絵を使う",
     "close": "閉じる"
   },
   "viewer": {
