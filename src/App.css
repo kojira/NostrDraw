@@ -487,65 +487,44 @@
   color: #555;
 }
 
-/* 3カラムレイアウト */
+/* メインレイアウト（タイムライン + サイドバー） */
 .mainLayout {
   display: flex;
   gap: 1rem;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
   align-items: flex-start;
+  flex: 1;
 }
 
-.sidebarLeft,
-.sidebarRight {
-  position: sticky;
-  top: 1rem;
-  flex-shrink: 0;
-}
-
-.sidebarLeft {
-  order: 1;
-}
-
-.main {
-  order: 2;
+.mainContent {
   flex: 1;
   min-width: 0;
+  max-width: 600px;
 }
 
-.sidebarRight {
-  order: 3;
-}
-
-/* モバイル用カルーセル（デフォルトで非表示） */
-.mobileCarouselSection {
-  display: none;
-  overflow: hidden;
-  max-width: 100%;
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1rem;
 }
 
 /* レスポンシブ */
-@media (max-width: 1200px) {
-  /* タブレット: 左サイドバーを非表示 */
-  .sidebarLeft {
-    display: none;
-  }
-}
-
-@media (max-width: 900px) {
-  /* スマホ横向き: 右サイドバーも非表示 */
-  .sidebarRight {
+@media (max-width: 1024px) {
+  /* タブレット/モバイル: サイドバーを非表示 */
+  .sidebar {
     display: none;
   }
   
   .mainLayout {
     padding: 0;
+    justify-content: center;
   }
   
-  /* モバイル用カルーセルを表示 */
-  .mobileCarouselSection {
-    display: block;
+  .mainContent {
+    max-width: 100%;
   }
 }
 

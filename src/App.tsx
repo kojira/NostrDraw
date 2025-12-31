@@ -6,7 +6,7 @@ import type { NewYearCard } from './types';
 import { LanguageSwitch } from './components/LanguageSwitch';
 import { useAuth } from './hooks/useAuth';
 import { useFollowees } from './hooks/useNostr';
-import { usePublicGalleryCards, useFollowCards, useSendCard, useCardEditor } from './hooks/useCards';
+import { usePublicGalleryCards, useFollowCards, usePopularCards, useSendCard, useCardEditor } from './hooks/useCards';
 import { fetchCardById } from './services/card';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import { Gallery } from './components/Gallery';
@@ -14,6 +14,7 @@ import { UserGallery } from './components/UserGallery';
 import { Timeline } from './components/Timeline';
 import { CardEditor } from './components/CardEditor';
 import { Auth } from './components/Auth';
+import { SidebarGallery } from './components/SidebarGallery';
 import { useRouter } from './hooks/useRouter';
 import './App.css';
 
@@ -42,6 +43,13 @@ function App() {
     error: recentError,
     refresh: refreshRecent,
   } = usePublicGalleryCards();
+
+  const {
+    cards: popularCards,
+    isLoading: popularLoading,
+    error: popularError,
+    refresh: refreshPopular,
+  } = usePopularCards(3); // 過去3日間
 
   // フォロー中のユーザーのpubkeyリスト
   const followeePubkeys = useMemo(() => 
@@ -286,20 +294,40 @@ function App() {
         </section>
       )}
 
-      {/* タイムライン（メインコンテンツ） */}
-      <Timeline
-        followCards={followCards}
-        globalCards={recentCards}
-        isLoadingFollow={followCardsLoading}
-        isLoadingGlobal={recentLoading}
-        errorFollow={followCardsError}
-        errorGlobal={recentError}
-        onRefreshFollow={refreshFollowCards}
-        onRefreshGlobal={refreshRecent}
-        userPubkey={authState.pubkey}
-        onUserClick={goToUser}
-        onCreatePost={goToCreate}
-      />
+      {/* メインレイアウト */}
+      <div className="mainLayout">
+        {/* タイムライン（メインコンテンツ） */}
+        <main className="mainContent">
+          <Timeline
+            followCards={followCards}
+            globalCards={recentCards}
+            isLoadingFollow={followCardsLoading}
+            isLoadingGlobal={recentLoading}
+            errorFollow={followCardsError}
+            errorGlobal={recentError}
+            onRefreshFollow={refreshFollowCards}
+            onRefreshGlobal={refreshRecent}
+            userPubkey={authState.pubkey}
+            onUserClick={goToUser}
+            onCreatePost={goToCreate}
+          />
+        </main>
+
+        {/* サイドバー: 人気の投稿（PC表示時のみ） */}
+        <aside className="sidebar">
+          <SidebarGallery
+            type="popular"
+            cards={popularCards}
+            isLoading={popularLoading}
+            error={popularError}
+            onRefresh={refreshPopular}
+            onViewAll={() => goToGallery({ tab: 'popular' })}
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+            onExtend={handleExtend}
+          />
+        </aside>
+      </div>
     </div>
   );
 }
