@@ -87,7 +87,10 @@
     "noReceived": "No messages received yet",
     "noSent": "No messages sent yet",
     "refresh": "Refresh",
-    "sharedCard": "🎨 Shared Card"
+    "sharedCard": "🎨 Shared Card",
+    "extend": "Extend",
+    "reaction": "Like",
+    "reacted": "Liked"
   },
   "card": {
     "to": "To:",
