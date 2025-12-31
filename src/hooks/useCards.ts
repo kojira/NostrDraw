@@ -153,6 +153,45 @@ export function usePopularCards(days: number = 3) {
   };
 }
 
+// フォロー中のユーザーの投稿を取得
+export function useFollowCards(followees: string[]) {
+  const [cards, setCards] = useState<NewYearCard[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCards = useCallback(async () => {
+    if (followees.length === 0) {
+      setCards([]);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { fetchCardsByAuthors } = await import('../services/card');
+      const followCards = await fetchCardsByAuthors(followees, 50);
+      setCards(followCards);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'フォロー中のユーザーの投稿取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [followees]);
+
+  useEffect(() => {
+    loadCards();
+  }, [loadCards]);
+
+  return {
+    cards,
+    count: cards.length,
+    isLoading,
+    error,
+    refresh: loadCards,
+  };
+}
+
 export function useSendCard(signEvent: (event: EventTemplate) => Promise<Event>) {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);

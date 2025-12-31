@@ -164,6 +164,28 @@ export async function fetchCardsByAuthor(pubkey: string, limit: number = 50): Pr
   return cards.sort((a, b) => b.createdAt - a.createdAt);
 }
 
+// 複数著者の投稿を取得（フォロータイムライン用）
+export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50): Promise<NewYearCard[]> {
+  if (pubkeys.length === 0) return [];
+
+  const events = await fetchEvents({
+    kinds: [NOSTRDRAW_KIND],
+    authors: pubkeys,
+    limit: limit,
+  });
+
+  const cards: NewYearCard[] = [];
+  for (const event of events) {
+    const card = parseNewYearCard(event);
+    if (card) {
+      cards.push(card);
+    }
+  }
+
+  // 新しい順にソート
+  return cards.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 // 公開ギャラリー（宛先なしの投稿）を取得
 export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYearCard[]> {
   const events = await fetchEvents({

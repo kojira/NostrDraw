@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export interface Route {
-  page: 'home' | 'gallery' | 'user';
+  page: 'home' | 'gallery' | 'user' | 'create';
   params: Record<string, string>;
 }
 
@@ -40,6 +40,10 @@ function parseHash(hash: string): Route {
   
   if (segments[0] === 'user' && segments[1]) {
     return { page: 'user', params: { ...params, npub: segments[1] } };
+  }
+  
+  if (segments[0] === 'create') {
+    return { page: 'create', params };
   }
   
   return { page: 'home', params };
@@ -82,12 +86,17 @@ export function useRouter() {
     window.location.hash = `user/${npub}`;
   }, []);
 
+  const goToCreate = useCallback(() => {
+    window.location.hash = 'create';
+  }, []);
+
   return {
     route,
     navigate,
     goHome,
     goToGallery,
     goToUser,
+    goToCreate,
   };
 }
 
