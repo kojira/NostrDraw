@@ -9,6 +9,13 @@
   position: relative;
 }
 
+/* PC版: タイムラインの幅を広げる */
+@media (min-width: 1025px) {
+  .timeline {
+    max-width: 100%;
+  }
+}
+
 /* タブ切り替え */
 .tabs {
   display: flex;
@@ -120,6 +127,24 @@
   padding-bottom: 70px; /* 下部タブバーの高さ分 */
 }
 
+/* PC版: タイル状グリッドレイアウト */
+@media (min-width: 1025px) {
+  .posts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 常に2列 */
+    gap: 1rem;
+    padding: 1rem;
+    align-content: start;
+  }
+}
+
+/* 大画面: 3列 */
+@media (min-width: 1600px) {
+  .posts {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* 各投稿 */
 .post {
   background: var(--bg-secondary, #1a1a2e);
@@ -127,6 +152,19 @@
   margin-bottom: 1rem;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* PC版: タイル用スタイル */
+@media (min-width: 1025px) {
+  .post {
+    margin-bottom: 0;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .post:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(233, 69, 96, 0.2);
+  }
 }
 
 .postHeader {

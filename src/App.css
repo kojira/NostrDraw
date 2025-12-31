@@ -133,6 +133,14 @@
   overflow-x: hidden;
 }
 
+/* PC版: メインエリアを広げてタイル表示に対応 */
+@media (min-width: 1025px) {
+  .main {
+    max-width: none;
+    padding: 1rem;
+  }
+}
+
 .section {
   margin-bottom: 2rem;
   overflow-x: hidden;
@@ -498,7 +506,7 @@
 .mainLayout {
   display: flex;
   gap: 1rem;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 1rem;
   align-items: flex-start;
@@ -508,7 +516,7 @@
 .mainContent {
   flex: 1;
   min-width: 0;
-  max-width: 600px;
+  max-width: 900px;
 }
 
 .sidebar {
