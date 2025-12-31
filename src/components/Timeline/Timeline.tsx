@@ -1,10 +1,11 @@
 // タイムラインコンポーネント - フォロー/グローバルタブ切り替え
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
-import type { NewYearCardWithReactions } from '../../services/card';
+import { sendReaction, type NewYearCardWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
+import type { EventTemplate, Event } from 'nostr-tools';
 import styles from './Timeline.module.css';
 
 // SVGを安全にレンダリングするためのコンポーネント
@@ -28,6 +29,7 @@ interface TimelineProps {
   onRefreshFollow: () => void;
   onRefreshGlobal: () => void;
   userPubkey?: string | null;
+  signEvent?: (event: EventTemplate) => Promise<Event>;
   onUserClick?: (npub: string) => void;
   onCreatePost?: () => void;
 }
@@ -44,6 +46,7 @@ export function Timeline({
   onRefreshFollow,
   onRefreshGlobal,
   userPubkey,
+  signEvent,
   onUserClick,
   onCreatePost,
 }: TimelineProps) {
@@ -52,6 +55,10 @@ export function Timeline({
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   // 既に取得中または取得済みのpubkeyを追跡（重複フェッチ防止）
   const fetchedPubkeysRef = useRef<Set<string>>(new Set());
+  // リアクション中のイベントIDを追跡
+  const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
+  // ローカルでリアクション済みのイベントIDを追跡
+  const [localReactedIds, setLocalReactedIds] = useState<Set<string>>(new Set());
 
   const cards = activeTab === 'follow' ? followCards : globalCards;
   const isLoading = activeTab === 'follow' ? isLoadingFollow : isLoadingGlobal;
@@ -103,6 +110,47 @@ export function Timeline({
     }
     return 0;
   };
+
+  const getUserReacted = (card: NewYearCard | NewYearCardWithReactions): boolean => {
+    // ローカルでリアクション済みならtrue
+    if (localReactedIds.has(card.id)) {
+      return true;
+    }
+    // サーバーからの情報
+    if ('userReacted' in card && card.userReacted === true) {
+      return true;
+    }
+    return false;
+  };
+
+  // リアクションを送信
+  const handleReaction = useCallback(async (card: NewYearCard | NewYearCardWithReactions) => {
+    if (!signEvent || !userPubkey) {
+      return;
+    }
+    
+    // 既にリアクション済みか処理中ならスキップ
+    if (getUserReacted(card) || reactingIds.has(card.id)) {
+      return;
+    }
+    
+    // 処理中としてマーク
+    setReactingIds(prev => new Set(prev).add(card.id));
+    
+    try {
+      await sendReaction(card.id, card.pubkey, '❤️', signEvent);
+      // ローカルでリアクション済みとしてマーク
+      setLocalReactedIds(prev => new Set(prev).add(card.id));
+    } catch (error) {
+      console.error('リアクション送信エラー:', error);
+    } finally {
+      setReactingIds(prev => {
+        const next = new Set(prev);
+        next.delete(card.id);
+        return next;
+      });
+    }
+  }, [signEvent, userPubkey, reactingIds, localReactedIds]);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
@@ -182,9 +230,14 @@ export function Timeline({
 
                   {/* フッター（リアクション） */}
                   <div className={styles.postFooter}>
-                    <span className={styles.reactions}>
-                      ❤️ {reactionCount}
-                    </span>
+                    <button
+                      className={`${styles.reactionButton} ${getUserReacted(card) ? styles.reacted : ''}`}
+                      onClick={() => handleReaction(card)}
+                      disabled={!signEvent || !userPubkey || getUserReacted(card) || reactingIds.has(card.id)}
+                      title={getUserReacted(card) ? t('viewer.reacted') : t('viewer.reaction')}
+                    >
+                      {reactingIds.has(card.id) ? '💓' : getUserReacted(card) ? '❤️' : '🤍'} {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
+                    </button>
                     {card.message && (
                       <span className={styles.message}>{card.message}</span>
                     )}

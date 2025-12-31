@@ -260,6 +260,38 @@
   color: #e94560;
 }
 
+/* リアクションボタン */
+.reactionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: #888;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reactionButton:hover:not(:disabled) {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border-color: rgba(233, 69, 96, 0.3);
+  transform: scale(1.05);
+}
+
+.reactionButton:disabled {
+  cursor: default;
+}
+
+.reactionButton.reacted {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border-color: rgba(233, 69, 96, 0.3);
+}
+
 .message {
   font-size: 0.85rem;
   color: var(--text-secondary, #888);

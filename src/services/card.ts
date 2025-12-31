@@ -209,6 +209,7 @@ export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYe
 // リアクション数付きのカード型
 export interface NewYearCardWithReactions extends NewYearCard {
   reactionCount: number;
+  userReacted?: boolean; // ユーザーがリアクション済みかどうか
 }
 
 // 特定のイベントIDに対するリアクション数を取得
