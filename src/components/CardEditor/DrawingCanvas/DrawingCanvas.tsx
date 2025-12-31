@@ -12,6 +12,8 @@ import styles from './DrawingCanvas.module.css';
 
 export function DrawingCanvas({
   onSave,
+  onPost,
+  isPosting = false,
   width = 400,
   height = 300,
   initialMessage = '',
@@ -109,6 +111,13 @@ export function DrawingCanvas({
     const svg = generateSvg();
     onSave(svg, message);
   }, [generateSvg, onSave, message]);
+
+  const handlePost = useCallback(async () => {
+    if (onPost) {
+      const svg = generateSvg();
+      await onPost(svg, message);
+    }
+  }, [generateSvg, onPost, message]);
 
   return (
     <div className={styles.drawingCanvas}>
@@ -391,8 +400,12 @@ export function DrawingCanvas({
         <button onClick={clearCanvas} className={styles.clearButton}>
           クリア
         </button>
-        <button onClick={handleSave} className={styles.saveButton}>
-          📤 投稿する
+        <button 
+          onClick={onPost ? handlePost : handleSave} 
+          className={styles.saveButton}
+          disabled={isPosting}
+        >
+          {isPosting ? '投稿中...' : '📤 投稿する'}
         </button>
       </div>
     </div>

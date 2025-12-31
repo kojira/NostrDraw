@@ -178,48 +178,40 @@ function App() {
                     onAllowExtendChange={setAllowExtend}
                     postToTimeline={postToTimeline}
                     onPostToTimelineChange={setPostToTimeline}
+                    isPosting={isSending}
+                    onPost={async (svg, msg) => {
+                      if (!authState.isNip07) {
+                        alert(t('auth.nip07Required'));
+                        return;
+                      }
+                      const result = await sendCard({
+                        svg,
+                        message: msg,
+                        year: new Date().getFullYear() + 1,
+                        layoutId: 'vertical',
+                        recipientPubkey: null,
+                        allowExtend,
+                        isPublic: postToTimeline,
+                      });
+                      if (result) {
+                        setLastSentEventId(result);
+                      }
+                    }}
                   />
                 </section>
-                {editorState.svg && (
-                  <section className="section sendSection">
-                    {/* 投稿ボタン */}
-                    <button
-                      className="sendButton"
-                      onClick={async () => {
-                        if (!authState.isNip07) {
-                          alert(t('auth.nip07Required'));
-                          return;
-                        }
-                        const result = await sendCard({
-                          svg: editorState.svg!,
-                          message: editorState.message,
-                          year: new Date().getFullYear() + 1,
-                          layoutId: 'vertical',
-                          recipientPubkey: null,
-                          allowExtend,
-                          isPublic: postToTimeline,
-                        });
-                        if (result) {
-                          setLastSentEventId(result);
-                        }
-                      }}
-                      disabled={!editorState.svg || isSending}
-                    >
-                      {isSending ? t('send.sending') : t('send.button')}
-                    </button>
-                    {sendError && <p className="error">{sendError}</p>}
-                    
-                    {/* 送信成功ダイアログ */}
-                    {lastSentEventId && (
-                      <div className="successMessage">
-                        <p>✅ {t('send.success')}</p>
-                        <button onClick={() => {
-                          handleCloseSendSuccess();
-                          goHome();
-                        }}>{t('send.close')}</button>
-                      </div>
-                    )}
-                  </section>
+                
+                {/* エラー表示 */}
+                {sendError && <p className="error">{sendError}</p>}
+                
+                {/* 送信成功ダイアログ */}
+                {lastSentEventId && (
+                  <div className="successMessage">
+                    <p>✅ {t('send.success')}</p>
+                    <button onClick={() => {
+                      handleCloseSendSuccess();
+                      goHome();
+                    }}>{t('send.close')}</button>
+                  </div>
                 )}
               </>
             )}

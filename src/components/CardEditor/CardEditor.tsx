@@ -19,6 +19,8 @@ interface CardEditorProps {
   onAllowExtendChange?: (allow: boolean) => void;
   postToTimeline?: boolean;
   onPostToTimelineChange?: (post: boolean) => void;
+  onPost?: (svg: string, message: string) => Promise<void>; // 投稿処理
+  isPosting?: boolean; // 投稿中フラグ
 }
 
 export function CardEditor({
@@ -31,6 +33,8 @@ export function CardEditor({
   onAllowExtendChange,
   postToTimeline = true,
   onPostToTimelineChange,
+  onPost,
+  isPosting = false,
 }: CardEditorProps) {
   const { t } = useTranslation();
   const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
@@ -90,7 +94,9 @@ export function CardEditor({
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>✏️ {t('editor.draw')}</h3>
         <DrawingCanvas 
-          onSave={handleDrawingSave} 
+          onSave={handleDrawingSave}
+          onPost={onPost}
+          isPosting={isPosting}
           initialMessage={message}
           customEmojis={customEmojis}
           isLoadingEmojis={isLoadingEmojis}

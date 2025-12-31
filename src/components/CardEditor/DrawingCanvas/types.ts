@@ -48,6 +48,8 @@ export type StampTab = 'builtin' | 'custom';
 
 export interface DrawingCanvasProps {
   onSave: (svg: string, message: string) => void;
+  onPost?: (svg: string, message: string) => Promise<void>; // 投稿処理
+  isPosting?: boolean; // 投稿中フラグ
   width?: number;
   height?: number;
   initialMessage?: string;
