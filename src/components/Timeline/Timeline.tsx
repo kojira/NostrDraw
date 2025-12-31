@@ -140,15 +140,13 @@ export function Timeline({
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-
-    if (hours < 1) return t('timeline.justNow');
-    if (hours < 24) return t('timeline.hoursAgo', { count: hours });
-    if (days < 7) return t('timeline.daysAgo', { count: days });
-    return date.toLocaleDateString();
+    // 絶対日時表示 (YYYY/MM/DD HH:mm)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
   return (

@@ -149,10 +149,7 @@
     "loginToSeeFollow": "Login to see posts from users you follow",
     "noFollowPosts": "No posts from users you follow",
     "noPosts": "No posts yet",
-    "createPost": "Create Post",
-    "justNow": "Just now",
-    "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago"
+    "createPost": "Create Post"
   }
 }
 

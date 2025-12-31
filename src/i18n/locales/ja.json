@@ -149,10 +149,7 @@
     "loginToSeeFollow": "フォロー中のユーザーの投稿を見るにはログインしてください",
     "noFollowPosts": "フォロー中のユーザーの投稿がありません",
     "noPosts": "投稿がありません",
-    "createPost": "投稿する",
-    "justNow": "たった今",
-    "hoursAgo": "{{count}}時間前",
-    "daysAgo": "{{count}}日前"
+    "createPost": "投稿する"
   }
 }
 
