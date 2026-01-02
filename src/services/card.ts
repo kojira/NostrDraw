@@ -256,11 +256,15 @@ export async function fetchReactionCounts(eventIds: string[]): Promise<Map<strin
       });
 
       for (const reaction of reactions) {
-        // eタグからリアクション対象のイベントIDを取得
-        const eTag = reaction.tags.find(tag => tag[0] === 'e');
-        if (eTag && eTag[1]) {
-          const eventId = eTag[1];
-          counts.set(eventId, (counts.get(eventId) || 0) + 1);
+        const eTags = reaction.tags.filter(tag => tag[0] === 'e');
+        // NIP-25: 最後のeタグがリアクション対象
+        // 最後のeタグがbatchに含まれる場合のみカウント
+        if (eTags.length > 0) {
+          const lastETag = eTags[eTags.length - 1];
+          const eventId = lastETag[1];
+          if (eventId && batch.includes(eventId)) {
+            counts.set(eventId, (counts.get(eventId) || 0) + 1);
+          }
         }
       }
     } catch (error) {
