@@ -41,7 +41,8 @@ export function CardFlip({
   
   // 描き足しアニメーション用の状態
   const [animatedSvg, setAnimatedSvg] = useState<string | null>(null);
-  const [isLoadingParent, setIsLoadingParent] = useState(false);
+  // 親カードがある場合は最初からロード中状態にする（アニメーション前に最終形が見えるのを防ぐ）
+  const [isLoadingParent, setIsLoadingParent] = useState(!!card.parentEventId);
 
   // リアクション状態を取得
   useEffect(() => {
@@ -316,7 +317,9 @@ function CardContent({
   const layoutClass = styles[`layout_${card.layoutId}`] || styles.layout_vertical;
   
   // 描き足しアニメーション付きSVGがあればそれを使用
-  const displaySvg = animatedSvg || card.svg;
+  // アニメーション処理中（親カード読み込み中）は元のSVGを表示しない
+  // これにより、アニメーション前に最終形が見えてしまうのを防ぐ
+  const displaySvg = isLoadingParent ? null : (animatedSvg || card.svg);
   // アニメーション付きSVGは常に直接レンダリング（CSS animationを適用するため）
   const forceDirectRender = !!animatedSvg;
 

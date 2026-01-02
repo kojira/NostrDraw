@@ -135,6 +135,8 @@ export function addAnimationToNewElements(
   
   // 描画要素にアニメーションクラスを追加
   const drawingElements = ['path', 'circle', 'rect', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'image', 'g'];
+  const strokeElements = ['path', 'line', 'polyline', 'polygon'];
+  let delay = 0;
   
   function processElement(element: Element) {
     const tagName = element.tagName.toLowerCase();
@@ -144,12 +146,16 @@ export function addAnimationToNewElements(
       
       // 親に存在しない要素には新規追加マーク
       if (!parentSignatures.has(signature)) {
-        element.classList.add(animationClass);
-        
-        // path要素の場合はstroke-dasharrayアニメーション用の属性を追加
-        if (tagName === 'path') {
-          // パスの長さを計算するためのヒント
-          element.setAttribute('data-new-stroke', 'true');
+        // stroke属性を持つ要素のみアニメーション対象
+        if (strokeElements.includes(tagName)) {
+          const stroke = element.getAttribute('stroke');
+          if (stroke && stroke !== 'none') {
+            element.classList.add(animationClass);
+            element.setAttribute('data-new-stroke', 'true');
+            // 連続したアニメーションのためにディレイを追加
+            element.setAttribute('style', `animation-delay: ${delay}ms`);
+            delay += 100; // 100msずつずらして描画される感じを出す
+          }
         }
       }
     }
