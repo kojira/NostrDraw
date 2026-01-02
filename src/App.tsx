@@ -84,6 +84,9 @@ function App() {
   // URLパラメータからeventidを取得して表示するカード
   const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
   const [isLoadingSharedCard, setIsLoadingSharedCard] = useState(false);
+  
+  // タイムラインでクリックされたカード（モーダル表示用）
+  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
 
   // 新規投稿を開始
   const handleCreatePost = useCallback(() => {
@@ -98,8 +101,14 @@ function App() {
     setLastSentEventId(null); // 前回の投稿成功状態をクリア
     resetEditor(); // エディタの状態をリセット
     setExtendingCard(card);
+    setSelectedCard(null); // モーダルを閉じる
     goToCreate();
   }, [goToCreate, resetEditor]);
+
+  // タイムラインのカードをクリック（大きく表示）
+  const handleCardClick = useCallback((card: NewYearCard) => {
+    setSelectedCard(card);
+  }, []);
 
   // URLパラメータのeventidをチェック
   useEffect(() => {
@@ -343,6 +352,21 @@ function App() {
         </section>
       )}
 
+      {/* カード詳細モーダル（タイムラインからクリック時） */}
+      {selectedCard && (
+        <div className="cardModal" onClick={() => setSelectedCard(null)}>
+          <div className="cardModalContent" onClick={(e) => e.stopPropagation()}>
+            <CardFlip
+              card={selectedCard}
+              userPubkey={authState.pubkey}
+              signEvent={authState.isNip07 ? signEvent : undefined}
+              onExtend={handleExtend}
+              onClose={() => setSelectedCard(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* メインレイアウト */}
       <div className="mainLayout">
         {/* タイムライン（メインコンテンツ） */}
@@ -361,6 +385,7 @@ function App() {
             onUserClick={goToUser}
             onCreatePost={handleCreatePost}
             onExtend={handleExtend}
+            onCardClick={handleCardClick}
           />
         </main>
 

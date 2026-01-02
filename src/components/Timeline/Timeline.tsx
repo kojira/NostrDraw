@@ -34,6 +34,7 @@ interface TimelineProps {
   onUserClick?: (npub: string) => void;
   onCreatePost?: () => void;
   onExtend?: (card: NewYearCard) => void; // 描き足しボタン押下時
+  onCardClick?: (card: NewYearCard) => void; // カードクリック時（大きく表示）
 }
 
 type TabType = 'follow' | 'global';
@@ -52,6 +53,7 @@ export function Timeline({
   onUserClick,
   onCreatePost,
   onExtend,
+  onCardClick,
 }: TimelineProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('follow'); // デフォルトはフォロータブ
@@ -245,7 +247,10 @@ export function Timeline({
                   </div>
 
                   {/* 画像 */}
-                  <div className={styles.postImage}>
+                  <div 
+                    className={`${styles.postImage} ${onCardClick ? styles.clickable : ''}`}
+                    onClick={() => onCardClick?.(card)}
+                  >
                     {card.svg ? (
                       <SvgRenderer svg={card.svg} className={styles.svg} />
                     ) : (

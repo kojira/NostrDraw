@@ -227,6 +227,15 @@
   overflow: hidden;
 }
 
+.postImage.clickable {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.postImage.clickable:hover {
+  opacity: 0.9;
+}
+
 .svg {
   width: 100%;
   height: 100%;
