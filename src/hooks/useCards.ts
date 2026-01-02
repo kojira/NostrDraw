@@ -89,7 +89,7 @@ export function useSentCards(pubkey: string | null) {
 
 // 公開ギャラリー（みんなの作品・新着）を取得
 export function usePublicGalleryCards() {
-  const [cards, setCards] = useState<NewYearCard[]>([]);
+  const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,7 +155,7 @@ export function usePopularCards(days: number = 3) {
 
 // フォロー中のユーザーの投稿を取得
 export function useFollowCards(followees: string[]) {
-  const [cards, setCards] = useState<NewYearCard[]>([]);
+  const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

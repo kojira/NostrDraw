@@ -166,7 +166,7 @@ export async function fetchCardsByAuthor(pubkey: string, limit: number = 50): Pr
 }
 
 // 複数著者の投稿を取得（フォロータイムライン用）
-export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50): Promise<NewYearCard[]> {
+export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50): Promise<NewYearCardWithReactions[]> {
   if (pubkeys.length === 0) return [];
 
   const events = await fetchEvents({
@@ -184,11 +184,23 @@ export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50)
   }
 
   // 新しい順にソート
-  return cards.sort((a, b) => b.createdAt - a.createdAt);
+  const sortedCards = cards.sort((a, b) => b.createdAt - a.createdAt);
+
+  // リアクション数を取得
+  if (sortedCards.length === 0) return [];
+  
+  const eventIds = sortedCards.map(card => card.id);
+  const reactionCounts = await fetchReactionCounts(eventIds);
+
+  // リアクション数を付与
+  return sortedCards.map(card => ({
+    ...card,
+    reactionCount: reactionCounts.get(card.id) || 0,
+  }));
 }
 
 // 公開ギャラリー（宛先なしの投稿）を取得
-export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYearCard[]> {
+export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYearCardWithReactions[]> {
   const events = await fetchEvents({
     kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
@@ -204,7 +216,19 @@ export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYe
   }
 
   // 新しい順にソートしてlimit件数に制限
-  return cards.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+  const sortedCards = cards.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+
+  // リアクション数を取得
+  if (sortedCards.length === 0) return [];
+  
+  const eventIds = sortedCards.map(card => card.id);
+  const reactionCounts = await fetchReactionCounts(eventIds);
+
+  // リアクション数を付与
+  return sortedCards.map(card => ({
+    ...card,
+    reactionCount: reactionCounts.get(card.id) || 0,
+  }));
 }
 
 // リアクション数付きのカード型
@@ -217,19 +241,30 @@ export interface NewYearCardWithReactions extends NewYearCard {
 export async function fetchReactionCounts(eventIds: string[]): Promise<Map<string, number>> {
   if (eventIds.length === 0) return new Map();
 
-  const reactions = await fetchEvents({
-    kinds: [7], // リアクション
-    '#e': eventIds,
-  });
-
   const counts = new Map<string, number>();
   
-  for (const reaction of reactions) {
-    // eタグからリアクション対象のイベントIDを取得
-    const eTag = reaction.tags.find(tag => tag[0] === 'e');
-    if (eTag && eTag[1]) {
-      const eventId = eTag[1];
-      counts.set(eventId, (counts.get(eventId) || 0) + 1);
+  // 大量のeventIdがある場合は分割して取得
+  const batchSize = 20;
+  for (let i = 0; i < eventIds.length; i += batchSize) {
+    const batch = eventIds.slice(i, i + batchSize);
+    
+    try {
+      const reactions = await fetchEvents({
+        kinds: [7], // リアクション
+        '#e': batch,
+        limit: 500, // 十分な数を取得
+      });
+
+      for (const reaction of reactions) {
+        // eタグからリアクション対象のイベントIDを取得
+        const eTag = reaction.tags.find(tag => tag[0] === 'e');
+        if (eTag && eTag[1]) {
+          const eventId = eTag[1];
+          counts.set(eventId, (counts.get(eventId) || 0) + 1);
+        }
+      }
+    } catch (error) {
+      console.error('リアクション取得エラー:', error);
     }
   }
 
