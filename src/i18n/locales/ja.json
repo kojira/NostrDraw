@@ -158,7 +158,9 @@
     "loginToSeeFollow": "フォロー中のユーザーの投稿を見るにはログインしてください",
     "noFollowPosts": "フォロー中のユーザーの投稿がありません",
     "noPosts": "投稿がありません",
-    "createPost": "投稿する"
+    "createPost": "投稿する",
+    "share": "シェア",
+    "copied": "コピーしました！"
   }
 }
 

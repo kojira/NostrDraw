@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import { sendReaction, type NewYearCardWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
+import { BASE_URL } from '../../config';
 import type { EventTemplate, Event } from 'nostr-tools';
 import styles from './Timeline.module.css';
 
@@ -61,6 +62,8 @@ export function Timeline({
   const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
   // ローカルでリアクション済みのイベントIDを追跡
   const [localReactedIds, setLocalReactedIds] = useState<Set<string>>(new Set());
+  // コピー済みのイベントIDを追跡（一時的なフィードバック用）
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
 
   const cards = activeTab === 'follow' ? followCards : globalCards;
   const isLoading = activeTab === 'follow' ? isLoadingFollow : isLoadingGlobal;
@@ -166,6 +169,26 @@ export function Timeline({
     return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
   };
 
+  // シェアボタンのハンドラ
+  const handleShare = useCallback(async (card: NewYearCard | NewYearCardWithReactions) => {
+    const url = `${BASE_URL}/?eventid=${card.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      // コピー成功のフィードバック
+      setCopiedIds(prev => new Set(prev).add(card.id));
+      // 2秒後にフィードバックを消す
+      setTimeout(() => {
+        setCopiedIds(prev => {
+          const next = new Set(prev);
+          next.delete(card.id);
+          return next;
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('URLのコピーに失敗:', error);
+    }
+  }, []);
+
   return (
     <div className={styles.timeline}>
       {/* ログイン促し（フォロータブでログインしていない場合） */}
@@ -240,6 +263,13 @@ export function Timeline({
                         title={getUserReacted(card) ? t('viewer.reacted') : t('viewer.reaction')}
                       >
                         {reactingIds.has(card.id) ? '💓' : getUserReacted(card) ? '❤️' : '🤍'} {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
+                      </button>
+                      <button
+                        className={`${styles.shareButton} ${copiedIds.has(card.id) ? styles.copied : ''}`}
+                        onClick={() => handleShare(card)}
+                        title={t('timeline.share')}
+                      >
+                        {copiedIds.has(card.id) ? '✅' : '🔗'}
                       </button>
                       {card.allowExtend && onExtend && (
                         <button
