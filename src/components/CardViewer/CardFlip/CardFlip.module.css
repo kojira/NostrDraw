@@ -422,17 +422,23 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 1.2rem;
   transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .shareButton:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.1);
+  color: #fff;
 }
 
 .shareButton.copied {
   background: rgba(100, 200, 100, 0.3);
+  color: #4ade80;
+}
+
+.shareButton svg {
+  display: block;
 }
 
 .reactionButton {
@@ -497,25 +503,25 @@
 .extendButton {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(100, 200, 255, 0.5);
-  border-radius: 50px;
+  border: none;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  color: #64c8ff;
+  transition: all 0.2s ease;
+  color: rgba(100, 200, 255, 0.8);
 }
 
 .extendButton:hover {
   background: rgba(100, 200, 255, 0.2);
-  border-color: #64c8ff;
-  transform: scale(1.05);
+  transform: scale(1.1);
+  color: #64c8ff;
 }
 
-.extendButton span:first-child {
-  font-size: 1.25rem;
+.extendButton svg {
+  display: block;
 }
 
 /* 描き足し元情報 */
@@ -696,12 +702,13 @@
   }
   
   .extendButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+    width: 36px;
+    height: 36px;
   }
   
-  .extendButton span:first-child {
-    font-size: 1rem;
+  .extendButton svg {
+    width: 18px;
+    height: 18px;
   }
   
   .parentInfo {

@@ -336,6 +336,10 @@
   border-color: rgba(107, 203, 119, 0.4);
 }
 
+.shareButton svg {
+  display: block;
+}
+
 /* 描き足しボタン */
 .extendButton {
   display: flex;
