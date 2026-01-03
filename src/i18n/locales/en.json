@@ -177,6 +177,25 @@
     "loginRequired": "Please login to see notifications",
     "reaction": " liked your post",
     "extend": " extended your post"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "relays": "Relay Settings",
+    "defaultRelay": "Default",
+    "relayRead": "Read",
+    "relayWrite": "Write",
+    "relayAdd": "Add",
+    "relayRemove": "Remove",
+    "relaysReset": "Reset",
+    "nip65Fetch": "📡 Fetch from NIP-65",
+    "nip65Loading": "Fetching...",
+    "nip65LoginRequired": "Login required to fetch relays",
+    "nip65NotFound": "No NIP-65 relay list found",
+    "nip65Success": "Fetched {{count}} relays",
+    "nip65Error": "Failed to fetch relays"
   }
 }
 

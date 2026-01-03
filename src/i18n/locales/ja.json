@@ -177,6 +177,25 @@
     "loginRequired": "通知を見るにはログインしてください",
     "reaction": "があなたの投稿にいいねしました",
     "extend": "があなたの投稿に描き足ししました"
+  },
+  "settings": {
+    "title": "設定",
+    "theme": "テーマ",
+    "themeDark": "ダーク",
+    "themeLight": "ライト",
+    "relays": "リレー設定",
+    "defaultRelay": "デフォルト",
+    "relayRead": "読み取り",
+    "relayWrite": "書き込み",
+    "relayAdd": "追加",
+    "relayRemove": "削除",
+    "relaysReset": "リセット",
+    "nip65Fetch": "📡 NIP-65からリレーを取得",
+    "nip65Loading": "取得中...",
+    "nip65LoginRequired": "リレー取得にはログインが必要です",
+    "nip65NotFound": "NIP-65のリレーリストが見つかりませんでした",
+    "nip65Success": "{{count}}件のリレーを取得しました",
+    "nip65Error": "リレーの取得に失敗しました"
   }
 }
 

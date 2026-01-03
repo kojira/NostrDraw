@@ -379,7 +379,7 @@
 .bottomTabs {
   position: fixed;
   bottom: 0;
-  left: 220px; /* サイドメニューの幅分 */
+  left: 60px; /* サイドメニューの幅分（アイコンのみ） */
   right: 0;
   display: flex;
   align-items: stretch;
@@ -428,11 +428,12 @@
 }
 
 .tabIcon {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   transition: transform 0.2s ease;
 }
 
 .tabLabel {
+  display: none;
   font-size: 0.65rem;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -546,5 +547,82 @@
     height: 28px;
     font-size: 0.9rem;
   }
+}
+
+/* ライトテーマ */
+:global(.light-theme) .tabs {
+  background: #fff;
+  border-bottom-color: #e0e0e0;
+}
+
+:global(.light-theme) .tab {
+  border-color: #ddd;
+  color: #666;
+}
+
+:global(.light-theme) .tab:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.03);
+  color: #333;
+}
+
+:global(.light-theme) .loginPrompt,
+:global(.light-theme) .loading,
+:global(.light-theme) .noPostsMessage {
+  color: #666;
+}
+
+:global(.light-theme) .post {
+  background: #fff;
+  border-color: #e0e0e0;
+}
+
+:global(.light-theme) .authorName {
+  color: #333;
+}
+
+:global(.light-theme) .authorNpub,
+:global(.light-theme) .postDate {
+  color: #888;
+}
+
+:global(.light-theme) .postMessage {
+  color: #555;
+}
+
+:global(.light-theme) .actionButton {
+  color: #666;
+  border-color: #ddd;
+}
+
+:global(.light-theme) .actionButton:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:global(.light-theme) .bottomTabs {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 248, 248, 1) 100%);
+  border-top-color: #e0e0e0;
+}
+
+:global(.light-theme) .bottomTab {
+  color: #888;
+}
+
+:global(.light-theme) .bottomTab:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: #555;
+}
+
+:global(.light-theme) .bottomTab.active {
+  color: #d63851;
+  background: rgba(233, 69, 96, 0.08);
+}
+
+:global(.light-theme) .createButton .tabLabel {
+  color: #e94560;
+}
+
+:global(.light-theme) .postImage {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 

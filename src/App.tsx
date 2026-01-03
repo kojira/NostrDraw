@@ -18,12 +18,33 @@ import { Auth } from './components/Auth';
 import { SidebarGallery } from './components/SidebarGallery';
 import { SideNav } from './components/SideNav';
 import { Notifications } from './components/Notifications';
+import { Settings } from './components/Settings';
 import { useRouter } from './hooks/useRouter';
+import { useNostr } from './hooks/useNostr';
 import './App.css';
+
+// テーマをローカルストレージに保存するキー
+const THEME_STORAGE_KEY = 'nostr-draw-theme';
 
 function App() {
   const { t } = useTranslation();
-  const { route, goHome, goToGallery, goToUser, goToCreate, goToNotifications } = useRouter();
+  const { route, goHome, goToGallery, goToUser, goToCreate, goToNotifications, goToSettings } = useRouter();
+  
+  // テーマ管理
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    return (stored === 'light' || stored === 'dark') ? stored : 'dark';
+  });
+  
+  // テーマ変更時にbodyにクラスを追加
+  useEffect(() => {
+    document.body.classList.remove('light-theme', 'dark-theme');
+    document.body.classList.add(`${theme}-theme`);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+  
+  // リレー設定
+  const { relays, updateRelays } = useNostr();
   
   const {
     authState,
@@ -161,10 +182,10 @@ function App() {
         }
         break;
       case 'settings':
-        // TODO: 設定ページを実装
+        goToSettings();
         break;
     }
-  }, [goHome, goToGallery, goToUser, goToNotifications, authState.pubkey]);
+  }, [goHome, goToGallery, goToUser, goToNotifications, goToSettings, authState.pubkey]);
 
   // 投稿画面
   if (route.page === 'create') {
@@ -318,6 +339,45 @@ function App() {
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
             onNavigateToUser={(npub) => goToUser(npub)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 設定ページ
+  if (route.page === 'settings') {
+    return (
+      <div className="app">
+        <SideNav
+          currentPage="settings"
+          onNavigate={handleNavigation}
+          userPubkey={authState.pubkey}
+        />
+        <div className="mainContent fullWidth">
+          <header className="header">
+            <div className="headerInner">
+              <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
+              <div className="headerActions">
+                <Auth
+                  authState={authState}
+                  isNip07Available={isNip07Available}
+                  isLoading={authLoading}
+                  error={authError}
+                  onLoginWithNip07={loginWithNip07}
+                  onLoginWithNpub={loginWithNpub}
+                  onLogout={logout}
+                />
+                <LanguageSwitch />
+              </div>
+            </div>
+          </header>
+          <Settings
+            theme={theme}
+            onThemeChange={setTheme}
+            relays={relays}
+            onRelaysChange={updateRelays}
+            userPubkey={authState.pubkey}
           />
         </div>
       </div>

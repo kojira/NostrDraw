@@ -217,4 +217,17 @@
   background: var(--text-secondary);
 }
 
+/* ライトテーマ */
+:global(.light-theme) .thumbnail {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+:global(.light-theme) .item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+:global(.light-theme) .name {
+  color: #333;
+}
+
 

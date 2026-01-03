@@ -227,3 +227,54 @@
   }
 }
 
+/* ライトテーマ */
+:global(.light-theme) .auth {
+  background: linear-gradient(135deg, #fff 0%, #f8f8f8 100%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+:global(.light-theme) .hint {
+  color: #666;
+}
+
+:global(.light-theme) .divider {
+  color: #999;
+}
+
+:global(.light-theme) .divider::before,
+:global(.light-theme) .divider::after {
+  background: linear-gradient(90deg, transparent, #ddd, transparent);
+}
+
+:global(.light-theme) .label {
+  color: #555;
+}
+
+:global(.light-theme) .input {
+  color: #333;
+  background: #fff;
+  border-color: #ddd;
+}
+
+:global(.light-theme) .input::placeholder {
+  color: #999;
+}
+
+:global(.light-theme) .loggedIn {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:global(.light-theme) .userInfo .label {
+  color: #666;
+}
+
+:global(.light-theme) .logoutButton {
+  color: #666;
+  border-color: #ccc;
+}
+
+:global(.light-theme) .logoutButton:hover {
+  color: #333;
+  border-color: #999;
+}
+
