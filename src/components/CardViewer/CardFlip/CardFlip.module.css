@@ -1,37 +1,84 @@
 /* カードフリップアニメーションのスタイル */
 
 .cardFlipContainer {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   perspective: 1000px;
-  padding: 60px 1rem 1rem 1rem;
-  max-width: 100%;
+  padding: 1rem;
   box-sizing: border-box;
-  overflow: visible;
-  background: transparent;
-  min-height: 300px;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(16px);
+  z-index: 99999;
+  overflow-y: auto;
+}
+
+/* メインレイアウト：カードとツリーを配置 */
+.mainLayout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* PC表示で横並びレイアウト */
+@media (min-width: 1000px) {
+  .mainLayout {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem 2rem 2rem 2rem;
+    max-width: calc(100vw - 80px); /* 閉じるボタン分のスペースを確保 */
+    margin: 0 auto;
+  }
+}
+
+/* カードセクション */
+.cardSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+/* PC表示でカードセクションは残りの幅を使う */
+@media (min-width: 1000px) {
+  .cardSection {
+    flex: 1;
+    min-width: 0;
+    max-width: calc(100% - 360px);
+  }
 }
 
 .closeButton {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 44px;
-  height: 44px;
-  font-size: 1.8rem;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  font-size: 2rem;
   color: #fff;
   background: #e94560;
   border: 2px solid #fff;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 100;
+  z-index: 100000;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .closeButton:hover {
@@ -40,18 +87,25 @@
 }
 
 .card {
-  width: min(85vw, 550px);
-  height: min(65vh, 420px);
+  width: min(90vw, 600px);
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  aspect-ratio: 4 / 3; /* カードのアスペクト比を固定 */
 }
 
 @media (max-width: 480px) {
   .card {
-    width: 90vw;
-    height: 60vh;
+    width: 95vw;
+  }
+}
+
+/* PC横並びレイアウト時はカードを大きくする */
+@media (min-width: 1000px) {
+  .card {
+    width: 100%;
+    max-width: 800px;
   }
 }
 
@@ -777,6 +831,18 @@
   width: 100%;
   max-height: min(50vh, 600px);
   overflow-y: auto;
+}
+
+/* PC横並び時のツリーナビゲーション */
+@media (min-width: 1000px) {
+  .treeNavigation {
+    margin-top: 0;
+    width: 340px;
+    min-width: 340px;
+    flex-shrink: 0;
+    max-height: min(80vh, 700px);
+    box-sizing: border-box;
+  }
 }
 
 /* ツリーローディング */

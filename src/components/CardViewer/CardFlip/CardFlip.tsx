@@ -1,6 +1,7 @@
 // カードフリップアニメーションコンポーネント
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
@@ -291,7 +292,7 @@ export function CardFlip({
 
   // 初期ローディング中はローディング表示
   if (isInitialLoading) {
-    return (
+    return createPortal(
       <div className={styles.cardFlipContainer}>
         {onClose && (
           <button onClick={onClose} className={styles.closeButton}>
@@ -301,20 +302,24 @@ export function CardFlip({
         <div className={styles.loadingContainer}>
           <span>{t('card.loading')}</span>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div className={styles.cardFlipContainer}>
+  return createPortal(
+    <div className={styles.cardFlipContainer} onClick={onClose}>
       {onClose && (
         <button onClick={onClose} className={styles.closeButton}>
           ×
         </button>
       )}
       
-      {/* 作者ヘッダー */}
-      <div className={styles.authorHeader}>
+      <div className={styles.mainLayout} onClick={(e) => e.stopPropagation()}>
+        {/* カードセクション */}
+        <div className={styles.cardSection}>
+          {/* 作者ヘッダー */}
+          <div className={styles.authorHeader}>
         <a 
           href={`${window.location.origin}${window.location.pathname}?npub=${pubkeyToNpub(card.pubkey)}`}
           className={styles.authorInfo}
@@ -458,6 +463,7 @@ export function CardFlip({
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {/* ツリーナビゲーション（すべての祖先と子孫） */}
@@ -604,6 +610,7 @@ export function CardFlip({
           )}
         </div>
       )}
+      </div>
       
       {/* 描き足し元の表示（ナビゲーションがない場合のフォールバック） */}
       {card.parentEventId && !onNavigateToCard && (
@@ -611,7 +618,8 @@ export function CardFlip({
           <span>{t('extend.label')}</span>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
