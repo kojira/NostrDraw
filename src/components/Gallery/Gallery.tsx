@@ -96,11 +96,8 @@ export function Gallery({
   // EOSE完了フラグ（EOSE後はhandleCardでcardsを更新しない）
   const eoseReceivedRef = useRef(false);
   
-  // 重複チェック用のSet（refで保持して購読間で共有）
+  // 重複チェック用のSet（refで保持）
   const seenIdsRef = useRef<Set<string>>(new Set());
-  
-  // 購読の世代カウンター（古い購読からのコールバックを無視するため）
-  const subscriptionGenRef = useRef(0);
   
   // リアクション状態を管理
   const [userReactions, setUserReactions] = useState<Set<string>>(new Set());
@@ -124,10 +121,6 @@ export function Gallery({
 
   // ストリーミングでカードを取得（リアルタイム表示）
   useEffect(() => {
-    // 新しい購読の世代をインクリメント
-    subscriptionGenRef.current += 1;
-    const currentGen = subscriptionGenRef.current;
-    
     setIsLoading(true);
     setError(null);
     setCards([]);
@@ -151,10 +144,7 @@ export function Gallery({
     }
     
     const handleCard = (card: NewYearCard) => {
-      // 古い購読からのコールバックは無視
-      if (currentGen !== subscriptionGenRef.current) return;
-      
-      // 重複チェック（refを使用して購読間で共有）
+      // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);
       
@@ -178,9 +168,6 @@ export function Gallery({
     };
     
     const handleEose = async () => {
-      // 古い購読からのコールバックは無視
-      if (currentGen !== subscriptionGenRef.current) return;
-      
       eoseReceivedRef.current = true; // EOSE完了をマーク
       setIsLoading(false);
       
@@ -189,9 +176,6 @@ export function Gallery({
         try {
           const cardIds = allReceivedCardsRef.current.map(c => c.id);
           const reactions = await fetchReactionCounts(cardIds);
-          
-          // 古い購読の場合は処理しない
-          if (currentGen !== subscriptionGenRef.current) return;
           
           reactionCountsRef.current = reactions;
           
