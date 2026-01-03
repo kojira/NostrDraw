@@ -6,6 +6,7 @@ import type { NewYearCard, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
+// URLは現在のページのoriginとpathnameから動的に生成
 import type { Event, EventTemplate } from 'nostr-tools';
 import styles from './CardFlip.module.css';
 
@@ -53,6 +54,9 @@ export function CardFlip({
   // ツリーカード用のプロファイルとリアクション数
   const [treeProfiles, setTreeProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [treeReactions, setTreeReactions] = useState<Map<string, number>>(new Map());
+  
+  // シェアボタン用の状態
+  const [isCopied, setIsCopied] = useState(false);
 
   // リアクション状態を取得
   useEffect(() => {
@@ -188,6 +192,24 @@ export function CardFlip({
     }
   }, [signEvent, userPubkey, hasReacted, isReacting, card.id, card.pubkey]);
 
+  // パーマリンクを生成（現在のURLベース）
+  const getPermalink = useCallback(() => {
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    return `${baseUrl}?eventid=${card.id}`;
+  }, [card.id]);
+
+  // シェアボタンのハンドラ
+  const handleShare = useCallback(async () => {
+    const shareUrl = getPermalink();
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('クリップボードへのコピーに失敗:', error);
+    }
+  }, [card.id]);
+
   const getSenderName = () => {
     if (senderProfile?.display_name) return senderProfile.display_name;
     if (senderProfile?.name) return senderProfile.name;
@@ -216,6 +238,9 @@ export function CardFlip({
     return `${dateStr} ${timeStr}`;
   };
 
+  // コラボ数（子孫の数）
+  const collabCount = descendants.length;
+
   return (
     <div className={styles.cardFlipContainer}>
       {onClose && (
@@ -223,6 +248,29 @@ export function CardFlip({
           ×
         </button>
       )}
+      
+      {/* 作者ヘッダー */}
+      <div className={styles.authorHeader}>
+        <div className={styles.authorInfo}>
+          {senderProfile?.picture && (
+            <img 
+              src={senderProfile.picture} 
+              alt="" 
+              className={styles.authorHeaderAvatar}
+            />
+          )}
+          <span className={styles.authorHeaderName}>{getSenderName()}</span>
+        </div>
+        <a 
+          href={getPermalink()}
+          className={styles.postDate}
+          onClick={(e) => e.stopPropagation()}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {formatDate(card.createdAt)}
+        </a>
+      </div>
       
       <div
         className={`${styles.card} ${isFlipped ? styles.flipped : ''}`}
@@ -283,6 +331,26 @@ export function CardFlip({
             {hasReacted ? '❤️' : '🤍'}
           </span>
           <span className={styles.reactionCount}>{reactionCount}</span>
+        </button>
+        
+        {/* コラボ数（描き足しされた数） */}
+        {card.allowExtend && (
+          <div className={styles.collabCount} title="コラボ数">
+            <span>🎨</span>
+            <span>{collabCount}</span>
+          </div>
+        )}
+        
+        {/* シェアボタン */}
+        <button
+          className={`${styles.shareButton} ${isCopied ? styles.copied : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleShare();
+          }}
+          title={isCopied ? t('timeline.copied') : t('timeline.share')}
+        >
+          <span>{isCopied ? '✅' : '🔗'}</span>
         </button>
         
         {/* 描き足しボタン（許可されている場合のみ表示） */}

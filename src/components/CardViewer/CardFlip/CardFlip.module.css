@@ -344,6 +344,48 @@
   border-top: 1px solid rgba(233, 69, 96, 0.2);
 }
 
+/* 作者ヘッダー */
+.authorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: min(85vw, 550px);
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
+}
+
+.authorInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.authorHeaderAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.authorHeaderName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.postDate {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.postDate:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 /* アクションエリア */
 .actionArea {
   position: relative;
@@ -355,6 +397,42 @@
   gap: 1rem;
   margin-top: 1rem;
   width: 100%;
+}
+
+/* コラボ数 */
+.collabCount {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+/* シェアボタン */
+.shareButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.shareButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.shareButton.copied {
+  background: rgba(100, 200, 100, 0.3);
 }
 
 .reactionButton {
