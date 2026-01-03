@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile} from '../../../types';
-import { pubkeyToNpub } from '../../../services/profile';
+import type { NewYearCard, NostrProfile } from '../../../types';
+import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
@@ -49,6 +49,10 @@ export function CardFlip({
   // ツリー構造の状態（すべての祖先と子孫）
   const [ancestors, setAncestors] = useState<NewYearCard[]>([]);
   const [descendants, setDescendants] = useState<NewYearCard[]>([]);
+  
+  // ツリーカード用のプロファイルとリアクション数
+  const [treeProfiles, setTreeProfiles] = useState<Map<string, NostrProfile>>(new Map());
+  const [treeReactions, setTreeReactions] = useState<Map<string, number>>(new Map());
 
   // リアクション状態を取得
   useEffect(() => {
@@ -87,6 +91,26 @@ export function CardFlip({
     loadTreeCards();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id]);
+
+  // ツリーカードのプロファイルとリアクション数を取得
+  useEffect(() => {
+    const loadTreeDetails = async () => {
+      const allTreeCards = [...ancestors, ...descendants];
+      if (allTreeCards.length === 0) return;
+      
+      // プロファイルを取得
+      const pubkeys = [...new Set(allTreeCards.map(c => c.pubkey))];
+      const profiles = await fetchProfiles(pubkeys);
+      setTreeProfiles(profiles);
+      
+      // リアクション数を取得
+      const eventIds = allTreeCards.map(c => c.id);
+      const reactions = await fetchReactionCounts(eventIds);
+      setTreeReactions(reactions);
+    };
+    
+    loadTreeDetails();
+  }, [ancestors, descendants]);
 
   // SVGにストロークアニメーションを適用
   // 描き足しの場合は差分のみ、通常の場合は全てのストロークにアニメーション
@@ -293,36 +317,58 @@ export function CardFlip({
       {(ancestors.length > 0 || descendants.length > 0) && onNavigateToCard && (
         <div className={styles.treeNavigation}>
           {/* 祖先カード（古い順） */}
-          {ancestors.map((ancestor, index) => (
-            <div key={ancestor.id} className={styles.treeRow}>
-              <div 
-                className={styles.treeIndent} 
-                style={{ width: `${index * 12}px` }} 
-              />
-              <button
-                className={styles.treeCard}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNavigateToCard(ancestor);
-                }}
-              >
-                <div className={styles.cardPreview}>
-                  {ancestor.svg && (
-                    <div 
-                      className={styles.miniSvg}
-                      dangerouslySetInnerHTML={{ __html: ancestor.svg }}
-                    />
-                  )}
-                </div>
-              </button>
-            </div>
-          ))}
+          {ancestors.map((ancestor, index) => {
+            const profile = treeProfiles.get(ancestor.pubkey);
+            const reactions = treeReactions.get(ancestor.id) || 0;
+            return (
+              <div key={ancestor.id} className={styles.treeRow}>
+                <div 
+                  className={styles.treeIndent} 
+                  style={{ width: `${index * 16}px` }} 
+                />
+                <button
+                  className={styles.treeCard}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigateToCard(ancestor);
+                  }}
+                >
+                  <div className={styles.cardPreview}>
+                    {ancestor.svg && (
+                      <div 
+                        className={styles.miniSvg}
+                        dangerouslySetInnerHTML={{ __html: ancestor.svg }}
+                      />
+                    )}
+                  </div>
+                  <div className={styles.cardInfo}>
+                    <div className={styles.cardAuthor}>
+                      {profile?.picture && (
+                        <img 
+                          src={profile.picture} 
+                          alt="" 
+                          className={styles.authorAvatar}
+                        />
+                      )}
+                      <span className={styles.authorName}>
+                        {profile?.name || pubkeyToNpub(ancestor.pubkey).slice(0, 12) + '...'}
+                      </span>
+                    </div>
+                    <div className={styles.cardMeta}>
+                      <span className={styles.cardDate}>{formatDate(ancestor.createdAt)}</span>
+                      <span className={styles.cardReactions}>❤️ {reactions}</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            );
+          })}
           
           {/* 現在のカード（ハイライト） */}
           <div className={styles.treeRow}>
             <div 
               className={styles.treeIndent} 
-              style={{ width: `${ancestors.length * 12}px` }} 
+              style={{ width: `${ancestors.length * 16}px` }} 
             />
             <div className={styles.currentCard}>
               <div className={styles.cardPreview}>
@@ -333,34 +379,74 @@ export function CardFlip({
                   />
                 )}
               </div>
+              <div className={styles.cardInfo}>
+                <div className={styles.cardAuthor}>
+                  {senderProfile?.picture && (
+                    <img 
+                      src={senderProfile.picture} 
+                      alt="" 
+                      className={styles.authorAvatar}
+                    />
+                  )}
+                  <span className={styles.authorName}>
+                    {senderProfile?.name || pubkeyToNpub(card.pubkey).slice(0, 12) + '...'}
+                  </span>
+                </div>
+                <div className={styles.cardMeta}>
+                  <span className={styles.cardDate}>{formatDate(card.createdAt)}</span>
+                  <span className={styles.cardReactions}>❤️ {reactionCount}</span>
+                </div>
+              </div>
             </div>
           </div>
           
           {/* 子孫カード */}
-          {descendants.map((descendant) => (
-            <div key={descendant.id} className={styles.treeRow}>
-              <div 
-                className={styles.treeIndent} 
-                style={{ width: `${(ancestors.length + 1) * 12}px` }} 
-              />
-              <button
-                className={styles.treeCard}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNavigateToCard(descendant);
-                }}
-              >
-                <div className={styles.cardPreview}>
-                  {descendant.svg && (
-                    <div 
-                      className={styles.miniSvg}
-                      dangerouslySetInnerHTML={{ __html: descendant.svg }}
-                    />
-                  )}
-                </div>
-              </button>
-            </div>
-          ))}
+          {descendants.map((descendant) => {
+            const profile = treeProfiles.get(descendant.pubkey);
+            const reactions = treeReactions.get(descendant.id) || 0;
+            return (
+              <div key={descendant.id} className={styles.treeRow}>
+                <div 
+                  className={styles.treeIndent} 
+                  style={{ width: `${(ancestors.length + 1) * 16}px` }} 
+                />
+                <button
+                  className={styles.treeCard}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigateToCard(descendant);
+                  }}
+                >
+                  <div className={styles.cardPreview}>
+                    {descendant.svg && (
+                      <div 
+                        className={styles.miniSvg}
+                        dangerouslySetInnerHTML={{ __html: descendant.svg }}
+                      />
+                    )}
+                  </div>
+                  <div className={styles.cardInfo}>
+                    <div className={styles.cardAuthor}>
+                      {profile?.picture && (
+                        <img 
+                          src={profile.picture} 
+                          alt="" 
+                          className={styles.authorAvatar}
+                        />
+                      )}
+                      <span className={styles.authorName}>
+                        {profile?.name || pubkeyToNpub(descendant.pubkey).slice(0, 12) + '...'}
+                      </span>
+                    </div>
+                    <div className={styles.cardMeta}>
+                      <span className={styles.cardDate}>{formatDate(descendant.createdAt)}</span>
+                      <span className={styles.cardReactions}>❤️ {reactions}</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
       
