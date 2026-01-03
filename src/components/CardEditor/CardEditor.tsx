@@ -54,21 +54,27 @@ export function CardEditor({
         const emojis: CustomEmoji[] = [];
         
         if (userPubkey) {
-          // ユーザーの絵文字リストを取得
+          // ユーザーの絵文字リストを取得（kind 10030 + 参照されているパック）
+          console.log('[Emoji] Fetching user emoji lists for:', userPubkey);
           const userLists = await fetchUserEmojiLists(userPubkey);
+          console.log('[Emoji] User emoji lists:', userLists.length, 'lists,', userLists.reduce((acc, list) => acc + list.emojis.length, 0), 'emojis');
           userLists.forEach(list => {
             emojis.push(...list.emojis);
           });
           
           // ブックマークしている絵文字パックを取得 (NIP-51)
+          console.log('[Emoji] Fetching bookmarked emoji packs...');
           const bookmarkedPacks = await fetchBookmarkedEmojiPacks(userPubkey);
+          console.log('[Emoji] Bookmarked packs:', bookmarkedPacks.length, 'packs,', bookmarkedPacks.reduce((acc, pack) => acc + pack.emojis.length, 0), 'emojis');
           bookmarkedPacks.forEach(pack => {
             emojis.push(...pack.emojis);
           });
         }
         
         // 人気の絵文字パックも取得
+        console.log('[Emoji] Fetching popular emoji packs...');
         const popularPacks = await fetchPopularEmojiPacks(10);
+        console.log('[Emoji] Popular packs:', popularPacks.length, 'packs,', popularPacks.reduce((acc, pack) => acc + pack.emojis.length, 0), 'emojis');
         popularPacks.forEach(pack => {
           emojis.push(...pack.emojis);
         });
@@ -78,6 +84,7 @@ export function CardEditor({
           index === self.findIndex(e => e.url === emoji.url)
         );
         
+        console.log('[Emoji] Total unique emojis:', uniqueEmojis.length);
         setCustomEmojis(uniqueEmojis);
       } catch (error) {
         console.error('カスタム絵文字の取得に失敗:', error);
