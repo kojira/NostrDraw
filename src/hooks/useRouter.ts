@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export interface Route {
-  page: 'home' | 'gallery' | 'user' | 'create';
+  page: 'home' | 'gallery' | 'user' | 'create' | 'notifications';
   params: Record<string, string>;
 }
 
@@ -44,6 +44,10 @@ function parseHash(hash: string): Route {
   
   if (segments[0] === 'create') {
     return { page: 'create', params };
+  }
+  
+  if (segments[0] === 'notifications') {
+    return { page: 'notifications', params };
   }
   
   return { page: 'home', params };
@@ -90,6 +94,10 @@ export function useRouter() {
     window.location.hash = 'create';
   }, []);
 
+  const goToNotifications = useCallback(() => {
+    window.location.hash = 'notifications';
+  }, []);
+
   return {
     route,
     navigate,
@@ -97,6 +105,7 @@ export function useRouter() {
     goToGallery,
     goToUser,
     goToCreate,
+    goToNotifications,
   };
 }
 

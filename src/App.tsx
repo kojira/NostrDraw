@@ -17,12 +17,13 @@ import { CardEditor } from './components/CardEditor';
 import { Auth } from './components/Auth';
 import { SidebarGallery } from './components/SidebarGallery';
 import { SideNav } from './components/SideNav';
+import { Notifications } from './components/Notifications';
 import { useRouter } from './hooks/useRouter';
 import './App.css';
 
 function App() {
   const { t } = useTranslation();
-  const { route, goHome, goToGallery, goToUser, goToCreate } = useRouter();
+  const { route, goHome, goToGallery, goToUser, goToCreate, goToNotifications } = useRouter();
   
   const {
     authState,
@@ -152,7 +153,7 @@ function App() {
         goToGallery();
         break;
       case 'notifications':
-        // TODO: 通知ページを実装
+        goToNotifications();
         break;
       case 'profile':
         if (authState.pubkey) {
@@ -163,7 +164,7 @@ function App() {
         // TODO: 設定ページを実装
         break;
     }
-  }, [goHome, goToGallery, goToUser, authState.pubkey]);
+  }, [goHome, goToGallery, goToUser, goToNotifications, authState.pubkey]);
 
   // 投稿画面
   if (route.page === 'create') {
@@ -252,6 +253,72 @@ function App() {
               </>
             )}
           </main>
+        </div>
+      </div>
+    );
+  }
+
+  // 通知ページ
+  if (route.page === 'notifications') {
+    // ログインが必要
+    if (!authState.isLoggedIn || !authState.pubkey) {
+      return (
+        <div className="app">
+          <SideNav
+            currentPage="notifications"
+            onNavigate={handleNavigation}
+            userPubkey={authState.pubkey}
+          />
+          <div className="mainContent">
+            <header className="header">
+              <div className="headerInner">
+                <h1 className="logo" onClick={goHome}>🎨 NostrDraw</h1>
+                <div className="headerActions">
+                  <Auth
+                    authState={authState}
+                    isNip07Available={isNip07Available}
+                    isLoading={authLoading}
+                    error={authError}
+                    onLoginWithNip07={loginWithNip07}
+                    onLoginWithNpub={loginWithNpub}
+                    onLogout={logout}
+                  />
+                  <LanguageSwitch />
+                </div>
+              </div>
+            </header>
+            <main className="main">
+              <div className="loginRequired">
+                <p>{t('notifications.loginRequired', '通知を見るにはログインしてください')}</p>
+                <Auth
+                  authState={authState}
+                  isNip07Available={isNip07Available}
+                  isLoading={authLoading}
+                  error={authError}
+                  onLoginWithNip07={loginWithNip07}
+                  onLoginWithNpub={loginWithNpub}
+                  onLogout={logout}
+                />
+              </div>
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="app">
+        <SideNav
+          currentPage="notifications"
+          onNavigate={handleNavigation}
+          userPubkey={authState.pubkey}
+        />
+        <div className="mainContent fullWidth">
+          <Notifications
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+            onNavigateToUser={(npub) => goToUser(npub)}
+          />
         </div>
       </div>
     );

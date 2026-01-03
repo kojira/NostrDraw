@@ -170,6 +170,13 @@
     "createPost": "Create Post",
     "share": "Share",
     "copied": "Copied!"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "loginRequired": "Please login to see notifications",
+    "reaction": " liked your post",
+    "extend": " extended your post"
   }
 }
 

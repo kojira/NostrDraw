@@ -170,6 +170,13 @@
     "createPost": "投稿する",
     "share": "シェア",
     "copied": "コピーしました！"
+  },
+  "notifications": {
+    "title": "通知",
+    "empty": "通知はありません",
+    "loginRequired": "通知を見るにはログインしてください",
+    "reaction": "があなたの投稿にいいねしました",
+    "extend": "があなたの投稿に描き足ししました"
   }
 }
 
