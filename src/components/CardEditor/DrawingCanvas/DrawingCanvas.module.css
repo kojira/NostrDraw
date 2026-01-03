@@ -1036,6 +1036,30 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* ライトテーマ: 投稿成功オーバーレイ */
+:global(body.light-theme) .successOverlay {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+:global(body.light-theme) .successTitle {
+  color: #d63050;
+}
+
+:global(body.light-theme) .successMessage {
+  color: #555;
+}
+
+:global(body.light-theme) .successButtonSecondary {
+  color: #666;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .successButtonSecondary:hover {
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.05);
+}
+
 /* テキストモード時のオプションセクション（キャンバスの下） */
 .textOptionsSection {
   margin-top: 1rem;
