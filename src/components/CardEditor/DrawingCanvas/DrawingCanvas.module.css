@@ -807,7 +807,8 @@
 
 /* ライトテーマ: スタンプ・絵文字パレット */
 :global(body.light-theme) .stampPalette {
-  background: rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
 }
 
 :global(body.light-theme) .stampButton {
@@ -840,7 +841,8 @@
 }
 
 :global(body.light-theme) .customEmojiPalette {
-  background: rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
 }
 
 :global(body.light-theme) .loadingEmojis {
