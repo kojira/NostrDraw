@@ -73,7 +73,7 @@ interface UseDrawingCanvasOptions {
   initialMessage: string;
 }
 
-export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCanvasOptions) {
+export function useDrawingCanvas({ width, height, initialMessage: _initialMessage }: UseDrawingCanvasOptions) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -141,18 +141,8 @@ export function useDrawingCanvas({ width, height, initialMessage }: UseDrawingCa
     if (savedState?.textBoxes && savedState.textBoxes.length > 0) {
       return savedState.textBoxes;
     }
-    return [{
-      id: `textbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: initialMessage,
-      x: 20,
-      y: 20,
-      width: Math.min(width - 40, 360),
-      height: 50,
-      fontSize: 16,
-      color: '#333333',
-      fontFamily: JAPANESE_FONTS[0].family,
-      fontId: JAPANESE_FONTS[0].id,
-    }];
+    // 初期状態は空（追加ボタンで追加する）
+    return [];
   });
   const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>('none');

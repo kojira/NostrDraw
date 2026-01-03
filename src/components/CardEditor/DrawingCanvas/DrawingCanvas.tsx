@@ -149,16 +149,6 @@ export function DrawingCanvas({
         onRedo={redo}
       />
 
-      {/* フォント選択（テキストモード時） */}
-      {tool === 'text' && (
-        <FontSelector
-          messageBox={messageBox}
-          fontCategory={fontCategory}
-          onMessageBoxChange={setMessageBox}
-          onFontCategoryChange={setFontCategory}
-        />
-      )}
-
       {/* スタンプパレット（スタンプモード時） */}
       {tool === 'stamp' && (
         <StampPalette
@@ -171,45 +161,6 @@ export function DrawingCanvas({
           onStampSelect={setSelectedStamp}
           onCustomEmojiSelect={setSelectedCustomEmoji}
         />
-      )}
-
-      {/* メッセージ入力（テキストモード時） */}
-      {tool === 'text' && (
-        <div className={styles.messageInputSection}>
-          <div className={styles.textBoxControls}>
-            <span className={styles.textBoxLabel}>
-              テキストボックス: {textBoxes.length}個
-              {selectedTextBox && ` (${textBoxes.findIndex(tb => tb.id === selectedTextBoxId) + 1}番目を編集中)`}
-            </span>
-            <button
-              className={styles.addTextBoxButton}
-              onClick={addTextBox}
-              title="テキストボックスを追加"
-            >
-              ➕ 追加
-            </button>
-            {textBoxes.length > 1 && selectedTextBoxId && (
-              <button
-                className={styles.removeTextBoxButton}
-                onClick={() => removeTextBox(selectedTextBoxId)}
-                title="選択中のテキストボックスを削除"
-              >
-                🗑️ 削除
-              </button>
-            )}
-          </div>
-          <textarea
-            className={styles.messageTextarea}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={selectedTextBox ? "メッセージを入力してください..." : "下のキャンバスでテキストボックスをクリックして選択"}
-            rows={3}
-            disabled={!selectedTextBox}
-          />
-          <p className={styles.messageHint}>
-            💡 キャンバス上でテキストボックスをクリックして選択、ドラッグで移動、角をドラッグでサイズ変更
-          </p>
-        </div>
       )}
 
       {/* キャンバス */}
@@ -425,6 +376,58 @@ export function DrawingCanvas({
         </div>
         </div>
       </div>
+
+      {/* テキストモード時のオプション（キャンバスの下に配置） */}
+      {tool === 'text' && (
+        <div className={styles.textOptionsSection}>
+          {/* テキストボックス操作 */}
+          <div className={styles.textBoxControls}>
+            <button
+              className={styles.addTextBoxButton}
+              onClick={addTextBox}
+              title="テキストボックスを追加"
+            >
+              ➕ テキスト追加
+            </button>
+            {textBoxes.length > 0 && selectedTextBoxId && (
+              <button
+                className={styles.removeTextBoxButton}
+                onClick={() => removeTextBox(selectedTextBoxId)}
+                title="選択中のテキストボックスを削除"
+              >
+                🗑️ 削除
+              </button>
+            )}
+            {textBoxes.length > 0 && (
+              <span className={styles.textBoxLabel}>
+                {selectedTextBox 
+                  ? `${textBoxes.findIndex(tb => tb.id === selectedTextBoxId) + 1}/${textBoxes.length}を編集中`
+                  : `${textBoxes.length}個のテキスト`
+                }
+              </span>
+            )}
+          </div>
+
+          {/* フォント選択とテキスト入力（テキストボックス選択時のみ） */}
+          {selectedTextBox && (
+            <div className={styles.textEditSection}>
+              <FontSelector
+                messageBox={messageBox}
+                fontCategory={fontCategory}
+                onMessageBoxChange={setMessageBox}
+                onFontCategoryChange={setFontCategory}
+              />
+              <textarea
+                className={styles.messageTextarea}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="メッセージを入力..."
+                rows={2}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* アクションボタン */}
       <div className={styles.actions}>

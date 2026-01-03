@@ -1035,3 +1035,154 @@
   border-color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* テキストモード時のオプションセクション（キャンバスの下） */
+.textOptionsSection {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.textEditSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* フォント選択ドロップダウン */
+.fontSelectorDropdown {
+  position: relative;
+  width: 100%;
+}
+
+.fontDropdownTrigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fontDropdownTrigger:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.fontDropdownLabel {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.fontDropdownValue {
+  flex: 1;
+  text-align: left;
+}
+
+.fontDropdownArrow {
+  font-size: 0.65rem;
+  color: #888;
+}
+
+.fontDropdownMenu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 0.5rem;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  max-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fontCategoryTabsCompact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.fontCategoryTabCompact {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fontCategoryTabCompact:hover {
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.fontCategoryTabCompact.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.3);
+  border-color: #e94560;
+}
+
+.fontListCompact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.35rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  max-height: 220px;
+}
+
+.fontListCompact::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fontListCompact::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fontListCompact::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.fontButtonCompact {
+  padding: 0.4rem;
+  font-size: 0.85rem;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fontButtonCompact:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.fontButtonCompact.active {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.25);
+  border-color: #e94560;
+}
