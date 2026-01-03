@@ -16,6 +16,7 @@
 @media (min-width: 1025px) {
   .timeline {
     max-width: 100%;
+    width: 100%;
   }
 }
 
@@ -129,22 +130,17 @@
   padding-bottom: 70px; /* 下部タブバーの高さ分 */
 }
 
-/* PC版: タイル状グリッドレイアウト */
+/* PC版: タイル状グリッドレイアウト（auto-fillで横幅を活用） */
 @media (min-width: 1025px) {
   .posts {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--space-4);
     padding: var(--space-4);
     padding-bottom: 100px;
     align-content: start;
-  }
-}
-
-/* 大画面: 3列 */
-@media (min-width: 1600px) {
-  .posts {
-    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 

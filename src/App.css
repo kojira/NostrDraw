@@ -532,17 +532,20 @@ body.light-theme {
 .mainLayout {
   display: flex;
   gap: 1rem;
+  width: 100%;
   max-width: 1600px;
   margin: 0 auto;
   padding: 0 1rem;
   align-items: flex-start;
   flex: 1;
+  box-sizing: border-box;
 }
 
 .mainContent {
   flex: 1;
   min-width: 0;
-  max-width: 900px;
+  width: 100%;
+  /* PC版では横幅を最大限活用 */
 }
 
 .sidebar {
