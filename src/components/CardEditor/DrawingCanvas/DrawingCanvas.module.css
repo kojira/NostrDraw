@@ -812,12 +812,12 @@
 }
 
 :global(body.light-theme) .stampButton {
-  background: rgba(0, 0, 0, 0.03);
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border: 2px solid #e0e0e0;
 }
 
 :global(body.light-theme) .stampButton:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: #f5f5f5;
 }
 
 :global(body.light-theme) .stampButton.active {
@@ -858,12 +858,12 @@
 }
 
 :global(body.light-theme) .emojiButton {
-  background: rgba(0, 0, 0, 0.03);
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border: 2px solid #e0e0e0;
 }
 
 :global(body.light-theme) .emojiButton:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: #f5f5f5;
 }
 
 :global(body.light-theme) .emojiButton.active {
