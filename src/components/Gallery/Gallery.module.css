@@ -1,8 +1,7 @@
 /* ギャラリーページのスタイル */
 
 .gallery {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 1rem;
   min-height: 100vh;
 }
@@ -174,8 +173,8 @@
 /* グリッドレイアウト */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 
 .item {

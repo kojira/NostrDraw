@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NewYearCardWithReactions } from '../../services/card';
-import { fetchPublicGalleryCards, fetchPopularCards, sendReaction, hasUserReacted, fetchReactionCounts } from '../../services/card';
-import { fetchProfile, pubkeyToNpub } from '../../services/profile';
+import { fetchPublicGalleryCards, fetchPopularCards, fetchCardsByAuthor, sendReaction, hasUserReacted, fetchReactionCounts } from '../../services/card';
+import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import styles from './Gallery.module.css';
 
@@ -38,10 +38,26 @@ interface GalleryProps {
   onExtend?: (card: NewYearCard) => void;
   onBack: () => void;
   onUserClick?: (npub: string) => void;
+  // UserGalleryから使う場合のオプション
+  showBreadcrumb?: boolean;
+  showAuthorFilter?: boolean;
 }
 
 type TabType = 'popular' | 'recent';
 type PeriodType = 'all' | 'day' | 'week' | 'month';
+type SortOrderType = 'desc' | 'asc';
+
+// 日時フォーマット（2026/1/1 10:00:00 形式）
+const formatDate = (timestamp: number): string => {
+  const date = new Date(timestamp * 1000);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+};
 
 export function Gallery({
   initialTab = 'popular',
@@ -52,10 +68,13 @@ export function Gallery({
   onExtend,
   onBack,
   onUserClick,
+  showBreadcrumb = true,
+  showAuthorFilter = true,
 }: GalleryProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>(initialTab as TabType || 'popular');
   const [period, setPeriod] = useState<PeriodType>(initialPeriod as PeriodType || 'week');
+  const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
   const [authorFilter, setAuthorFilter] = useState<string>(initialAuthor || '');
   const [cards, setCards] = useState<(NewYearCard | NewYearCardWithReactions)[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,23 +107,75 @@ export function Gallery({
       let fetchedCards: (NewYearCard | NewYearCardWithReactions)[];
       const days = periodToDays(period);
       
-      if (activeTab === 'popular') {
-        fetchedCards = await fetchPopularCards(days, limit);
-      } else {
-        fetchedCards = await fetchPublicGalleryCards(limit);
+      // 著者指定がある場合
+      if (authorFilter) {
+        // npubの場合はpubkeyに変換
+        let authorPubkey = authorFilter;
+        if (authorFilter.startsWith('npub')) {
+          const converted = npubToPubkey(authorFilter);
+          if (converted) {
+            authorPubkey = converted;
+          }
+        }
+        
+        const authorCards = await fetchCardsByAuthor(authorPubkey, limit);
+        // 公開カードのみ（recipientPubkeyがないもの）
+        fetchedCards = authorCards.filter(card => !card.recipientPubkey);
+        
         // 期間でフィルタリング
         if (period !== 'all') {
           const since = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
           fetchedCards = fetchedCards.filter(card => card.createdAt >= since);
         }
-      }
-      
-      // 著者フィルタ
-      if (authorFilter) {
-        fetchedCards = fetchedCards.filter(card => {
-          const npub = pubkeyToNpub(card.pubkey);
-          return npub === authorFilter || card.pubkey === authorFilter;
-        });
+        
+        // 人気順の場合はリアクション数でソート（リアクションは常に多い順、第二キーは日付で並び順に従う）
+        if (activeTab === 'popular') {
+          const cardIds = fetchedCards.map(c => c.id);
+          const reactions = await fetchReactionCounts(cardIds);
+          fetchedCards = [...fetchedCards].sort((a, b) => {
+            const aCount = reactions.get(a.id) || 0;
+            const bCount = reactions.get(b.id) || 0;
+            // 第一キー：リアクション数（常に多い順）
+            if (aCount !== bCount) {
+              return bCount - aCount;
+            }
+            // 第二キー：日付（リアクション数が同じ場合、並び順に従う）
+            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+          });
+        } else {
+          // 日付順
+          fetchedCards = [...fetchedCards].sort((a, b) => 
+            sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+          );
+        }
+      } else {
+        // 通常のギャラリー表示（著者指定なし）
+        if (activeTab === 'popular') {
+          fetchedCards = await fetchPopularCards(days, limit);
+          // リアクション数でソート（リアクションは常に多い順、第二キーは日付で並び順に従う）
+          // fetchPopularCardsはNewYearCardWithReactionsを返すので、reactionCountを直接使用
+          fetchedCards = [...fetchedCards].sort((a, b) => {
+            const aCount = 'reactionCount' in a ? a.reactionCount : 0;
+            const bCount = 'reactionCount' in b ? b.reactionCount : 0;
+            // 第一キー：リアクション数（常に多い順）
+            if (aCount !== bCount) {
+              return bCount - aCount;
+            }
+            // 第二キー：日付（リアクション数が同じ場合、並び順に従う）
+            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+          });
+        } else {
+          fetchedCards = await fetchPublicGalleryCards(limit);
+          // 期間でフィルタリング
+          if (period !== 'all') {
+            const since = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+            fetchedCards = fetchedCards.filter(card => card.createdAt >= since);
+          }
+          // 日付ソート
+          fetchedCards = [...fetchedCards].sort((a, b) => 
+            sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+          );
+        }
       }
       
       setCards(fetchedCards);
@@ -113,7 +184,7 @@ export function Gallery({
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, period, authorFilter, limit, periodToDays]);
+  }, [activeTab, period, sortOrder, authorFilter, limit, periodToDays]);
 
   useEffect(() => {
     fetchCards();
@@ -254,13 +325,15 @@ export function Gallery({
   return (
     <div className={styles.gallery}>
       {/* パンくずリスト */}
-      <nav className={styles.breadcrumb}>
-        <button onClick={onBack} className={styles.breadcrumbLink}>
-          {t('nav.home')}
-        </button>
-        <span className={styles.breadcrumbSeparator}>›</span>
-        <span className={styles.breadcrumbCurrent}>{t('nav.gallery')}</span>
-      </nav>
+      {showBreadcrumb && (
+        <nav className={styles.breadcrumb}>
+          <button onClick={onBack} className={styles.breadcrumbLink}>
+            {t('nav.home')}
+          </button>
+          <span className={styles.breadcrumbSeparator}>›</span>
+          <span className={styles.breadcrumbCurrent}>{t('nav.gallery')}</span>
+        </nav>
+      )}
 
       {/* タブ */}
       <div className={styles.tabs}>
@@ -295,23 +368,37 @@ export function Gallery({
         </div>
         
         <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>{t('gallery.author')}:</label>
-          <input
-            type="text"
-            value={authorFilter}
-            onChange={(e) => setAuthorFilter(e.target.value)}
-            placeholder="npub1..."
-            className={styles.filterInput}
-          />
-          {authorFilter && (
-            <button 
-              onClick={() => setAuthorFilter('')}
-              className={styles.clearButton}
-            >
-              ×
-            </button>
-          )}
+          <label className={styles.filterLabel}>{t('gallery.sortOrder')}:</label>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as SortOrderType)}
+            className={styles.filterSelect}
+          >
+            <option value="desc">{t('gallery.sortDesc')}</option>
+            <option value="asc">{t('gallery.sortAsc')}</option>
+          </select>
         </div>
+        
+        {showAuthorFilter && (
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>{t('gallery.author')}:</label>
+            <input
+              type="text"
+              value={authorFilter}
+              onChange={(e) => setAuthorFilter(e.target.value)}
+              placeholder="npub1..."
+              className={styles.filterInput}
+            />
+            {authorFilter && (
+              <button 
+                onClick={() => setAuthorFilter('')}
+                className={styles.clearButton}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* コンテンツ */}
@@ -369,7 +456,7 @@ export function Gallery({
                           <span>{reactionCount}</span>
                         </button>
                         <span className={styles.date}>
-                          {new Date(card.createdAt * 1000).toLocaleDateString()}
+                          {formatDate(card.createdAt)}
                         </span>
                       </div>
                     </div>

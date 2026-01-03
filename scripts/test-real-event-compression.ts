@@ -128,3 +128,4 @@ console.log(`\n🎯 最適化版イベントサイズ: ${finalEventSize.toLocale
 console.log(`   (元の ${((finalEventSize / eventSize) * 100).toFixed(1)}%、${((1 - finalEventSize / eventSize) * 100).toFixed(1)}% 削減)`);
 
 
+

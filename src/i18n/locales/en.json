@@ -155,7 +155,10 @@
     "userGallery": "'s Posts",
     "backToGallery": "Back to Gallery",
     "backToHome": "Back to Home",
-    "unknownUser": "Unknown User"
+    "unknownUser": "Unknown User",
+    "sortOrder": "Sort",
+    "sortDesc": "Newest first",
+    "sortAsc": "Oldest first"
   },
   "timeline": {
     "follow": "Following",

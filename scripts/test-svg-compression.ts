@@ -149,3 +149,4 @@ console.log(`| 描き足し後            | ${result3.originalSize.toString().pa
 console.log('━'.repeat(60));
 
 
+

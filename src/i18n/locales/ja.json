@@ -155,7 +155,10 @@
     "userGallery": "の投稿",
     "backToGallery": "ギャラリーに戻る",
     "backToHome": "ホームに戻る",
-    "unknownUser": "不明なユーザー"
+    "unknownUser": "不明なユーザー",
+    "sortOrder": "並び順",
+    "sortDesc": "新しい順",
+    "sortAsc": "古い順"
   },
   "timeline": {
     "follow": "フォロー",

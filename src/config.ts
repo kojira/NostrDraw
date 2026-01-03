@@ -11,3 +11,4 @@ export const APP_VERSION = '1.0.0';
 export const NOSTRDRAW_KIND = 31898;
 export const NOSTRDRAW_CLIENT_TAG = 'NostrDraw';
 
+
