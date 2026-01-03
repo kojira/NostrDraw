@@ -68,11 +68,59 @@
   font-family: 'Shippori Mincho', serif;
 }
 
-.userNpub {
-  font-size: 0.85rem;
+.npubRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.userNpubFull,
+.userNpubTruncated {
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  margin: 0 0 0.5rem 0;
+  margin: 0;
   font-family: monospace;
+  cursor: default;
+  word-break: break-all;
+}
+
+/* PC表示: 全文表示、省略版は非表示 */
+.userNpubFull {
+  display: block;
+}
+
+.userNpubTruncated {
+  display: none;
+}
+
+.copyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.copyButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+
+.copyButton.copied {
+  background: rgba(100, 200, 100, 0.2);
+  color: #4ade80;
+}
+
+.copyButton svg {
+  display: block;
 }
 
 .userAbout {
@@ -277,6 +325,15 @@
     text-align: center;
     padding: 1rem;
     gap: 1rem;
+  }
+  
+  /* モバイル表示: 省略版を表示、全文は非表示 */
+  .userNpubFull {
+    display: none;
+  }
+  
+  .userNpubTruncated {
+    display: block;
   }
   
   .userAvatar {

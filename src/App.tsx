@@ -110,10 +110,11 @@ function App() {
     setSelectedCard(card);
   }, []);
 
-  // URLパラメータのeventidをチェック
+  // URLパラメータをチェック（eventid, npub）
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get('eventid');
+    const npub = params.get('npub');
     
     if (eventId) {
       setIsLoadingSharedCard(true);
@@ -128,7 +129,12 @@ function App() {
           setIsLoadingSharedCard(false);
         });
     }
-  }, []);
+    
+    // npubパラメータがある場合はユーザーページにナビゲート
+    if (npub && npub.startsWith('npub1')) {
+      goToUser(npub);
+    }
+  }, [goToUser]);
 
   // 送信完了ダイアログを閉じる
   const handleCloseSendSuccess = useCallback(() => {

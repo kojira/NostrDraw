@@ -57,6 +57,39 @@ export function CardFlip({
   
   // シェアボタン用の状態
   const [isCopied, setIsCopied] = useState(false);
+  
+  // senderProfileが渡されない場合は自分で取得
+  const [localSenderProfile, setLocalSenderProfile] = useState<NostrProfile | null>(null);
+  const [localRecipientProfile, setLocalRecipientProfile] = useState<NostrProfile | null>(null);
+  
+  // プロファイルを取得
+  useEffect(() => {
+    const loadProfiles = async () => {
+      const pubkeysToFetch: string[] = [];
+      if (!senderProfile && card.pubkey) {
+        pubkeysToFetch.push(card.pubkey);
+      }
+      if (!recipientProfile && card.recipientPubkey) {
+        pubkeysToFetch.push(card.recipientPubkey);
+      }
+      
+      if (pubkeysToFetch.length > 0) {
+        const profiles = await fetchProfiles(pubkeysToFetch);
+        if (!senderProfile && card.pubkey) {
+          setLocalSenderProfile(profiles.get(card.pubkey) || null);
+        }
+        if (!recipientProfile && card.recipientPubkey) {
+          setLocalRecipientProfile(profiles.get(card.recipientPubkey) || null);
+        }
+      }
+    };
+    
+    loadProfiles();
+  }, [card.pubkey, card.recipientPubkey, senderProfile, recipientProfile]);
+  
+  // 実際に使用するプロファイル（外部から渡されたものがあればそれを優先）
+  const effectiveSenderProfile = senderProfile || localSenderProfile;
+  const effectiveRecipientProfile = recipientProfile || localRecipientProfile;
 
   // リアクション状態を取得
   useEffect(() => {
@@ -211,15 +244,15 @@ export function CardFlip({
   }, [card.id]);
 
   const getSenderName = () => {
-    if (senderProfile?.display_name) return senderProfile.display_name;
-    if (senderProfile?.name) return senderProfile.name;
+    if (effectiveSenderProfile?.display_name) return effectiveSenderProfile.display_name;
+    if (effectiveSenderProfile?.name) return effectiveSenderProfile.name;
     return pubkeyToNpub(card.pubkey).slice(0, 12) + '...';
   };
 
   const getRecipientName = () => {
     if (!card.recipientPubkey) return 'みんな';
-    if (recipientProfile?.display_name) return recipientProfile.display_name;
-    if (recipientProfile?.name) return recipientProfile.name;
+    if (effectiveRecipientProfile?.display_name) return effectiveRecipientProfile.display_name;
+    if (effectiveRecipientProfile?.name) return effectiveRecipientProfile.name;
     return pubkeyToNpub(card.recipientPubkey).slice(0, 12) + '...';
   };
 
@@ -251,16 +284,20 @@ export function CardFlip({
       
       {/* 作者ヘッダー */}
       <div className={styles.authorHeader}>
-        <div className={styles.authorInfo}>
-          {senderProfile?.picture && (
+        <a 
+          href={`${window.location.origin}${window.location.pathname}?npub=${pubkeyToNpub(card.pubkey)}`}
+          className={styles.authorInfo}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {effectiveSenderProfile?.picture && (
             <img 
-              src={senderProfile.picture} 
+              src={effectiveSenderProfile.picture} 
               alt="" 
               className={styles.authorHeaderAvatar}
             />
           )}
           <span className={styles.authorHeaderName}>{getSenderName()}</span>
-        </div>
+        </a>
         <a 
           href={getPermalink()}
           className={styles.postDate}
@@ -284,9 +321,9 @@ export function CardFlip({
               <div className={styles.toSection}>
                 <span className={styles.label}>To:</span>
                 <span className={styles.name}>{getRecipientName()}</span>
-                {recipientProfile?.picture && (
-                  <img
-                    src={recipientProfile.picture}
+{effectiveRecipientProfile?.picture && (
+                    <img
+                      src={effectiveRecipientProfile.picture}
                     alt=""
                     className={styles.avatar}
                   />
@@ -295,9 +332,9 @@ export function CardFlip({
               <div className={styles.fromSection}>
                 <span className={styles.label}>From:</span>
                 <span className={styles.name}>{getSenderName()}</span>
-                {senderProfile?.picture && (
+                {effectiveSenderProfile?.picture && (
                   <img
-                    src={senderProfile.picture}
+                    src={effectiveSenderProfile.picture}
                     alt=""
                     className={styles.avatar}
                   />
@@ -460,15 +497,15 @@ export function CardFlip({
               </div>
               <div className={styles.cardInfo}>
                 <div className={styles.cardAuthor}>
-                  {senderProfile?.picture && (
+                  {effectiveSenderProfile?.picture && (
                     <img 
-                      src={senderProfile.picture} 
+                      src={effectiveSenderProfile.picture} 
                       alt="" 
                       className={styles.authorAvatar}
                     />
                   )}
                   <span className={styles.authorName}>
-                    {senderProfile?.name || pubkeyToNpub(card.pubkey).slice(0, 12) + '...'}
+                    {effectiveSenderProfile?.name || pubkeyToNpub(card.pubkey).slice(0, 12) + '...'}
                   </span>
                 </div>
                 <div className={styles.cardMeta}>

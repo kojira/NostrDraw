@@ -37,6 +37,9 @@ interface UserGalleryProps {
   onGalleryClick: () => void;
 }
 
+// npubコピー状態
+type CopyState = 'idle' | 'copied';
+
 export function UserGallery({
   npub,
   userPubkey,
@@ -61,6 +64,26 @@ export function UserGallery({
 
   // npubからpubkeyを取得
   const pubkey = npub.startsWith('npub') ? npubToPubkey(npub) : npub;
+  const fullNpub = pubkeyToNpub(pubkey || '');
+  
+  // npubコピー状態
+  const [copyState, setCopyState] = useState<CopyState>('idle');
+  
+  // 真ん中を省略したnpub表示（先頭12文字 + ... + 末尾8文字）
+  const truncatedNpub = fullNpub.length > 24 
+    ? `${fullNpub.slice(0, 12)}...${fullNpub.slice(-8)}`
+    : fullNpub;
+  
+  // npubをコピー
+  const handleCopyNpub = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(fullNpub);
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 2000);
+    } catch (error) {
+      console.error('コピーに失敗:', error);
+    }
+  }, [fullNpub]);
 
   // プロフィールを取得
   useEffect(() => {
@@ -206,7 +229,25 @@ export function UserGallery({
         )}
         <div className={styles.userDetails}>
           <h1 className={styles.userName}>{displayName}</h1>
-          <p className={styles.userNpub}>{pubkeyToNpub(pubkey || '').slice(0, 16)}...</p>
+          <div className={styles.npubRow}>
+            <p className={styles.userNpubFull}>{fullNpub}</p>
+            <p className={styles.userNpubTruncated}>{truncatedNpub}</p>
+            <button 
+              className={`${styles.copyButton} ${copyState === 'copied' ? styles.copied : ''}`}
+              onClick={handleCopyNpub}
+              title={copyState === 'copied' ? 'コピーしました' : 'npubをコピー'}
+            >
+              {copyState === 'copied' ? (
+                <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                  <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                  <path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/>
+                </svg>
+              )}
+            </button>
+          </div>
           {profile?.about && (
             <p className={styles.userAbout}>{profile.about}</p>
           )}
