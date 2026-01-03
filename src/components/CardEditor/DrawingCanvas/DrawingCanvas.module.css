@@ -1273,3 +1273,291 @@
   background: rgba(233, 69, 96, 0.25);
   border-color: #e94560;
 }
+
+/* =====================================
+   ライトテーマ: 全体的なスタイル調整
+   ===================================== */
+
+/* メインコンテナ */
+:global(body.light-theme) .drawingCanvas {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* テンプレート選択 */
+:global(body.light-theme) .templateSection {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .templateToggle {
+  color: #555;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .templateToggle:hover {
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .sectionLabel {
+  color: #555;
+}
+
+:global(body.light-theme) .templateList {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:global(body.light-theme) .templateButton {
+  color: #444;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .templateButton:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .templateButton.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+:global(body.light-theme) .templateTabButton {
+  color: #555;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .templateTabButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+:global(body.light-theme) .templateTabButton.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+/* 干支ギャラリー */
+:global(body.light-theme) .etoGallery {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:global(body.light-theme) .etoButton {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+:global(body.light-theme) .etoButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+:global(body.light-theme) .etoName {
+  color: #666;
+}
+
+/* ツールバー */
+:global(body.light-theme) .toolbar {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .toolButton {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .toolButton:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .toolButton.disabled:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:global(body.light-theme) .colorButton {
+  border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .colorButton.active {
+  border-color: #333;
+}
+
+:global(body.light-theme) .sizeSlider {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .sizeLabel {
+  color: #555;
+}
+
+/* メッセージ入力セクション */
+:global(body.light-theme) .messageInputSection {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global(body.light-theme) .messageTextarea {
+  color: #333;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+:global(body.light-theme) .messageTextarea::placeholder {
+  color: #999;
+}
+
+:global(body.light-theme) .messageHint {
+  color: #666;
+}
+
+/* テキストボックスコントロール */
+:global(body.light-theme) .textBoxControls {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .textBoxLabel {
+  color: #555;
+}
+
+/* キャンバスコンテナ */
+:global(body.light-theme) .canvasContainer {
+  background: #f0f0f0;
+}
+
+/* アクションボタン */
+:global(body.light-theme) .clearButton {
+  color: #666;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+:global(body.light-theme) .clearButton:hover {
+  color: #e94560;
+  border-color: #e94560;
+}
+
+/* フォント選択セクション */
+:global(body.light-theme) .fontSection {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global(body.light-theme) .fontCategoryTabs {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .fontCategoryTab {
+  color: #555;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .fontCategoryTab:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .fontCategoryTab.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.15);
+}
+
+:global(body.light-theme) .fontList::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global(body.light-theme) .fontList::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .fontList::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+:global(body.light-theme) .fontButton {
+  color: #444;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .fontButton:hover {
+  color: #222;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .fontButton.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+/* テキストオプションセクション */
+:global(body.light-theme) .textOptionsSection {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* フォントドロップダウン */
+:global(body.light-theme) .fontDropdownTrigger {
+  color: #333;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+:global(body.light-theme) .fontDropdownTrigger:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+:global(body.light-theme) .fontDropdownLabel {
+  color: #666;
+}
+
+:global(body.light-theme) .fontDropdownArrow {
+  color: #666;
+}
+
+:global(body.light-theme) .fontDropdownMenu {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
+}
+
+:global(body.light-theme) .fontCategoryTabsCompact {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:global(body.light-theme) .fontCategoryTabCompact {
+  color: #555;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .fontCategoryTabCompact:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .fontCategoryTabCompact.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.15);
+}
+
+:global(body.light-theme) .fontListCompact::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global(body.light-theme) .fontListCompact::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .fontButtonCompact {
+  color: #444;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .fontButtonCompact:hover {
+  color: #222;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .fontButtonCompact.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.12);
+}
