@@ -805,6 +805,69 @@
   object-fit: contain;
 }
 
+/* ライトテーマ: スタンプ・絵文字パレット */
+:global(body.light-theme) .stampPalette {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global(body.light-theme) .stampButton {
+  background: rgba(0, 0, 0, 0.03);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .stampButton:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .stampButton.active {
+  background: rgba(233, 69, 96, 0.15);
+}
+
+:global(body.light-theme) .stampTabButton {
+  color: #555;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .stampTabButton:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #333;
+}
+
+:global(body.light-theme) .stampTabButton.active {
+  color: #d63050;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+:global(body.light-theme) .customEmojiPalette {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global(body.light-theme) .loadingEmojis {
+  color: #666;
+}
+
+:global(body.light-theme) .noEmojis {
+  color: #666;
+}
+
+:global(body.light-theme) .noEmojisHint {
+  color: #888;
+}
+
+:global(body.light-theme) .emojiButton {
+  background: rgba(0, 0, 0, 0.03);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(body.light-theme) .emojiButton:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:global(body.light-theme) .emojiButton.active {
+  background: rgba(233, 69, 96, 0.15);
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
