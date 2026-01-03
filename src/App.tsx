@@ -255,23 +255,35 @@ function App() {
                         alert(t('auth.nip07Required'));
                         return;
                       }
-                      const result = await sendCard({
-                        svg,
-                        message: msg,
-                        year: new Date().getFullYear() + 1,
-                        layoutId: 'vertical',
-                        recipientPubkey: null,
-                        allowExtend,
-                        isPublic: postToTimeline,
-                        parentEventId: extendingCard?.id || null,
-                        parentPubkey: extendingCard?.pubkey || null,
-                        // ルートの計算: 
-                        // 1. 親にrootEventIdがある場合、それがルート
-                        // 2. 親にrootEventIdがなく、親自身がルートの場合、親のidがルート
-                        rootEventId: extendingCard?.rootEventId || extendingCard?.id || null,
-                      });
-                      if (result) {
-                        setLastSentEventId(result);
+                      try {
+                        const result = await sendCard({
+                          svg,
+                          message: msg,
+                          year: new Date().getFullYear() + 1,
+                          layoutId: 'vertical',
+                          recipientPubkey: null,
+                          allowExtend,
+                          isPublic: postToTimeline,
+                          parentEventId: extendingCard?.id || null,
+                          parentPubkey: extendingCard?.pubkey || null,
+                          // ルートの計算: 
+                          // 1. 親にrootEventIdがある場合、それがルート
+                          // 2. 親にrootEventIdがなく、親自身がルートの場合、親のidがルート
+                          rootEventId: extendingCard?.rootEventId || extendingCard?.id || null,
+                          // 画像アップロード失敗時の確認コールバック
+                          onImageUploadFailed: async (error) => {
+                            return window.confirm(
+                              `画像のアップロードに失敗しました。\n\nエラー: ${error}\n\n画像なしで投稿を続けますか？\n（キャンセルで投稿を中止）`
+                            );
+                          },
+                        });
+                        if (result) {
+                          setLastSentEventId(result);
+                        }
+                      } catch (error) {
+                        if (error instanceof Error) {
+                          alert(error.message);
+                        }
                       }
                     }}
                   />

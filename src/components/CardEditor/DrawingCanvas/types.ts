@@ -65,6 +65,12 @@ export interface DrawingCanvasProps {
 // 定数
 export const COLORS = ['#e94560', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b5de5', '#000000', '#ffffff'];
 
+// カスタムカラーパレット用のローカルストレージキー
+export const CUSTOM_COLORS_STORAGE_KEY = 'nostrdraw-custom-colors';
+
+// カスタムカラーパレットの最大保存数
+export const MAX_CUSTOM_COLORS = 12;
+
 // Re-export types for convenience
 export type { Template, Stamp, FontOption, CustomEmoji, EtoImage };
 

@@ -11,6 +11,65 @@ import {
 } from '../types';
 import { compressSvg, decompressSvg } from '../utils/compression';
 import { BASE_URL } from '../config';
+import { uploadWithNip96 } from './imageUpload';
+
+// SVG文字列をPNG Blobに変換するヘルパー関数
+async function svgToPngBlob(svgString: string, width: number = 800, height: number = 600): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    try {
+      // SVG文字列をData URLに変換
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            URL.revokeObjectURL(svgUrl);
+            resolve(null);
+            return;
+          }
+          
+          // 背景を白で塗りつぶし
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+          
+          // SVGを描画
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob(
+            (blob) => {
+              URL.revokeObjectURL(svgUrl);
+              resolve(blob);
+            },
+            'image/png',
+            0.95
+          );
+        } catch (error) {
+          console.error('[svgToPngBlob] Canvas error:', error);
+          URL.revokeObjectURL(svgUrl);
+          resolve(null);
+        }
+      };
+      
+      img.onerror = (error) => {
+        console.error('[svgToPngBlob] Image load error:', error);
+        URL.revokeObjectURL(svgUrl);
+        resolve(null);
+      };
+      
+      img.src = svgUrl;
+    } catch (error) {
+      console.error('[svgToPngBlob] Error:', error);
+      resolve(null);
+    }
+  });
+}
 
 // NostrDrawのイベントかどうかをチェック
 export function isNostrDrawEvent(event: Event): boolean {
@@ -430,6 +489,7 @@ export interface SendCardParams {
   parentPubkey?: string | null; // 描き足し元の投稿者
   rootEventId?: string | null; // スレッドのルートイベントID（最初の親）
   isPublic?: boolean; // kind 1にも投稿するか
+  onImageUploadFailed?: (error: string) => Promise<boolean>; // 画像アップロード失敗時の確認コールバック（trueで続行）
 }
 
 export async function sendCard(
@@ -520,24 +580,73 @@ export async function sendCard(
     // NostrDrawで閲覧するためのURL
     const viewUrl = `${BASE_URL}/?eventid=${signedEvent.id}`;
     
+    // SVGをPNGに変換してアップロード
+    let imageUrl: string | null = null;
+    let uploadError: string | null = null;
+    
+    try {
+      console.log('[sendCard] Converting SVG to PNG for upload...');
+      const pngBlob = await svgToPngBlob(params.svg, 800, 600);
+      if (pngBlob) {
+        console.log('[sendCard] Uploading image to NIP-96 server...');
+        const uploadResult = await uploadWithNip96(pngBlob, signEvent);
+        if (uploadResult.success && uploadResult.url) {
+          imageUrl = uploadResult.url;
+          console.log('[sendCard] Image uploaded successfully:', imageUrl);
+        } else {
+          uploadError = uploadResult.error || '画像のアップロードに失敗しました';
+          console.warn('[sendCard] Image upload failed:', uploadError);
+        }
+      } else {
+        uploadError = '画像の変換に失敗しました';
+      }
+    } catch (error) {
+      uploadError = error instanceof Error ? error.message : '画像アップロード中にエラーが発生しました';
+      console.warn('[sendCard] Failed to upload image:', error);
+    }
+    
+    // 画像アップロードに失敗した場合、ユーザーに確認
+    if (!imageUrl && uploadError) {
+      if (params.onImageUploadFailed) {
+        const shouldContinue = await params.onImageUploadFailed(uploadError);
+        if (!shouldContinue) {
+          throw new Error('画像のアップロードに失敗したため、投稿をキャンセルしました');
+        }
+      }
+      // コールバックがない場合は警告のみで続行
+    }
+    
     const kind1Tags: string[][] = [
       ['client', NOSTRDRAW_CLIENT_TAG],
       ['e', signedEvent.id, '', 'mention'], // kind 31898への参照
       ['r', viewUrl], // URLタグ
     ];
     
+    // 画像URLがあればimeta/imageタグを追加
+    if (imageUrl) {
+      kind1Tags.push(['imeta', `url ${imageUrl}`, 'm image/png']);
+    }
+    
     // 描き足し元の投稿者をメンション（告知用）
     if (params.parentPubkey) {
       kind1Tags.push(['p', params.parentPubkey]);
+    }
+    
+    // コンテンツを構築（画像URLを含める）
+    let kind1Content = params.message 
+      ? `${params.message}\n\n${viewUrl}`
+      : `NostrDrawで絵を投稿しました！\n\n${viewUrl}`;
+    
+    // 画像URLをコンテンツに追加（クライアントで表示されやすい）
+    if (imageUrl) {
+      kind1Content = `${kind1Content}\n\n${imageUrl}`;
     }
     
     const kind1EventTemplate: EventTemplate = {
       kind: 1, // テキストノート
       created_at: timestamp,
       tags: kind1Tags,
-      content: params.message 
-        ? `${params.message}\n\n${viewUrl}`
-        : `NostrDrawで絵を投稿しました！\n\n${viewUrl}`,
+      content: kind1Content,
     };
     
     const signedKind1Event = await signEvent(kind1EventTemplate);

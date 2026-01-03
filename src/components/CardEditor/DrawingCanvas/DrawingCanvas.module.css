@@ -253,6 +253,89 @@
   box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.5);
 }
 
+.colorButton.customColor {
+  position: relative;
+}
+
+.colorButton.colorPickerButton {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 25%, #6bcb77 50%, #4d96ff 75%, #9b5de5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.colorPickerContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.colorPickerPanel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.colorInput {
+  width: 48px;
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+.colorInput::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colorInput::-webkit-color-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.colorInputSmall {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+.colorInputSmall::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colorInputSmall::-webkit-color-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+.saveColorButton {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: #4d96ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.saveColorButton:hover {
+  background: #3d7acc;
+}
+
 @media (max-width: 480px) {
   .colorButton {
     width: 24px;
@@ -1382,6 +1465,20 @@
 
 :global(body.light-theme) .colorButton.active {
   border-color: #333;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .colorPickerPanel {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
+}
+
+:global(body.light-theme) .colorInput::-webkit-color-swatch {
+  border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .colorInputSmall::-webkit-color-swatch {
+  border: 2px solid rgba(0, 0, 0, 0.2);
 }
 
 :global(body.light-theme) .sizeSlider {

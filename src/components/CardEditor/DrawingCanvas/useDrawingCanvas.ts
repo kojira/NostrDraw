@@ -15,6 +15,7 @@ import type {
   Stamp,
   CustomEmoji,
 } from './types';
+import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS } from './types';
 
 // ローカルストレージのキー
 const STORAGE_KEY = 'nostrdraw-canvas-state';
@@ -110,6 +111,44 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const [stampScale, setStampScale] = useState(1);
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
   const [stampDragStart, setStampDragStart] = useState<Point | null>(null);
+
+  // カスタムカラーパレット
+  const [customColors, setCustomColors] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(CUSTOM_COLORS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // カスタムカラーを保存
+  const addCustomColor = useCallback((newColor: string) => {
+    setCustomColors(prev => {
+      // 既に存在する場合は先頭に移動
+      const filtered = prev.filter(c => c.toLowerCase() !== newColor.toLowerCase());
+      const updated = [newColor, ...filtered].slice(0, MAX_CUSTOM_COLORS);
+      try {
+        localStorage.setItem(CUSTOM_COLORS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ストレージエラーを無視
+      }
+      return updated;
+    });
+  }, []);
+
+  // カスタムカラーを削除
+  const removeCustomColor = useCallback((colorToRemove: string) => {
+    setCustomColors(prev => {
+      const updated = prev.filter(c => c.toLowerCase() !== colorToRemove.toLowerCase());
+      try {
+        localStorage.setItem(CUSTOM_COLORS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ストレージエラーを無視
+      }
+      return updated;
+    });
+  }, []);
   const [stampDragOriginal, setStampDragOriginal] = useState<PlacedStamp | null>(null);
   const [stampDragMode, setStampDragMode] = useState<'move' | 'resize' | null>(null);
 
@@ -851,6 +890,11 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     selectedPlacedStampId,
     stampScale,
     stampTab,
+    
+    // カスタムカラーパレット
+    customColors,
+    addCustomColor,
+    removeCustomColor,
     
     // テキストボックス（複数対応）
     textBoxes,

@@ -38,6 +38,9 @@ export function DrawingCanvas({
     selectedPlacedStampId,
     stampScale,
     stampTab,
+    customColors,
+    addCustomColor,
+    removeCustomColor,
     textBoxes,
     selectedTextBoxId,
     selectedTextBox,
@@ -140,6 +143,7 @@ export function DrawingCanvas({
         messageBox={messageBox}
         canUndo={canUndo}
         canRedo={canRedo}
+        customColors={customColors}
         onToolChange={selectTool}
         onColorChange={setColor}
         onLineWidthChange={setLineWidth}
@@ -147,6 +151,8 @@ export function DrawingCanvas({
         onMessageBoxChange={setMessageBox}
         onUndo={undo}
         onRedo={redo}
+        onAddCustomColor={addCustomColor}
+        onRemoveCustomColor={removeCustomColor}
       />
 
       {/* スタンプパレット（スタンプモード時） */}
