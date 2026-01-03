@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../common/Icon';
 import styles from './SideNav.module.css';
 
 interface SideNavProps {
@@ -13,11 +14,12 @@ export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { id: 'home', icon: '🏠', label: t('nav.home', 'ホーム') },
-    { id: 'gallery', icon: '🖼️', label: t('nav.gallery', 'ギャラリー') },
-    { id: 'notifications', icon: '🔔', label: t('nav.notifications', '通知') },
-    { id: 'profile', icon: '👤', label: t('nav.profile', 'プロフィール'), requiresAuth: true },
-    { id: 'settings', icon: '⚙️', label: t('nav.settings', '設定') },
+    { id: 'home', icon: 'home', label: t('nav.home', 'ホーム') },
+    { id: 'gallery', icon: 'gallery_thumbnail', label: t('nav.gallery', 'ギャラリー') },
+    { id: 'notifications', icon: 'notifications', label: t('nav.notifications', '通知') },
+    { id: 'profile', icon: 'person', label: t('nav.profile', 'プロフィール'), requiresAuth: true },
+    { id: 'settings', icon: 'settings', label: t('nav.settings', '設定') },
+    { id: 'help', icon: 'help', label: t('nav.help', 'ヘルプ') },
   ];
 
   const handleNavigate = (page: string) => {
@@ -59,9 +61,9 @@ export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
                   className={`${styles.navItem} ${isActive ? styles.active : ''}`}
                   onClick={() => handleNavigate(item.id)}
                   disabled={isDisabled}
+                  title={item.label}
                 >
-                  <span className={styles.navIcon}>{item.icon}</span>
-                  <span className={styles.navLabel}>{item.label}</span>
+                  <Icon name={item.icon} size="lg" className={styles.navIcon} />
                 </button>
               </li>
             );

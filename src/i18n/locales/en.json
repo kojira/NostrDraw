@@ -12,7 +12,8 @@
     "gallery": "Gallery",
     "notifications": "Notifications",
     "profile": "Profile",
-    "settings": "Settings"
+    "settings": "Settings",
+    "help": "Help"
   },
   "auth": {
     "login": "Login",
@@ -196,6 +197,94 @@
     "nip65NotFound": "No NIP-65 relay list found",
     "nip65Success": "Fetched {{count}} relays",
     "nip65Error": "Failed to fetch relays"
+  },
+  "help": {
+    "title": "How to Use",
+    "back": "Back",
+    "about": {
+      "title": "About NostrDraw",
+      "description": "NostrDraw is a social drawing app that runs on the Nostr protocol. Share your drawings with people around the world and collaborate by extending others' artwork."
+    },
+    "features": {
+      "title": "Features",
+      "draw": {
+        "title": "Draw",
+        "description": "Draw freehand on the canvas or add text. Choose from various brushes and colors to create your own art."
+      },
+      "share": {
+        "title": "Share",
+        "description": "Your drawings are posted to the Nostr network. Copy the permalink to share with friends."
+      },
+      "react": {
+        "title": "Reactions",
+        "description": "Like artworks you enjoy. Reactions show support for the artist."
+      },
+      "extend": {
+        "title": "Extend",
+        "description": "Collaborate by extending others' artwork (if the artist allows it)."
+      },
+      "tree": {
+        "title": "Tree View",
+        "description": "View connected artworks in a tree structure. See which artwork was derived from which."
+      }
+    },
+    "steps": {
+      "title": "Getting Started",
+      "login": {
+        "title": "Login",
+        "description": "Login with a NIP-07 compatible browser extension (nos2x, Alby, etc.)."
+      },
+      "create": {
+        "title": "Create",
+        "description": "Tap the '+' button to open the editor. Choose a template and draw freely."
+      },
+      "post": {
+        "title": "Post",
+        "description": "When finished, press 'Post' to publish to Nostr."
+      },
+      "explore": {
+        "title": "Explore",
+        "description": "Enjoy others' artwork in the timeline and gallery."
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "nostr": {
+        "question": "What is Nostr?",
+        "answer": "Nostr is a decentralized social protocol. Information is shared through multiple relay servers without depending on a central server."
+      },
+      "login": {
+        "question": "What do I need to login?",
+        "answer": "A NIP-07 compatible browser extension is required. Recommended: nos2x, Alby, Nostore, etc."
+      },
+      "delete": {
+        "question": "Can I delete posts?",
+        "answer": "Complete deletion is not guaranteed by Nostr's design. A delete request can be sent, but data already stored on relays may remain."
+      }
+    },
+    "footer": "If you have any questions, please don't hesitate to reach out."
+  },
+  "welcome": {
+    "step1": {
+      "title": "Welcome to NostrDraw!",
+      "description": "A social drawing app that runs on Nostr. Draw freely and share with people around the world."
+    },
+    "step2": {
+      "title": "Draw Freely",
+      "description": "Choose a template and create your own art with pen tools and text."
+    },
+    "step3": {
+      "title": "Share Your Art",
+      "description": "Login with a NIP-07 extension to post your artwork to Nostr. Interact with likes and comments!"
+    },
+    "step4": {
+      "title": "Collaborate",
+      "description": "Extend others' artwork to collaborate! View derivative works in the tree view."
+    },
+    "next": "Next",
+    "prev": "Back",
+    "start": "Get Started",
+    "learnMore": "Learn More"
   }
 }
 

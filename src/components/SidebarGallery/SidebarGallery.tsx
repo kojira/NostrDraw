@@ -7,6 +7,7 @@ import type { Event, EventTemplate } from 'nostr-tools';
 import type { NewYearCardWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
+import { Spinner } from '../common/Spinner';
 import styles from './SidebarGallery.module.css';
 
 // SVGを安全にレンダリングするためのコンポーネント
@@ -147,7 +148,10 @@ export function SidebarGallery({
 
       <div className={styles.content}>
         {isLoading && (
-          <div className={styles.loading}>{t('card.loading')}</div>
+          <div className={styles.loading}>
+            <Spinner size="md" />
+            <span>{t('card.loading')}</span>
+          </div>
         )}
 
         {error && (

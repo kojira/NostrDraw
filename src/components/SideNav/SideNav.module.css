@@ -1,30 +1,40 @@
+/**
+ * SideNav Component Styles
+ * Using Design Tokens
+ */
+
 /* ハンバーガーボタン（モバイル用） */
 .hamburger {
   display: none;
   position: fixed;
-  top: 0.75rem;
-  left: 0.75rem;
-  z-index: 1001;
-  width: 40px;
-  height: 40px;
-  padding: 8px;
-  background: rgba(26, 26, 46, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: calc(var(--z-overlay) + 2);
+  width: var(--size-button-md);
+  height: var(--size-button-md);
+  padding: var(--space-2);
+  background: var(--color-bg-raised);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 5px;
+  transition: background-color var(--duration-fast) var(--easing-default);
+}
+
+.hamburger:hover {
+  background: var(--color-bg-overlay);
 }
 
 .hamburgerLine {
   display: block;
   width: 20px;
   height: 2px;
-  background: #fff;
+  background: var(--color-text-primary);
   border-radius: 1px;
-  transition: all 0.3s ease;
+  transition: all var(--duration-slow) var(--easing-default);
 }
 
 .hamburger .hamburgerLine.open:nth-child(1) {
@@ -48,7 +58,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: calc(var(--z-overlay) - 1);
 }
 
 /* サイドナビゲーション */
@@ -56,34 +66,14 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 60px;
+  width: var(--size-sidenav);
   height: 100vh;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  border-right: 1px solid rgba(233, 69, 96, 0.2);
+  background: var(--color-bg-raised);
+  border-right: var(--border-thin) solid var(--color-border);
   display: flex;
   flex-direction: column;
-  z-index: 1000;
-  padding-top: 1rem;
-}
-
-.navHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 1rem;
-}
-
-.navLogo {
-  font-size: 1.5rem;
-}
-
-.navTitle {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #e94560;
-  font-family: 'Shippori Mincho', serif;
+  z-index: var(--z-overlay);
+  padding-top: var(--space-4);
 }
 
 .navList {
@@ -91,6 +81,9 @@
   padding: 0;
   margin: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .navItem {
@@ -98,25 +91,27 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 0.875rem 0;
+  padding: var(--space-4) 0;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.95rem;
+  border-left: 3px solid transparent;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default),
+    border-color var(--duration-fast) var(--easing-default);
 }
 
 .navItem:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
 }
 
 .navItem.active {
-  background: linear-gradient(90deg, rgba(233, 69, 96, 0.2) 0%, transparent 100%);
-  color: #e94560;
-  border-left: 3px solid #e94560;
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  border-left-color: var(--color-accent);
 }
 
 .navItem:disabled {
@@ -125,24 +120,26 @@
 }
 
 .navIcon {
-  font-size: 1.5rem;
-  width: auto;
-  text-align: center;
+  transition: transform var(--duration-fast) var(--easing-default);
 }
 
-.navLabel {
-  display: none;
+.navItem:hover:not(:disabled) .navIcon {
+  transform: scale(1.1);
+}
+
+.navItem:active:not(:disabled) .navIcon {
+  transform: scale(0.95);
 }
 
 .navFooter {
-  padding: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-2);
+  border-top: var(--border-thin) solid var(--color-border);
   text-align: center;
 }
 
 .footerText {
-  font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
   margin: 0;
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -160,55 +157,10 @@
 
   .sideNav {
     transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    transition: transform var(--duration-slow) var(--easing-default);
   }
 
   .sideNav.open {
     transform: translateX(0);
   }
 }
-
-/* ライトテーマ */
-:global(.light-theme) .hamburger {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: #ddd;
-}
-
-:global(.light-theme) .hamburgerLine {
-  background: #333;
-}
-
-:global(.light-theme) .sideNav {
-  background: linear-gradient(180deg, #fff 0%, #f8f8f8 100%);
-  border-right-color: rgba(233, 69, 96, 0.15);
-}
-
-:global(.light-theme) .navHeader {
-  border-bottom-color: #e0e0e0;
-}
-
-:global(.light-theme) .navItem {
-  color: #555;
-}
-
-:global(.light-theme) .navItem:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.03);
-  color: #333;
-}
-
-:global(.light-theme) .navItem.active {
-  background: linear-gradient(90deg, rgba(233, 69, 96, 0.15) 0%, rgba(233, 69, 96, 0.05) 100%);
-  color: #d63851;
-  border-left: 3px solid #d63851;
-  font-weight: 600;
-}
-
-:global(.light-theme) .navFooter {
-  border-top-color: #e0e0e0;
-}
-
-:global(.light-theme) .footerText {
-  color: #999;
-}
-
-

@@ -72,6 +72,27 @@ export async function fetchEvents(filter: Filter): Promise<Event[]> {
   return await p.querySync(relayUrls, filter);
 }
 
+// ストリーミングでイベントを購読（リアルタイム表示用）
+export function subscribeToEvents(
+  filter: Filter,
+  onEvent: (event: Event) => void,
+  onEose?: () => void
+): () => void {
+  const p = getPool();
+  const relayUrls = getReadRelayUrls();
+  
+  // nostr-toolsのsubscribeManyは単一のFilterを受け取る
+  const sub = p.subscribeMany(relayUrls, filter, {
+    onevent: onEvent,
+    oneose: onEose,
+  });
+  
+  // クリーンアップ関数を返す
+  return () => {
+    sub.close();
+  };
+}
+
 export async function publishEvent(event: Event): Promise<void> {
   const p = getPool();
   const relayUrls = getWriteRelayUrls();

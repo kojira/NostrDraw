@@ -1,8 +1,7 @@
 /* ユーザーギャラリーページのスタイル */
 
 .userGallery {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 1rem;
   min-height: 100vh;
 }
@@ -15,6 +14,7 @@
   padding: 0.75rem 0;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  max-width: 1200px;
 }
 
 .breadcrumbLink {
@@ -53,6 +53,7 @@
   padding: 1.5rem;
   border-radius: 16px;
   margin-bottom: 1.5rem;
+  max-width: 1200px;
 }
 
 .userAvatar {

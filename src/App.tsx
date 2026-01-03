@@ -19,6 +19,8 @@ import { SidebarGallery } from './components/SidebarGallery';
 import { SideNav } from './components/SideNav';
 import { Notifications } from './components/Notifications';
 import { Settings } from './components/Settings';
+import { HelpPage } from './components/Help';
+import { WelcomeModal, useWelcomeModal } from './components/Onboarding';
 import { useRouter } from './hooks/useRouter';
 import { useNostr } from './hooks/useNostr';
 import './App.css';
@@ -28,7 +30,10 @@ const THEME_STORAGE_KEY = 'nostr-draw-theme';
 
 function App() {
   const { t } = useTranslation();
-  const { route, goHome, goToGallery, goToUser, goToCreate, goToNotifications, goToSettings } = useRouter();
+  const { route, goHome, goToGallery, goToUser, goToCreate, goToNotifications, goToSettings, goToHelp } = useRouter();
+  
+  // Welcome modal
+  const { shouldShow: showWelcome, hideModal: hideWelcome } = useWelcomeModal();
   
   // テーマ管理
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -184,8 +189,11 @@ function App() {
       case 'settings':
         goToSettings();
         break;
+      case 'help':
+        goToHelp();
+        break;
     }
-  }, [goHome, goToGallery, goToUser, goToNotifications, goToSettings, authState.pubkey]);
+  }, [goHome, goToGallery, goToUser, goToNotifications, goToSettings, goToHelp, authState.pubkey]);
 
   // 投稿画面
   if (route.page === 'create') {
@@ -384,6 +392,22 @@ function App() {
     );
   }
 
+  // ヘルプページ
+  if (route.page === 'help') {
+    return (
+      <div className="app">
+        <SideNav
+          currentPage="help"
+          onNavigate={handleNavigation}
+          userPubkey={authState.pubkey}
+        />
+        <div className="mainContent fullWidth">
+          <HelpPage onNavigate={handleNavigation} />
+        </div>
+      </div>
+    );
+  }
+
   // ギャラリーページ
   if (route.page === 'gallery') {
     return (
@@ -489,6 +513,14 @@ function App() {
 
   return (
     <div className="app">
+      {/* Welcome Modal */}
+      {showWelcome && (
+        <WelcomeModal 
+          onClose={hideWelcome} 
+          onNavigateToHelp={goToHelp}
+        />
+      )}
+      
       {/* 左サイドナビゲーション */}
       <SideNav
         currentPage="home"

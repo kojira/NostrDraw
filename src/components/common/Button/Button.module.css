@@ -1,0 +1,187 @@
+/**
+ * Button Component Styles
+ * マイクロインタラクション付き
+ */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-family-base);
+  font-weight: var(--font-medium);
+  line-height: 1;
+  border: var(--border-thin) solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    border-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default),
+    transform var(--duration-fast) var(--easing-default),
+    box-shadow var(--duration-fast) var(--easing-default);
+}
+
+/* Hover - scale up */
+.button:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+/* Active - scale down */
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Focus */
+.button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Disabled */
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==========================================================================
+   Variants
+   ========================================================================== */
+
+/* Primary */
+.primary {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.primary:active:not(:disabled) {
+  background-color: var(--color-accent-active);
+  border-color: var(--color-accent-active);
+}
+
+/* Secondary */
+.secondary {
+  background-color: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-bg-subtle);
+  border-color: var(--color-border-emphasis);
+}
+
+.secondary:active:not(:disabled) {
+  background-color: var(--color-bg-overlay);
+}
+
+/* Ghost */
+.ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.ghost:hover:not(:disabled) {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.ghost:active:not(:disabled) {
+  background-color: var(--color-bg-overlay);
+}
+
+/* Danger */
+.danger {
+  background-color: var(--color-error);
+  border-color: var(--color-error);
+  color: #ffffff;
+}
+
+.danger:hover:not(:disabled) {
+  background-color: #da3633;
+  border-color: #da3633;
+  box-shadow: var(--shadow-md);
+}
+
+.danger:active:not(:disabled) {
+  background-color: #b62324;
+  border-color: #b62324;
+}
+
+/* ==========================================================================
+   Sizes
+   ========================================================================== */
+
+.sm {
+  height: var(--size-button-sm);
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.md {
+  height: var(--size-button-md);
+  padding: 0 var(--space-4);
+  font-size: var(--text-base);
+}
+
+.lg {
+  height: var(--size-button-lg);
+  padding: 0 var(--space-6);
+  font-size: var(--text-md);
+}
+
+/* ==========================================================================
+   Full Width
+   ========================================================================== */
+
+.fullWidth {
+  width: 100%;
+}
+
+/* ==========================================================================
+   Loading State
+   ========================================================================== */
+
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.spinner {
+  display: inline-flex;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Icon positioning
+   ========================================================================== */
+
+.leftIcon {
+  margin-right: calc(var(--space-1) * -1);
+}
+
+.rightIcon {
+  margin-left: calc(var(--space-1) * -1);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+}
+

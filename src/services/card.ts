@@ -1,7 +1,7 @@
 // NostrDraw 送受信サービス
 
 import { type Event, finalizeEvent, type EventTemplate } from 'nostr-tools';
-import { fetchEvents, publishEvent } from './relay';
+import { fetchEvents, publishEvent, subscribeToEvents } from './relay';
 import { 
   NOSTRDRAW_KIND, 
   NOSTRDRAW_CLIENT_TAG, 
@@ -254,6 +254,51 @@ export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYe
     ...card,
     reactionCount: reactionCounts.get(card.id) || 0,
   }));
+}
+
+// ストリーミングでギャラリーカードを取得（リアルタイム表示用）
+export function subscribeToPublicGalleryCards(
+  onCard: (card: NewYearCard) => void,
+  onEose?: () => void,
+  limit: number = 50
+): () => void {
+  return subscribeToEvents(
+    {
+      kinds: [NOSTRDRAW_KIND],
+      limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
+    },
+    (event) => {
+      const card = parseNewYearCard(event);
+      // 宛先なし（公開）のカードのみ
+      if (card && !card.recipientPubkey) {
+        onCard(card);
+      }
+    },
+    onEose
+  );
+}
+
+// ストリーミングで作者別カードを取得（リアルタイム表示用）
+export function subscribeToCardsByAuthor(
+  pubkey: string,
+  onCard: (card: NewYearCard) => void,
+  onEose?: () => void,
+  limit: number = 50
+): () => void {
+  return subscribeToEvents(
+    {
+      kinds: [NOSTRDRAW_KIND],
+      authors: [pubkey],
+      limit,
+    },
+    (event) => {
+      const card = parseNewYearCard(event);
+      if (card) {
+        onCard(card);
+      }
+    },
+    onEose
+  );
 }
 
 // リアクション数付きのカード型

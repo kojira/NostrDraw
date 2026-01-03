@@ -7,6 +7,7 @@ import { fetchNotifications, type Notification } from '../../services/notificati
 import { fetchProfiles, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import type { Event, EventTemplate } from 'nostr-tools';
+import { Spinner } from '../common/Spinner';
 import styles from './Notifications.module.css';
 
 interface NotificationsProps {
@@ -109,7 +110,10 @@ export function Notifications({
       {/* 通知リスト */}
       <div className={styles.notificationList}>
         {isLoading ? (
-          <div className={styles.loading}>{t('card.loading', '読み込み中...')}</div>
+          <div className={styles.loading}>
+            <Spinner size="lg" />
+            <span>{t('card.loading', '読み込み中...')}</span>
+          </div>
         ) : notifications.length === 0 ? (
           <div className={styles.empty}>{t('notifications.empty', '通知はありません')}</div>
         ) : (

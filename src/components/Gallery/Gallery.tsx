@@ -1,13 +1,14 @@
 // ギャラリーページ - 公開投稿の一覧表示
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NewYearCardWithReactions } from '../../services/card';
-import { fetchPublicGalleryCards, fetchPopularCards, fetchCardsByAuthor, sendReaction, hasUserReacted, fetchReactionCounts } from '../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
+import { Spinner } from '../common/Spinner';
 import styles from './Gallery.module.css';
 
 // SVGを安全にレンダリングするためのコンポーネント
@@ -82,7 +83,14 @@ export function Gallery({
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
-  const [limit, setLimit] = useState(20);
+  const [displayLimit, setDisplayLimit] = useState(20);
+  
+  // 購読用の固定数（表示用と分離）
+  const FETCH_LIMIT = 100;
+  
+  // 全受信カードを保持（再購読なしで「もっと見る」を実現）
+  const allReceivedCardsRef = useRef<NewYearCard[]>([]);
+  const reactionCountsRef = useRef<Map<string, number>>(new Map());
   
   // リアクション状態を管理
   const [userReactions, setUserReactions] = useState<Set<string>>(new Set());
@@ -99,96 +107,95 @@ export function Gallery({
     }
   }, []);
 
-  // カードを取得
-  const fetchCards = useCallback(async () => {
+  // ストリーミングでカードを取得（リアルタイム表示）
+  useEffect(() => {
     setIsLoading(true);
     setError(null);
-    try {
-      let fetchedCards: (NewYearCard | NewYearCardWithReactions)[];
-      const days = periodToDays(period);
+    setCards([]);
+    setDisplayLimit(20); // フィルタ変更時は表示数をリセット
+    allReceivedCardsRef.current = [];
+    reactionCountsRef.current = new Map();
+    
+    const days = periodToDays(period);
+    const since = period !== 'all' ? Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60) : 0;
+    
+    // 著者フィルタ用のpubkeyを計算
+    let authorPubkey = authorFilter;
+    if (authorFilter && authorFilter.startsWith('npub')) {
+      const converted = npubToPubkey(authorFilter);
+      if (converted) {
+        authorPubkey = converted;
+      }
+    }
+    
+    // 重複チェック用のSet
+    const seenIds = new Set<string>();
+    
+    const handleCard = (card: NewYearCard) => {
+      // 重複チェック
+      if (seenIds.has(card.id)) return;
+      seenIds.add(card.id);
       
-      // 著者指定がある場合
-      if (authorFilter) {
-        // npubの場合はpubkeyに変換
-        let authorPubkey = authorFilter;
-        if (authorFilter.startsWith('npub')) {
-          const converted = npubToPubkey(authorFilter);
-          if (converted) {
-            authorPubkey = converted;
-          }
-        }
-        
-        const authorCards = await fetchCardsByAuthor(authorPubkey, limit);
-        // 公開カードのみ（recipientPubkeyがないもの）
-        fetchedCards = authorCards.filter(card => !card.recipientPubkey);
-        
-        // 期間でフィルタリング
-        if (period !== 'all') {
-          const since = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
-          fetchedCards = fetchedCards.filter(card => card.createdAt >= since);
-        }
-        
-        // 人気順の場合はリアクション数でソート（リアクションは常に多い順、第二キーは日付で並び順に従う）
-        if (activeTab === 'popular') {
-          const cardIds = fetchedCards.map(c => c.id);
+      // 公開カードのみ
+      if (card.recipientPubkey) return;
+      
+      // 期間フィルタ
+      if (since > 0 && card.createdAt < since) return;
+      
+      allReceivedCardsRef.current.push(card);
+      
+      // リアルタイムで表示を更新（ソートして最初のdisplayLimit件だけ表示）
+      const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
+        sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+      ).slice(0, 20); // 初期表示は20件
+      
+      setCards(sortedCards);
+    };
+    
+    const handleEose = async () => {
+      setIsLoading(false);
+      
+      // EOSE後にリアクション数を取得してソート
+      if (activeTab === 'popular' && allReceivedCardsRef.current.length > 0) {
+        try {
+          const cardIds = allReceivedCardsRef.current.map(c => c.id);
           const reactions = await fetchReactionCounts(cardIds);
-          fetchedCards = [...fetchedCards].sort((a, b) => {
+          reactionCountsRef.current = reactions;
+          
+          // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
+          const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
             const aCount = reactions.get(a.id) || 0;
             const bCount = reactions.get(b.id) || 0;
-            // 第一キー：リアクション数（常に多い順）
             if (aCount !== bCount) {
               return bCount - aCount;
             }
-            // 第二キー：日付（リアクション数が同じ場合、並び順に従う）
             return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-          });
-        } else {
-          // 日付順
-          fetchedCards = [...fetchedCards].sort((a, b) => 
-            sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-          );
-        }
-      } else {
-        // 通常のギャラリー表示（著者指定なし）
-        if (activeTab === 'popular') {
-          fetchedCards = await fetchPopularCards(days, limit);
-          // リアクション数でソート（リアクションは常に多い順、第二キーは日付で並び順に従う）
-          // fetchPopularCardsはNewYearCardWithReactionsを返すので、reactionCountを直接使用
-          fetchedCards = [...fetchedCards].sort((a, b) => {
-            const aCount = 'reactionCount' in a ? a.reactionCount : 0;
-            const bCount = 'reactionCount' in b ? b.reactionCount : 0;
-            // 第一キー：リアクション数（常に多い順）
-            if (aCount !== bCount) {
-              return bCount - aCount;
-            }
-            // 第二キー：日付（リアクション数が同じ場合、並び順に従う）
-            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-          });
-        } else {
-          fetchedCards = await fetchPublicGalleryCards(limit);
-          // 期間でフィルタリング
-          if (period !== 'all') {
-            const since = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
-            fetchedCards = fetchedCards.filter(card => card.createdAt >= since);
-          }
-          // 日付ソート
-          fetchedCards = [...fetchedCards].sort((a, b) => 
-            sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-          );
+          }).slice(0, 20); // 初期表示は20件
+          
+          setCards(sortedByReaction);
+          
+          // リアクション数をステートに保存
+          setReactionCounts(reactions);
+        } catch (err) {
+          console.error('Failed to fetch reaction counts:', err);
         }
       }
-      
-      setCards(fetchedCards);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load cards');
-    } finally {
-      setIsLoading(false);
+    };
+    
+    // ストリーミング購読を開始
+    let unsubscribe: () => void;
+    
+    if (authorPubkey) {
+      unsubscribe = subscribeToCardsByAuthor(authorPubkey, handleCard, handleEose, FETCH_LIMIT);
+    } else {
+      unsubscribe = subscribeToPublicGalleryCards(handleCard, handleEose, FETCH_LIMIT);
     }
-  }, [activeTab, period, sortOrder, authorFilter, limit, periodToDays]);
-
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+    
+    // クリーンアップ
+    return () => {
+      unsubscribe();
+    };
+  }, [activeTab, period, sortOrder, authorFilter, periodToDays]);
 
   // プロフィールを取得
   useEffect(() => {
@@ -275,9 +282,29 @@ export function Gallery({
     setSelectedCard(card);
   }, []);
 
-  const handleLoadMore = () => {
-    setLimit(prev => prev + 20);
-  };
+  const handleLoadMore = useCallback(() => {
+    const newLimit = displayLimit + 20;
+    setDisplayLimit(newLimit);
+    
+    // 既に取得済みのカードから追加表示（再購読しない）
+    if (activeTab === 'popular') {
+      const reactions = reactionCountsRef.current;
+      const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
+        const aCount = reactions.get(a.id) || 0;
+        const bCount = reactions.get(b.id) || 0;
+        if (aCount !== bCount) {
+          return bCount - aCount;
+        }
+        return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+      }).slice(0, newLimit);
+      setCards(sortedCards);
+    } else {
+      const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
+        sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+      ).slice(0, newLimit);
+      setCards(sortedCards);
+    }
+  }, [displayLimit, activeTab, sortOrder]);
 
   // 一覧からリアクションを送信
   const handleReaction = useCallback(async (e: React.MouseEvent, card: NewYearCard) => {
@@ -409,7 +436,10 @@ export function Gallery({
       {/* コンテンツ */}
       <div className={styles.content}>
         {isLoading && cards.length === 0 && (
-          <div className={styles.loading}>{t('card.loading')}</div>
+          <div className={styles.loading}>
+            <Spinner size="lg" />
+            <span>{t('card.loading')}</span>
+          </div>
         )}
 
         {error && (
@@ -470,7 +500,7 @@ export function Gallery({
               })}
             </div>
 
-            {!isLoading && cards.length >= limit && (
+            {!isLoading && cards.length >= displayLimit && allReceivedCardsRef.current.length > displayLimit && (
               <div className={styles.loadMoreContainer}>
                 <button onClick={handleLoadMore} className={styles.loadMoreButton}>
                   {t('gallery.loadMore')}
@@ -479,7 +509,10 @@ export function Gallery({
             )}
 
             {isLoading && cards.length > 0 && (
-              <div className={styles.loadingMore}>{t('card.loading')}</div>
+              <div className={styles.loadingMore}>
+                <Spinner size="sm" />
+                <span>{t('card.loading')}</span>
+              </div>
             )}
           </>
         )}
@@ -505,4 +538,3 @@ export function Gallery({
     </div>
   );
 }
-

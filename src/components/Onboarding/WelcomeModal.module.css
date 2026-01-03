@@ -1,0 +1,180 @@
+/**
+ * Welcome Modal Styles
+ * Using Design Tokens
+ */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: var(--space-4);
+  backdrop-filter: blur(4px);
+  animation: fadeIn var(--duration-normal) var(--easing-default);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-raised);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  animation: scaleUp var(--duration-slow) var(--easing-default);
+}
+
+@keyframes scaleUp {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9);
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+}
+
+.closeButton {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default);
+}
+
+.closeButton:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.content {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.iconContainer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-full);
+  color: var(--color-accent);
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4) 0;
+  line-height: var(--leading-tight);
+}
+
+.description {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+
+.indicators {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.indicator {
+  width: 10px;
+  height: 10px;
+  background: var(--color-bg-subtle);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    transform var(--duration-fast) var(--easing-default);
+}
+
+.indicator:hover {
+  background: var(--color-text-tertiary);
+}
+
+.indicator.active {
+  background: var(--color-accent);
+  transform: scale(1.2);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.finalActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* レスポンシブ */
+@media (max-width: 480px) {
+  .modal {
+    padding: var(--space-6);
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .description {
+    font-size: var(--text-base);
+  }
+
+  .iconContainer {
+    width: 64px;
+    height: 64px;
+  }
+
+  .finalActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .spacer {
+    display: none;
+  }
+}
+

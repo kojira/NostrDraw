@@ -1,0 +1,58 @@
+/**
+ * Icon Component Styles
+ */
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variation-settings: 
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+  user-select: none;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--easing-default);
+}
+
+/* Filled variant */
+.filled {
+  font-variation-settings: 
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* Sizes */
+.size-xs {
+  font-size: var(--size-icon-xs);
+  width: var(--size-icon-xs);
+  height: var(--size-icon-xs);
+}
+
+.size-sm {
+  font-size: var(--size-icon-sm);
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+}
+
+.size-md {
+  font-size: var(--size-icon-md);
+  width: var(--size-icon-md);
+  height: var(--size-icon-md);
+}
+
+.size-lg {
+  font-size: var(--size-icon-lg);
+  width: var(--size-icon-lg);
+  height: var(--size-icon-lg);
+}
+
+.size-xl {
+  font-size: var(--size-icon-xl);
+  width: var(--size-icon-xl);
+  height: var(--size-icon-xl);
+}
+

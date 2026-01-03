@@ -7,6 +7,8 @@ import { sendReaction, type NewYearCardWithReactions } from '../../services/card
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { BASE_URL } from '../../config';
 import type { EventTemplate, Event } from 'nostr-tools';
+import { Icon } from '../common/Icon';
+import { Spinner } from '../common/Spinner';
 import styles from './Timeline.module.css';
 
 // SVGを安全にレンダリングするためのコンポーネント
@@ -203,7 +205,7 @@ export function Timeline({
       {/* ローディング */}
       {isLoading && (
         <div className={styles.loading}>
-          <span className={styles.spinner}>⏳</span>
+          <Spinner size="md" />
           {t('timeline.loading')}
         </div>
       )}
@@ -238,7 +240,9 @@ export function Timeline({
                     {picture ? (
                       <img src={picture} alt="" className={styles.avatar} />
                     ) : (
-                      <div className={styles.avatarPlaceholder}>👤</div>
+                      <div className={styles.avatarPlaceholder}>
+                        <Icon name="person" size="md" />
+                      </div>
                     )}
                     <div className={styles.authorInfo}>
                       <span className={styles.authorName}>{name}</span>
@@ -313,27 +317,29 @@ export function Timeline({
           className={`${styles.bottomTab} ${activeTab === 'follow' ? styles.active : ''}`}
           onClick={() => setActiveTab('follow')}
           disabled={!userPubkey}
+          title={t('timeline.follow')}
         >
-          <span className={styles.tabIcon}>👥</span>
-          <span className={styles.tabLabel}>{t('timeline.follow')}</span>
+          <Icon name="group" size="lg" className={styles.tabIcon} />
         </button>
         
         {onCreatePost && (
           <button 
             className={styles.createButton}
             onClick={onCreatePost}
+            title={t('timeline.createPost')}
           >
-            <span className={styles.createIcon}>＋</span>
-            <span className={styles.tabLabel}>{t('timeline.createPost')}</span>
+            <span className={styles.createIcon}>
+              <Icon name="add" size="md" />
+            </span>
           </button>
         )}
         
         <button
           className={`${styles.bottomTab} ${activeTab === 'global' ? styles.active : ''}`}
           onClick={() => setActiveTab('global')}
+          title={t('timeline.global')}
         >
-          <span className={styles.tabIcon}>🌐</span>
-          <span className={styles.tabLabel}>{t('timeline.global')}</span>
+          <Icon name="public" size="lg" className={styles.tabIcon} />
         </button>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
+import { Spinner } from '../../common/Spinner';
 import styles from './CardFlip.module.css';
 
 interface CardFlipProps {
@@ -305,6 +306,7 @@ export function CardFlip({
           </button>
         )}
         <div className={styles.loadingContainer}>
+          <Spinner size="lg" />
           <span>{t('card.loading')}</span>
         </div>
       </div>,
@@ -476,6 +478,7 @@ export function CardFlip({
         <div className={styles.treeNavigation}>
           {isLoadingTree ? (
             <div className={styles.treeLoading}>
+              <Spinner size="sm" />
               <span>{t('card.loading')}</span>
             </div>
           ) : (
@@ -683,6 +686,7 @@ function CardContent({
     <div className={`${styles.content} ${layoutClass}`}>
       {isLoadingParent && (
         <div className={styles.loadingOverlay}>
+          <Spinner size="md" />
           <span>{t('card.loading')}</span>
         </div>
       )}
