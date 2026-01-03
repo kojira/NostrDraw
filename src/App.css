@@ -155,8 +155,10 @@
   padding: 1.5rem;
   text-align: center;
   max-width: 100%;
+  max-height: 85vh;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sharedCardTitle {
@@ -164,6 +166,11 @@
   font-size: 1.3rem;
   margin: 0 0 1rem 0;
   font-family: 'Shippori Mincho', serif;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, rgba(30, 30, 45, 0.95) 0%, rgba(30, 30, 45, 0.95) 100%);
+  padding: 0.5rem;
+  z-index: 10;
 }
 
 .sharedCardContainer {
@@ -172,7 +179,7 @@
   margin-bottom: 1rem;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
 }
 
@@ -755,11 +762,12 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.85);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
   backdrop-filter: blur(4px);
+  overflow-y: auto;
 }
 
 .cardModalContent {

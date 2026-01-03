@@ -30,13 +30,17 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
     let recipientPubkey: string | null = null;
     let parentEventId: string | null = null;
     let parentPubkey: string | null = null;
+    let rootEventId: string | null = null;
     
     for (const tag of event.tags) {
       if (tag[0] === 'p') {
         recipientPubkey = tag[1];
       } else if (tag[0] === 'e' && tag[3] === 'reply') {
-        // 描き足し元の参照
+        // 描き足し元の参照（直接の親）
         parentEventId = tag[1];
+      } else if (tag[0] === 'e' && tag[3] === 'root') {
+        // スレッドのルート
+        rootEventId = tag[1];
       } else if (tag[0] === 'parent_p') {
         // 描き足し元の投稿者
         parentPubkey = tag[1];
@@ -92,6 +96,7 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
       allowExtend,
       parentEventId,
       parentPubkey,
+      rootEventId,
     };
   } catch {
     return null;
@@ -107,6 +112,26 @@ export async function fetchCardById(eventId: string): Promise<NewYearCard | null
 
   if (events.length === 0) return null;
   return parseNewYearCard(events[0]);
+}
+
+// 特定のカードを親として持つ子カード（描き足しされたカード）を取得
+export async function fetchChildCards(parentEventId: string): Promise<NewYearCard[]> {
+  const events = await fetchEvents({
+    kinds: [NOSTRDRAW_KIND],
+    '#e': [parentEventId],
+  });
+
+  const cards: NewYearCard[] = [];
+  for (const event of events) {
+    const card = parseNewYearCard(event);
+    // parentEventIdが一致するもののみ（replyタグで参照されているもの）
+    if (card && card.parentEventId === parentEventId) {
+      cards.push(card);
+    }
+  }
+
+  // 新しい順にソート
+  return cards.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function fetchReceivedCards(pubkey: string): Promise<NewYearCard[]> {
@@ -327,8 +352,9 @@ export interface SendCardParams {
   layoutId: LayoutType;
   year?: number;
   allowExtend?: boolean; // 描き足し許可
-  parentEventId?: string | null; // 描き足し元のイベントID
+  parentEventId?: string | null; // 描き足し元のイベントID（直接の親）
   parentPubkey?: string | null; // 描き足し元の投稿者
+  rootEventId?: string | null; // スレッドのルートイベントID（最初の親）
   isPublic?: boolean; // kind 1にも投稿するか
 }
 
@@ -364,9 +390,18 @@ export async function sendCard(
     tags.push(['allow_extend', 'true']);
   }
 
-  // 描き足し元の参照（スレッド形式）
+  // 描き足し元の参照（NIP-10スレッド形式）
   if (params.parentEventId) {
-    tags.push(['e', params.parentEventId, '', 'reply']);
+    // rootとreplyを設定
+    if (params.rootEventId && params.rootEventId !== params.parentEventId) {
+      // ルートと直接の親が異なる場合（チェーン状の描き足し）
+      tags.push(['e', params.rootEventId, '', 'root']);
+      tags.push(['e', params.parentEventId, '', 'reply']);
+    } else {
+      // ルートがないか、親がルートの場合
+      tags.push(['e', params.parentEventId, '', 'root']);
+      tags.push(['e', params.parentEventId, '', 'reply']);
+    }
   }
   if (params.parentPubkey) {
     tags.push(['parent_p', params.parentPubkey]);
@@ -417,10 +452,7 @@ export async function sendCard(
       ['r', viewUrl], // URLタグ
     ];
     
-    // 描き足し元への参照
-    if (params.parentEventId) {
-      kind1Tags.push(['e', params.parentEventId, '', 'reply']);
-    }
+    // 描き足し元の投稿者をメンション（告知用）
     if (params.parentPubkey) {
       kind1Tags.push(['p', params.parentPubkey]);
     }
@@ -484,5 +516,39 @@ export async function hasUserReacted(eventId: string, userPubkey: string): Promi
   });
   
   return reactions.length > 0;
+}
+
+// ツリー構造を取得（すべての祖先と子孫）
+export interface CardTreeNode {
+  card: NewYearCard;
+  isCurrent: boolean;
+}
+
+// すべての祖先を取得（ルートまで遡る）
+export async function fetchAncestors(card: NewYearCard): Promise<NewYearCard[]> {
+  const ancestors: NewYearCard[] = [];
+  let currentCard = card;
+  
+  while (currentCard.parentEventId) {
+    const parent = await fetchCardById(currentCard.parentEventId);
+    if (!parent) break;
+    ancestors.unshift(parent); // 先頭に追加（古い順）
+    currentCard = parent;
+  }
+  
+  return ancestors;
+}
+
+// すべての子孫を取得（再帰的）
+export async function fetchDescendants(cardId: string): Promise<NewYearCard[]> {
+  const children = await fetchChildCards(cardId);
+  const allDescendants: NewYearCard[] = [...children];
+  
+  for (const child of children) {
+    const grandchildren = await fetchDescendants(child.id);
+    allDescendants.push(...grandchildren);
+  }
+  
+  return allDescendants;
 }
 

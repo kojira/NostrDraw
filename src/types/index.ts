@@ -20,8 +20,9 @@ export interface NewYearCard {
   createdAt: number;
   year: number;
   allowExtend?: boolean; // 描き足し許可
-  parentEventId?: string | null; // 描き足し元のイベントID
+  parentEventId?: string | null; // 描き足し元のイベントID（直接の親）
   parentPubkey?: string | null; // 描き足し元の投稿者
+  rootEventId?: string | null; // スレッドのルートイベントID（最初の親）
 }
 
 export type LayoutType = 'vertical' | 'horizontal' | 'fullscreen' | 'classic';

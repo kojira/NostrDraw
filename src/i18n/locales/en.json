@@ -107,7 +107,11 @@
   },
   "extend": {
     "button": "✏️ Extend",
-    "label": "🔗 Extended work"
+    "label": "🔗 Extended work",
+    "parentCard": "Original",
+    "childCards": "Extensions ({{count}})",
+    "childCard": "Extension",
+    "currentCard": "This work"
   },
   "sidebar": {
     "popular": "🔥 Popular",

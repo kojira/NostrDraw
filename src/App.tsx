@@ -226,6 +226,10 @@ function App() {
                         isPublic: postToTimeline,
                         parentEventId: extendingCard?.id || null,
                         parentPubkey: extendingCard?.pubkey || null,
+                        // ルートの計算: 
+                        // 1. 親にrootEventIdがある場合、それがルート
+                        // 2. 親にrootEventIdがなく、親自身がルートの場合、親のidがルート
+                        rootEventId: extendingCard?.rootEventId || extendingCard?.id || null,
                       });
                       if (result) {
                         setLastSentEventId(result);
@@ -332,6 +336,7 @@ function App() {
                   userPubkey={authState.pubkey}
                   signEvent={authState.isNip07 ? signEvent : undefined}
                   onExtend={handleExtend}
+                  onNavigateToCard={setSharedCard}
                 />
               </div>
               <div className="sharedCardActions">
@@ -362,6 +367,7 @@ function App() {
               signEvent={authState.isNip07 ? signEvent : undefined}
               onExtend={handleExtend}
               onClose={() => setSelectedCard(null)}
+              onNavigateToCard={setSelectedCard}
             />
           </div>
         </div>

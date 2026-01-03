@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile} from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
-import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById } from '../../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import styles from './CardFlip.module.css';
@@ -17,6 +17,7 @@ interface CardFlipProps {
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onExtend?: (card: NewYearCard) => void; // 描き足しボタンのコールバック
+  onNavigateToCard?: (card: NewYearCard) => void; // 親子カードへのナビゲーション
 }
 
 export function CardFlip({
@@ -27,6 +28,7 @@ export function CardFlip({
   userPubkey,
   signEvent,
   onExtend,
+  onNavigateToCard,
 }: CardFlipProps) {
   const { t } = useTranslation();
   // 宛先がない場合は最初から裏面（絵柄面）を表示
@@ -43,6 +45,10 @@ export function CardFlip({
   const [animatedSvg, setAnimatedSvg] = useState<string | null>(null);
   // 親カードがある場合は最初からロード中状態にする（アニメーション前に最終形が見えるのを防ぐ）
   const [isLoadingParent, setIsLoadingParent] = useState(!!card.parentEventId);
+  
+  // ツリー構造の状態（すべての祖先と子孫）
+  const [ancestors, setAncestors] = useState<NewYearCard[]>([]);
+  const [descendants, setDescendants] = useState<NewYearCard[]>([]);
 
   // リアクション状態を取得
   useEffect(() => {
@@ -60,6 +66,27 @@ export function CardFlip({
     
     loadReactionState();
   }, [card.id, userPubkey]);
+
+  // ツリー全体を取得（すべての祖先と子孫）
+  // card.idが変わった時だけ再取得（cardオブジェクト全体を依存に含めると無限ループの原因になる）
+  useEffect(() => {
+    // 状態をリセット
+    setAncestors([]);
+    setDescendants([]);
+    
+    const loadTreeCards = async () => {
+      // すべての祖先を取得（ルートまで遡る）
+      const ancestorCards = await fetchAncestors(card);
+      setAncestors(ancestorCards);
+      
+      // すべての子孫を取得
+      const descendantCards = await fetchDescendants(card.id);
+      setDescendants(descendantCards);
+    };
+    
+    loadTreeCards();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.id]);
 
   // SVGにストロークアニメーションを適用
   // 描き足しの場合は差分のみ、通常の場合は全てのストロークにアニメーション
@@ -262,8 +289,83 @@ export function CardFlip({
         )}
       </div>
 
-      {/* 描き足し元の表示 */}
-      {card.parentEventId && (
+      {/* ツリーナビゲーション（すべての祖先と子孫） */}
+      {(ancestors.length > 0 || descendants.length > 0) && onNavigateToCard && (
+        <div className={styles.treeNavigation}>
+          {/* 祖先カード（古い順） */}
+          {ancestors.map((ancestor, index) => (
+            <div key={ancestor.id} className={styles.treeRow}>
+              <div 
+                className={styles.treeIndent} 
+                style={{ width: `${index * 12}px` }} 
+              />
+              <button
+                className={styles.treeCard}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigateToCard(ancestor);
+                }}
+              >
+                <div className={styles.cardPreview}>
+                  {ancestor.svg && (
+                    <div 
+                      className={styles.miniSvg}
+                      dangerouslySetInnerHTML={{ __html: ancestor.svg }}
+                    />
+                  )}
+                </div>
+              </button>
+            </div>
+          ))}
+          
+          {/* 現在のカード（ハイライト） */}
+          <div className={styles.treeRow}>
+            <div 
+              className={styles.treeIndent} 
+              style={{ width: `${ancestors.length * 12}px` }} 
+            />
+            <div className={styles.currentCard}>
+              <div className={styles.cardPreview}>
+                {card.svg && (
+                  <div 
+                    className={styles.miniSvg}
+                    dangerouslySetInnerHTML={{ __html: card.svg }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* 子孫カード */}
+          {descendants.map((descendant) => (
+            <div key={descendant.id} className={styles.treeRow}>
+              <div 
+                className={styles.treeIndent} 
+                style={{ width: `${(ancestors.length + 1) * 12}px` }} 
+              />
+              <button
+                className={styles.treeCard}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigateToCard(descendant);
+                }}
+              >
+                <div className={styles.cardPreview}>
+                  {descendant.svg && (
+                    <div 
+                      className={styles.miniSvg}
+                      dangerouslySetInnerHTML={{ __html: descendant.svg }}
+                    />
+                  )}
+                </div>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* 描き足し元の表示（ナビゲーションがない場合のフォールバック） */}
+      {card.parentEventId && !onNavigateToCard && (
         <div className={styles.parentInfo}>
           <span>{t('extend.label')}</span>
         </div>

@@ -107,7 +107,11 @@
   },
   "extend": {
     "button": "✏️ 描き足す",
-    "label": "🔗 描き足し作品"
+    "label": "🔗 描き足し作品",
+    "parentCard": "元の作品",
+    "childCards": "描き足し ({{count}}件)",
+    "childCard": "描き足し",
+    "currentCard": "この作品"
   },
   "sidebar": {
     "popular": "🔥 人気",

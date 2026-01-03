@@ -110,6 +110,11 @@ export function SidebarGallery({
     setSelectedCard(null);
   };
 
+  // 親子カードナビゲーション
+  const handleNavigateToCard = (card: NewYearCard) => {
+    setSelectedCard(card);
+  };
+
   // リアクション数を取得（NewYearCardWithReactionsの場合）
   const getReactionCount = (card: NewYearCard | NewYearCardWithReactions): number | undefined => {
     if ('reactionCount' in card) {
@@ -203,6 +208,7 @@ export function SidebarGallery({
               userPubkey={userPubkey}
               signEvent={signEvent}
               onExtend={onExtend}
+              onNavigateToCard={handleNavigateToCard}
             />
           </div>
         </div>
