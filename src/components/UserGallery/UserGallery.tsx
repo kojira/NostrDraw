@@ -34,7 +34,6 @@ interface UserGalleryProps {
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onExtend?: (card: NewYearCard) => void;
   onBack: () => void;
-  onGalleryClick: () => void;
 }
 
 // npubコピー状態
@@ -46,7 +45,6 @@ export function UserGallery({
   signEvent,
   onExtend,
   onBack,
-  onGalleryClick,
 }: UserGalleryProps) {
   const { t } = useTranslation();
   const [cards, setCards] = useState<NewYearCard[]>([]);
@@ -235,10 +233,6 @@ export function UserGallery({
       <nav className={styles.breadcrumb}>
         <button onClick={onBack} className={styles.breadcrumbLink}>
           {t('nav.home')}
-        </button>
-        <span className={styles.breadcrumbSeparator}>›</span>
-        <button onClick={onGalleryClick} className={styles.breadcrumbLink}>
-          {t('nav.gallery')}
         </button>
         <span className={styles.breadcrumbSeparator}>›</span>
         <span className={styles.breadcrumbCurrent}>{displayName}</span>

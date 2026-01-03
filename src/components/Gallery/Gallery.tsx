@@ -253,13 +253,14 @@ export function Gallery({
 
   return (
     <div className={styles.gallery}>
-      {/* ヘッダー */}
-      <div className={styles.header}>
-        <button onClick={onBack} className={styles.backButton}>
-          ← {t('gallery.backToHome')}
+      {/* パンくずリスト */}
+      <nav className={styles.breadcrumb}>
+        <button onClick={onBack} className={styles.breadcrumbLink}>
+          {t('nav.home')}
         </button>
-        <h1 className={styles.title}>🎨 {t('gallery.title')}</h1>
-      </div>
+        <span className={styles.breadcrumbSeparator}>›</span>
+        <span className={styles.breadcrumbCurrent}>{t('nav.gallery')}</span>
+      </nav>
 
       {/* タブ */}
       <div className={styles.tabs}>

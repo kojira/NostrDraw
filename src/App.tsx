@@ -148,6 +148,9 @@ function App() {
       case 'home':
         goHome();
         break;
+      case 'gallery':
+        goToGallery();
+        break;
       case 'notifications':
         // TODO: 通知ページを実装
         break;
@@ -160,7 +163,7 @@ function App() {
         // TODO: 設定ページを実装
         break;
     }
-  }, [goHome, goToUser, authState.pubkey]);
+  }, [goHome, goToGallery, goToUser, authState.pubkey]);
 
   // 投稿画面
   if (route.page === 'create') {
@@ -258,6 +261,41 @@ function App() {
   if (route.page === 'gallery') {
     return (
       <div className="app">
+        <SideNav
+          currentPage="gallery"
+          onNavigate={handleNavigation}
+          userPubkey={authState.pubkey}
+        />
+        <header className="header">
+          <div className="headerTop">
+            <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
+            <div className="headerActions">
+              {!authState.isLoggedIn ? (
+                <button 
+                  className="headerLoginButton"
+                  onClick={() => {
+                    if (isNip07Available) {
+                      loginWithNip07();
+                    } else {
+                      const npub = prompt('npub1...');
+                      if (npub) loginWithNpub(npub);
+                    }
+                  }}
+                >
+                  {t('auth.login')}
+                </button>
+              ) : (
+                <button 
+                  className="headerLogoutButton"
+                  onClick={logout}
+                >
+                  {t('auth.logout')}
+                </button>
+              )}
+              <LanguageSwitch />
+            </div>
+          </div>
+        </header>
         <Gallery
           initialTab={route.params.tab}
           initialPeriod={route.params.period}
@@ -317,7 +355,6 @@ function App() {
           signEvent={authState.isNip07 ? signEvent : undefined}
           onExtend={handleExtend}
           onBack={goHome}
-          onGalleryClick={() => goToGallery()}
         />
       </div>
     );

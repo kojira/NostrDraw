@@ -10,6 +10,8 @@
   max-width: 100%;
   box-sizing: border-box;
   overflow: visible;
+  background: transparent;
+  min-height: 300px;
 }
 
 .closeButton {
@@ -193,6 +195,19 @@
   bottom: 0;
   display: flex;
   overflow: hidden;
+}
+
+/* 初期ローディングコンテナ */
+.loadingContainer {
+  width: min(85vw, 550px);
+  height: min(65vh, 420px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary, #1a1a2e);
+  border-radius: 16px;
+  color: var(--text-secondary, #888);
+  font-size: 1rem;
 }
 
 /* 読み込み中オーバーレイ */

@@ -36,6 +36,9 @@ export function CardFlip({
   const hasRecipient = !!card.recipientPubkey;
   const [isFlipped, setIsFlipped] = useState(!hasRecipient);
   
+  // 初期ローディング状態（アニメーションSVGが準備できるまで表示）
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
   // リアクション関連の状態
   const [hasReacted, setHasReacted] = useState(false);
   const [reactionCount, setReactionCount] = useState(0);
@@ -90,6 +93,13 @@ export function CardFlip({
   // 実際に使用するプロファイル（外部から渡されたものがあればそれを優先）
   const effectiveSenderProfile = senderProfile || localSenderProfile;
   const effectiveRecipientProfile = recipientProfile || localRecipientProfile;
+
+  // 初期ローディング完了判定（アニメーションSVGが準備できたら終了）
+  useEffect(() => {
+    if (animatedSvg && isInitialLoading) {
+      setIsInitialLoading(false);
+    }
+  }, [animatedSvg, isInitialLoading]);
 
   // リアクション状態を取得
   useEffect(() => {
@@ -273,6 +283,22 @@ export function CardFlip({
 
   // コラボ数（子孫の数）
   const collabCount = descendants.length;
+
+  // 初期ローディング中はローディング表示
+  if (isInitialLoading) {
+    return (
+      <div className={styles.cardFlipContainer}>
+        {onClose && (
+          <button onClick={onClose} className={styles.closeButton}>
+            ×
+          </button>
+        )}
+        <div className={styles.loadingContainer}>
+          <span>{t('card.loading')}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.cardFlipContainer}>

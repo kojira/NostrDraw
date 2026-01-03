@@ -14,6 +14,7 @@ export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
 
   const menuItems = [
     { id: 'home', icon: '🏠', label: t('nav.home', 'ホーム') },
+    { id: 'gallery', icon: '🖼️', label: t('nav.gallery', 'ギャラリー') },
     { id: 'notifications', icon: '🔔', label: t('nav.notifications', '通知') },
     { id: 'profile', icon: '👤', label: t('nav.profile', 'プロフィール'), requiresAuth: true },
     { id: 'settings', icon: '⚙️', label: t('nav.settings', '設定') },
