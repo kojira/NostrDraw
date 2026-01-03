@@ -95,6 +95,11 @@ export function CardFlip({
   const effectiveSenderProfile = senderProfile || localSenderProfile;
   const effectiveRecipientProfile = recipientProfile || localRecipientProfile;
 
+  // カードが変わった時にローディング状態をリセット
+  useEffect(() => {
+    setIsInitialLoading(true);
+  }, [card.id]);
+
   // 初期ローディング完了判定（アニメーションSVGが準備できたら終了）
   useEffect(() => {
     if (animatedSvg && isInitialLoading) {
