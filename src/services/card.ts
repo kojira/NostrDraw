@@ -301,6 +301,35 @@ export function subscribeToCardsByAuthor(
   );
 }
 
+// ストリーミングで複数作者のカードを取得（フォロータイムライン用）
+export function subscribeToCardsByAuthors(
+  pubkeys: string[],
+  onCard: (card: NewYearCard) => void,
+  onEose?: () => void,
+  limit: number = 50
+): () => void {
+  if (pubkeys.length === 0) {
+    // 空の場合は即座にEOSEを呼んで終了
+    onEose?.();
+    return () => {};
+  }
+  
+  return subscribeToEvents(
+    {
+      kinds: [NOSTRDRAW_KIND],
+      authors: pubkeys,
+      limit,
+    },
+    (event) => {
+      const card = parseNewYearCard(event);
+      if (card) {
+        onCard(card);
+      }
+    },
+    onEose
+  );
+}
+
 // リアクション数付きのカード型
 export interface NewYearCardWithReactions extends NewYearCard {
   reactionCount: number;

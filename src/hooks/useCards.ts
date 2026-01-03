@@ -1,13 +1,13 @@
 // 年賀状データ管理フック
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { NewYearCard, LayoutType } from '../types';
 import { 
   fetchReceivedCards, 
   fetchSentCards, 
-  fetchPublicGalleryCards, 
-  fetchPopularCards,
   sendCard, 
+  subscribeToPublicGalleryCards,
+  subscribeToCardsByAuthors,
   type SendCardParams,
   type NewYearCardWithReactions,
 } from '../services/card';
@@ -87,28 +87,64 @@ export function useSentCards(pubkey: string | null) {
   };
 }
 
-// 公開ギャラリー（みんなの作品・新着）を取得
+// 公開ギャラリー（みんなの作品・新着）を取得 - ストリーミング対応
 export function usePublicGalleryCards() {
   const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const allCardsRef = useRef<NewYearCard[]>([]);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  const loadCards = useCallback(async () => {
+  const loadCards = useCallback(() => {
+    // 既存の購読をクリーンアップ
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+    
     setIsLoading(true);
     setError(null);
+    setCards([]);
+    allCardsRef.current = [];
+    seenIdsRef.current = new Set();
+
+    const handleCard = (card: NewYearCard) => {
+      // 重複チェック
+      if (seenIdsRef.current.has(card.id)) return;
+      seenIdsRef.current.add(card.id);
+      
+      // 公開カードのみ（宛先なし）
+      if (card.recipientPubkey) return;
+      
+      allCardsRef.current.push(card);
+      
+      // ソートして表示更新
+      const sortedCards = [...allCardsRef.current]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .map(c => ({ ...c, reactionCount: 0 }));
+      setCards(sortedCards);
+    };
+
+    const handleEose = () => {
+      setIsLoading(false);
+    };
 
     try {
-      const galleryCards = await fetchPublicGalleryCards(50);
-      setCards(galleryCards);
+      unsubscribeRef.current = subscribeToPublicGalleryCards(handleCard, handleEose, 50);
     } catch (err) {
       setError(err instanceof Error ? err.message : '作品の取得に失敗しました');
-    } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadCards();
+    
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, [loadCards]);
 
   return {
@@ -120,28 +156,92 @@ export function usePublicGalleryCards() {
   };
 }
 
-// 人気投稿（過去N日間でリアクション多い順）を取得
+// 人気投稿（過去N日間でリアクション多い順）を取得 - ストリーミング対応
 export function usePopularCards(days: number = 3) {
   const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const allCardsRef = useRef<NewYearCard[]>([]);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  const loadCards = useCallback(async () => {
+  const loadCards = useCallback(() => {
+    // 既存の購読をクリーンアップ
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    
     setIsLoading(true);
     setError(null);
+    setCards([]);
+    allCardsRef.current = [];
+    seenIdsRef.current = new Set();
+
+    const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+
+    const handleCard = (card: NewYearCard) => {
+      // 重複チェック
+      if (seenIdsRef.current.has(card.id)) return;
+      seenIdsRef.current.add(card.id);
+      
+      // 公開カードのみ（宛先なし）
+      if (card.recipientPubkey) return;
+      
+      // 期間フィルタ
+      if (card.createdAt < sinceTimestamp) return;
+      
+      allCardsRef.current.push(card);
+      
+      // 日時でソートして表示更新（EOSE前は仮表示）
+      const sortedCards = [...allCardsRef.current]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 20)
+        .map(c => ({ ...c, reactionCount: 0 }));
+      setCards(sortedCards);
+    };
+
+    const handleEose = async () => {
+      // EOSE後にリアクション数を取得してソート
+      if (allCardsRef.current.length > 0) {
+        try {
+          const { fetchReactionCounts } = await import('../services/card');
+          const cardIds = allCardsRef.current.map(c => c.id);
+          const reactions = await fetchReactionCounts(cardIds);
+          
+          // リアクション数でソート
+          const sortedByReaction = [...allCardsRef.current]
+            .map(card => ({
+              ...card,
+              reactionCount: reactions.get(card.id) || 0,
+            }))
+            .sort((a, b) => b.reactionCount - a.reactionCount)
+            .slice(0, 20);
+          
+          setCards(sortedByReaction);
+        } catch (err) {
+          console.error('Failed to fetch reaction counts:', err);
+        }
+      }
+      setIsLoading(false);
+    };
 
     try {
-      const popularCards = await fetchPopularCards(days, 20);
-      setCards(popularCards);
+      unsubscribeRef.current = subscribeToPublicGalleryCards(handleCard, handleEose, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : '人気作品の取得に失敗しました');
-    } finally {
       setIsLoading(false);
     }
   }, [days]);
 
   useEffect(() => {
     loadCards();
+    
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, [loadCards]);
 
   return {
@@ -153,34 +253,68 @@ export function usePopularCards(days: number = 3) {
   };
 }
 
-// フォロー中のユーザーの投稿を取得
+// フォロー中のユーザーの投稿を取得 - ストリーミング対応
 export function useFollowCards(followees: string[]) {
   const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const allCardsRef = useRef<NewYearCard[]>([]);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  const loadCards = useCallback(async () => {
+  const loadCards = useCallback(() => {
+    // 既存の購読をクリーンアップ
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    
     if (followees.length === 0) {
       setCards([]);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setCards([]);
+    allCardsRef.current = [];
+    seenIdsRef.current = new Set();
+
+    const handleCard = (card: NewYearCard) => {
+      // 重複チェック
+      if (seenIdsRef.current.has(card.id)) return;
+      seenIdsRef.current.add(card.id);
+      
+      allCardsRef.current.push(card);
+      
+      // ソートして表示更新
+      const sortedCards = [...allCardsRef.current]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .map(c => ({ ...c, reactionCount: 0 }));
+      setCards(sortedCards);
+    };
+
+    const handleEose = () => {
+      setIsLoading(false);
+    };
 
     try {
-      const { fetchCardsByAuthors } = await import('../services/card');
-      const followCards = await fetchCardsByAuthors(followees, 50);
-      setCards(followCards);
+      unsubscribeRef.current = subscribeToCardsByAuthors(followees, handleCard, handleEose, 50);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'フォロー中のユーザーの投稿取得に失敗しました');
-    } finally {
       setIsLoading(false);
     }
   }, [followees]);
 
   useEffect(() => {
     loadCards();
+    
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, [loadCards]);
 
   return {
