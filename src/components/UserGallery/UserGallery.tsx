@@ -62,9 +62,17 @@ export function UserGallery({
   const [reactionCounts, setReactionCounts] = useState<Map<string, number>>(new Map());
   const [reactingCards, setReactingCards] = useState<Set<string>>(new Set());
 
-  // npubからpubkeyを取得
+  // npubからpubkeyを取得（無効なnpubの場合はnullになる）
   const pubkey = npub.startsWith('npub') ? npubToPubkey(npub) : npub;
-  const fullNpub = pubkeyToNpub(pubkey || '');
+  
+  // pubkeyが有効な場合のみnpubを生成（無効な場合は空文字）
+  const fullNpub = pubkey ? (() => {
+    try {
+      return pubkeyToNpub(pubkey);
+    } catch {
+      return '';
+    }
+  })() : '';
   
   // npubコピー状態
   const [copyState, setCopyState] = useState<CopyState>('idle');
@@ -206,21 +214,35 @@ export function UserGallery({
     return reactionCounts.get(cardId) || 0;
   };
 
-  const displayName = profile?.display_name || profile?.name || pubkeyToNpub(pubkey || '').slice(0, 12) + '...';
+  // 日時フォーマット（2026/1/1 10:00:00 形式）
+  const formatDate = (timestamp: number): string => {
+    const date = new Date(timestamp * 1000);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  // 表示名（プロファイルがない場合はnpubを省略表示、それも無効なら「不明なユーザー」）
+  const displayName = profile?.display_name || profile?.name || (fullNpub ? fullNpub.slice(0, 12) + '...' : t('gallery.unknownUser'));
 
   return (
     <div className={styles.userGallery}>
-      {/* ヘッダー */}
-      <div className={styles.header}>
-        <div className={styles.navigation}>
-          <button onClick={onBack} className={styles.backButton}>
-            ← {t('gallery.backToHome')}
-          </button>
-          <button onClick={onGalleryClick} className={styles.galleryButton}>
-            🎨 {t('gallery.backToGallery')}
-          </button>
-        </div>
-      </div>
+      {/* パンくずリスト */}
+      <nav className={styles.breadcrumb}>
+        <button onClick={onBack} className={styles.breadcrumbLink}>
+          {t('nav.home')}
+        </button>
+        <span className={styles.breadcrumbSeparator}>›</span>
+        <button onClick={onGalleryClick} className={styles.breadcrumbLink}>
+          {t('nav.gallery')}
+        </button>
+        <span className={styles.breadcrumbSeparator}>›</span>
+        <span className={styles.breadcrumbCurrent}>{displayName}</span>
+      </nav>
 
       {/* ユーザー情報 */}
       <div className={styles.userInfo}>
@@ -299,7 +321,7 @@ export function UserGallery({
                         <span>{getReactionCount(card.id)}</span>
                       </button>
                       <span className={styles.date}>
-                        {new Date(card.createdAt * 1000).toLocaleDateString()}
+                        {formatDate(card.createdAt)}
                       </span>
                     </div>
                     {card.message && (
@@ -340,6 +362,7 @@ export function UserGallery({
               userPubkey={userPubkey}
               signEvent={signEvent}
               onExtend={onExtend}
+              onNavigateToCard={setSelectedCard}
             />
           </div>
         </div>

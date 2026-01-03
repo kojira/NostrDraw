@@ -9,6 +9,7 @@
     "create": "🎨 お絵かきする",
     "inbox": "📬 お手紙を見る",
     "home": "ホーム",
+    "gallery": "ギャラリー",
     "notifications": "通知",
     "profile": "プロフィール",
     "settings": "設定"
@@ -153,7 +154,8 @@
     "noResults": "投稿が見つかりません",
     "userGallery": "の投稿",
     "backToGallery": "ギャラリーに戻る",
-    "backToHome": "ホームに戻る"
+    "backToHome": "ホームに戻る",
+    "unknownUser": "不明なユーザー"
   },
   "timeline": {
     "follow": "フォロー",

@@ -7,33 +7,41 @@
   min-height: 100vh;
 }
 
-.header {
-  margin-bottom: 1.5rem;
-}
-
-.navigation {
+/* パンくずリスト */
+.breadcrumb {
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
-.backButton,
-.galleryButton {
-  background: transparent;
-  border: 1px solid var(--text-secondary);
+.breadcrumbLink {
+  background: none;
+  border: none;
   color: var(--text-secondary);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
 }
 
-.backButton:hover,
-.galleryButton:hover {
-  background: var(--bg-tertiary);
+.breadcrumbLink:hover {
+  color: #e94560;
+  text-decoration: underline;
+}
+
+.breadcrumbSeparator {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  opacity: 0.5;
+}
+
+.breadcrumbCurrent {
   color: var(--text-primary);
-  border-color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 /* ユーザー情報 */
@@ -301,6 +309,7 @@
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  overflow: auto;
 }
 
 /* レスポンシブ */
@@ -309,14 +318,14 @@
     padding: 0.75rem;
   }
   
-  .navigation {
-    flex-direction: column;
+  .breadcrumb {
+    padding: 0.5rem 0;
   }
   
-  .backButton,
-  .galleryButton {
-    font-size: 0.85rem;
-    padding: 0.4rem 0.8rem;
+  .breadcrumbLink,
+  .breadcrumbCurrent,
+  .breadcrumbSeparator {
+    font-size: 0.8rem;
   }
   
   .userInfo {

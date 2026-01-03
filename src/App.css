@@ -550,9 +550,15 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .header {
+    padding: 1rem 0.75rem 1rem 60px; /* 左側にハンバーガーメニュー分のパディング */
+  }
+}
+
 @media (max-width: 640px) {
   .header {
-    padding: 1rem 0.75rem;
+    padding: 1rem 0.75rem 1rem 60px;
   }
   
   .headerTop {
@@ -561,7 +567,7 @@
   }
   
   .logo {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
   }
   
   .tagline {

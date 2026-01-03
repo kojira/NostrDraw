@@ -9,6 +9,7 @@
     "create": "🎨 Draw",
     "inbox": "📬 Inbox",
     "home": "Home",
+    "gallery": "Gallery",
     "notifications": "Notifications",
     "profile": "Profile",
     "settings": "Settings"
@@ -153,7 +154,8 @@
     "noResults": "No posts found",
     "userGallery": "'s Posts",
     "backToGallery": "Back to Gallery",
-    "backToHome": "Back to Home"
+    "backToHome": "Back to Home",
+    "unknownUser": "Unknown User"
   },
   "timeline": {
     "follow": "Following",

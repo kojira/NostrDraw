@@ -276,6 +276,41 @@ function App() {
   if (route.page === 'user' && route.params.npub) {
     return (
       <div className="app">
+        <SideNav
+          currentPage="user"
+          onNavigate={handleNavigation}
+          userPubkey={authState.pubkey}
+        />
+        <header className="header">
+          <div className="headerTop">
+            <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
+            <div className="headerActions">
+              {!authState.isLoggedIn ? (
+                <button 
+                  className="headerLoginButton"
+                  onClick={() => {
+                    if (isNip07Available) {
+                      loginWithNip07();
+                    } else {
+                      const npub = prompt('npub1...');
+                      if (npub) loginWithNpub(npub);
+                    }
+                  }}
+                >
+                  {t('auth.login')}
+                </button>
+              ) : (
+                <button 
+                  className="headerLogoutButton"
+                  onClick={logout}
+                >
+                  {t('auth.logout')}
+                </button>
+              )}
+              <LanguageSwitch />
+            </div>
+          </div>
+        </header>
         <UserGallery
           npub={route.params.npub}
           userPubkey={authState.pubkey}
