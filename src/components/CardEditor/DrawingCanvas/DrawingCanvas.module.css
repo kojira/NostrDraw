@@ -352,13 +352,13 @@
 
 .addTextBoxButton {
   color: #fff;
-  background: rgba(107, 203, 119, 0.2);
-  border: 1px solid rgba(107, 203, 119, 0.5);
+  background: rgba(77, 150, 255, 0.3);
+  border: 1px solid rgba(77, 150, 255, 0.6);
 }
 
 .addTextBoxButton:hover {
-  background: rgba(107, 203, 119, 0.3);
-  border-color: #6bcb77;
+  background: rgba(77, 150, 255, 0.5);
+  border-color: #4d96ff;
 }
 
 .removeTextBoxButton {
@@ -896,16 +896,17 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+  background: linear-gradient(135deg, #2196F3 0%, #4dabf7 100%);
   border: none;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
 }
 
 .saveButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
 }
 
 /* フォント選択セクション */
@@ -1415,6 +1416,26 @@
 
 :global(body.light-theme) .textBoxLabel {
   color: #555;
+}
+
+:global(body.light-theme) .addTextBoxButton {
+  color: #fff;
+  background: rgba(33, 150, 243, 0.8);
+  border: 1px solid rgba(33, 150, 243, 0.9);
+}
+
+:global(body.light-theme) .addTextBoxButton:hover {
+  background: rgba(33, 150, 243, 1);
+}
+
+:global(body.light-theme) .removeTextBoxButton {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.4);
+}
+
+:global(body.light-theme) .removeTextBoxButton:hover {
+  background: rgba(233, 69, 96, 0.2);
 }
 
 /* キャンバスコンテナ */
