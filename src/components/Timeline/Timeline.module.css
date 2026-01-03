@@ -344,13 +344,13 @@
 .extendButton {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   color: #4d96ff;
   background: transparent;
   border: 1px solid rgba(77, 150, 255, 0.3);
-  border-radius: 20px;
+  border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -359,7 +359,11 @@
   color: #fff;
   background: rgba(77, 150, 255, 0.2);
   border-color: rgba(77, 150, 255, 0.5);
-  transform: scale(1.05);
+  transform: scale(1.1);
+}
+
+.extendButton svg {
+  display: block;
 }
 
 .message {
