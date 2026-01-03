@@ -84,6 +84,7 @@ export function Gallery({
   const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
   const [displayLimit, setDisplayLimit] = useState(20);
+  const displayLimitRef = useRef(20); // コールバック内で最新の値を参照するためのref
   
   // 購読用の固定数（表示用と分離）
   const FETCH_LIMIT = 100;
@@ -91,6 +92,15 @@ export function Gallery({
   // 全受信カードを保持（再購読なしで「もっと見る」を実現）
   const allReceivedCardsRef = useRef<NewYearCard[]>([]);
   const reactionCountsRef = useRef<Map<string, number>>(new Map());
+  
+  // EOSE完了フラグ（EOSE後はhandleCardでcardsを更新しない）
+  const eoseReceivedRef = useRef(false);
+  
+  // 重複チェック用のSet（refで保持して購読間で共有）
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  
+  // 購読の世代カウンター（古い購読からのコールバックを無視するため）
+  const subscriptionGenRef = useRef(0);
   
   // リアクション状態を管理
   const [userReactions, setUserReactions] = useState<Set<string>>(new Set());
@@ -107,14 +117,26 @@ export function Gallery({
     }
   }, []);
 
+  // displayLimitが変わったらrefも更新
+  useEffect(() => {
+    displayLimitRef.current = displayLimit;
+  }, [displayLimit]);
+
   // ストリーミングでカードを取得（リアルタイム表示）
   useEffect(() => {
+    // 新しい購読の世代をインクリメント
+    subscriptionGenRef.current += 1;
+    const currentGen = subscriptionGenRef.current;
+    
     setIsLoading(true);
     setError(null);
     setCards([]);
     setDisplayLimit(20); // フィルタ変更時は表示数をリセット
+    displayLimitRef.current = 20;
     allReceivedCardsRef.current = [];
     reactionCountsRef.current = new Map();
+    eoseReceivedRef.current = false; // EOSE完了フラグをリセット
+    seenIdsRef.current = new Set(); // 重複チェック用のSetをリセット
     
     const days = periodToDays(period);
     const since = period !== 'all' ? Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60) : 0;
@@ -128,13 +150,13 @@ export function Gallery({
       }
     }
     
-    // 重複チェック用のSet
-    const seenIds = new Set<string>();
-    
     const handleCard = (card: NewYearCard) => {
-      // 重複チェック
-      if (seenIds.has(card.id)) return;
-      seenIds.add(card.id);
+      // 古い購読からのコールバックは無視
+      if (currentGen !== subscriptionGenRef.current) return;
+      
+      // 重複チェック（refを使用して購読間で共有）
+      if (seenIdsRef.current.has(card.id)) return;
+      seenIdsRef.current.add(card.id);
       
       // 公開カードのみ
       if (card.recipientPubkey) return;
@@ -144,7 +166,10 @@ export function Gallery({
       
       allReceivedCardsRef.current.push(card);
       
-      // リアルタイムで表示を更新（ソートして最初のdisplayLimit件だけ表示）
+      // EOSE完了後は表示を更新しない（「もっと見る」で増やした表示数を維持するため）
+      if (eoseReceivedRef.current) return;
+      
+      // EOSE前はリアルタイムで表示を更新（ソートして最初の20件だけ表示）
       const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
         sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
       ).slice(0, 20); // 初期表示は20件
@@ -153,6 +178,10 @@ export function Gallery({
     };
     
     const handleEose = async () => {
+      // 古い購読からのコールバックは無視
+      if (currentGen !== subscriptionGenRef.current) return;
+      
+      eoseReceivedRef.current = true; // EOSE完了をマーク
       setIsLoading(false);
       
       // EOSE後にリアクション数を取得してソート
@@ -160,9 +189,14 @@ export function Gallery({
         try {
           const cardIds = allReceivedCardsRef.current.map(c => c.id);
           const reactions = await fetchReactionCounts(cardIds);
+          
+          // 古い購読の場合は処理しない
+          if (currentGen !== subscriptionGenRef.current) return;
+          
           reactionCountsRef.current = reactions;
           
           // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
+          const currentLimit = displayLimitRef.current;
           const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
             const aCount = reactions.get(a.id) || 0;
             const bCount = reactions.get(b.id) || 0;
@@ -170,7 +204,7 @@ export function Gallery({
               return bCount - aCount;
             }
             return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-          }).slice(0, 20); // 初期表示は20件
+          }).slice(0, currentLimit);
           
           setCards(sortedByReaction);
           
