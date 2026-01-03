@@ -779,6 +779,16 @@
   overflow-y: auto;
 }
 
+/* ツリーローディング */
+.treeLoading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+}
+
 /* ツリー行 */
 .treeRow {
   display: flex;

@@ -270,6 +270,11 @@ export function Gallery({
     setSelectedCard(null);
   };
 
+  // ツリー内のカードへナビゲート
+  const handleNavigateToCard = useCallback((card: NewYearCard) => {
+    setSelectedCard(card);
+  }, []);
+
   const handleLoadMore = () => {
     setLimit(prev => prev + 20);
   };
@@ -492,6 +497,7 @@ export function Gallery({
               userPubkey={userPubkey}
               signEvent={signEvent}
               onExtend={onExtend}
+              onNavigateToCard={handleNavigateToCard}
             />
           </div>
         </div>
