@@ -74,7 +74,7 @@ function App() {
     error: recentError,
     refresh: refreshRecent,
     loadMore: loadMoreRecent,
-  } = usePublicGalleryCards();
+  } = usePublicGalleryCards(authState.pubkey);
 
   const {
     cards: popularCards,
@@ -98,7 +98,7 @@ function App() {
     error: followCardsError,
     refresh: refreshFollowCards,
     loadMore: loadMoreFollowCards,
-  } = useFollowCards(followeePubkeys);
+  } = useFollowCards(followeePubkeys, authState.pubkey);
 
   const {
     state: editorState,

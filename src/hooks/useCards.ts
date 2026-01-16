@@ -90,7 +90,7 @@ export function useSentCards(pubkey: string | null) {
 }
 
 // 公開ギャラリー（みんなの作品・新着）を取得 - ストリーミング対応
-export function usePublicGalleryCards() {
+export function usePublicGalleryCards(userPubkey?: string | null) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -99,6 +99,12 @@ export function usePublicGalleryCards() {
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const userPubkeyRef = useRef(userPubkey);
+  
+  // userPubkeyの変更を追跡
+  useEffect(() => {
+    userPubkeyRef.current = userPubkey;
+  }, [userPubkey]);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -131,19 +137,33 @@ export function usePublicGalleryCards() {
     };
 
     const handleEose = async () => {
-      // EOSE後にリアクション数を取得
+      // EOSE後にリアクション数とユーザーのリアクション状態を取得
       if (allCardsRef.current.length > 0) {
         try {
-          const { fetchReactionCounts } = await import('../services/card');
+          const { fetchReactionCounts, hasUserReacted } = await import('../services/card');
           const cardIds = allCardsRef.current.map(c => c.id);
           const reactions = await fetchReactionCounts(cardIds);
           
-          // リアクション数を付与して更新
+          // ユーザーのリアクション状態を取得
+          const userReactedSet = new Set<string>();
+          if (userPubkeyRef.current) {
+            await Promise.all(
+              cardIds.map(async (cardId) => {
+                const reacted = await hasUserReacted(cardId, userPubkeyRef.current!);
+                if (reacted) {
+                  userReactedSet.add(cardId);
+                }
+              })
+            );
+          }
+          
+          // リアクション数とユーザーリアクション状態を付与して更新
           const cardsWithReactions = [...allCardsRef.current]
             .sort((a, b) => b.createdAt - a.createdAt)
             .map(card => ({
               ...card,
               reactionCount: reactions.get(card.id) || 0,
+              userReacted: userReactedSet.has(card.id),
             }));
           
           setCards(cardsWithReactions);
@@ -322,7 +342,7 @@ export function usePopularCards(days: number = 3) {
 }
 
 // フォロー中のユーザーの投稿を取得 - ストリーミング対応
-export function useFollowCards(followees: string[]) {
+export function useFollowCards(followees: string[], userPubkey?: string | null) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -332,11 +352,17 @@ export function useFollowCards(followees: string[]) {
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const followeesRef = useRef<string[]>(followees);
+  const userPubkeyRef = useRef(userPubkey);
 
   // followeesの変更を追跡
   useEffect(() => {
     followeesRef.current = followees;
   }, [followees]);
+  
+  // userPubkeyの変更を追跡
+  useEffect(() => {
+    userPubkeyRef.current = userPubkey;
+  }, [userPubkey]);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -373,19 +399,33 @@ export function useFollowCards(followees: string[]) {
     };
 
     const handleEose = async () => {
-      // EOSE後にリアクション数を取得
+      // EOSE後にリアクション数とユーザーのリアクション状態を取得
       if (allCardsRef.current.length > 0) {
         try {
-          const { fetchReactionCounts } = await import('../services/card');
+          const { fetchReactionCounts, hasUserReacted } = await import('../services/card');
           const cardIds = allCardsRef.current.map(c => c.id);
           const reactions = await fetchReactionCounts(cardIds);
           
-          // リアクション数を付与して更新
+          // ユーザーのリアクション状態を取得
+          const userReactedSet = new Set<string>();
+          if (userPubkeyRef.current) {
+            await Promise.all(
+              cardIds.map(async (cardId) => {
+                const reacted = await hasUserReacted(cardId, userPubkeyRef.current!);
+                if (reacted) {
+                  userReactedSet.add(cardId);
+                }
+              })
+            );
+          }
+          
+          // リアクション数とユーザーリアクション状態を付与して更新
           const cardsWithReactions = [...allCardsRef.current]
             .sort((a, b) => b.createdAt - a.createdAt)
             .map(card => ({
               ...card,
               reactionCount: reactions.get(card.id) || 0,
+              userReacted: userReactedSet.has(card.id),
             }));
           
           setCards(cardsWithReactions);
