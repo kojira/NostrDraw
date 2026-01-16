@@ -159,7 +159,10 @@ export function Gallery({
       // EOSE完了後は表示を更新しない（「もっと見る」で増やした表示数を維持するため）
       if (eoseReceivedRef.current) return;
       
-      // EOSE前はリアルタイムで表示を更新（ソートして最初の20件だけ表示）
+      // 人気タブの場合はEOSE後にリアクション数でソートするため、EOSE前は表示を更新しない
+      if (activeTab === 'popular') return;
+      
+      // 新着タブの場合のみ、EOSE前にリアルタイムで表示を更新（ソートして最初の20件だけ表示）
       const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
         sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
       ).slice(0, 20); // 初期表示は20件
@@ -169,7 +172,8 @@ export function Gallery({
     
     const handleEose = async () => {
       eoseReceivedRef.current = true; // EOSE完了をマーク
-      setIsLoading(false);
+      
+      const currentLimit = displayLimitRef.current;
       
       // EOSE後にリアクション数を取得してソート
       if (activeTab === 'popular' && allReceivedCardsRef.current.length > 0) {
@@ -180,7 +184,6 @@ export function Gallery({
           reactionCountsRef.current = reactions;
           
           // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
-          const currentLimit = displayLimitRef.current;
           const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
             const aCount = reactions.get(a.id) || 0;
             const bCount = reactions.get(b.id) || 0;
@@ -197,7 +200,15 @@ export function Gallery({
         } catch (err) {
           console.error('Failed to fetch reaction counts:', err);
         }
+      } else if (activeTab === 'recent' && allReceivedCardsRef.current.length > 0) {
+        // 新着タブの場合、日付でソートして表示
+        const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
+          sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+        ).slice(0, currentLimit);
+        setCards(sortedCards);
       }
+      
+      setIsLoading(false);
     };
     
     // ストリーミング購読を開始

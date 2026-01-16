@@ -226,8 +226,8 @@ export function Timeline({
         </div>
       )}
 
-      {/* ローディング */}
-      {isLoading && (
+      {/* ローディング（カードがない場合のみ表示） */}
+      {isLoading && cards.length === 0 && (
         <div className={styles.loading}>
           <Spinner size="md" />
           {t('timeline.loading')}
@@ -241,8 +241,8 @@ export function Timeline({
         </div>
       )}
 
-      {/* 投稿一覧 */}
-      {!isLoading && !error && (
+      {/* 投稿一覧（キャッシュからのデータがあれば即表示） */}
+      {!error && (
         <div className={styles.posts}>
           {cards.length === 0 ? (
             <div className={styles.empty}>

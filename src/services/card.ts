@@ -2,6 +2,7 @@
 
 import { type Event, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import { fetchEvents, publishEvent, subscribeToEvents } from './relay';
+import { fetchEventById, cacheEvent, cacheEvents, getCachedEventsByFilter } from './eventCache';
 import { 
   NOSTRDRAW_KIND, 
   NOSTRDRAW_CLIENT_TAG, 
@@ -253,15 +254,11 @@ export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
   }
 }
 
-// イベントIDからカードを取得
+// イベントIDからカードを取得（キャッシュ付き）
 export async function fetchCardById(eventId: string): Promise<NostrDrawPost | null> {
-  const events = await fetchEvents({
-    ids: [eventId],
-    kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
-  });
-
-  if (events.length === 0) return null;
-  return parseNostrDrawPost(events[0]);
+  const event = await fetchEventById(eventId, [NOSTRDRAW_KIND]);
+  if (!event) return null;
+  return parseNostrDrawPost(event);
 }
 
 // 特定のカードを親として持つ子カード（描き足しされたカード）を取得
@@ -270,6 +267,9 @@ export async function fetchChildCards(parentEventId: string): Promise<NostrDrawP
     kinds: [NOSTRDRAW_KIND],
     '#e': [parentEventId],
   });
+
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
 
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
@@ -290,6 +290,9 @@ export async function fetchReceivedCards(pubkey: string): Promise<NostrDrawPost[
     '#p': [pubkey],
   });
 
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
+
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
     const card = parseNostrDrawPost(event);
@@ -307,6 +310,9 @@ export async function fetchSentCards(pubkey: string): Promise<NostrDrawPost[]> {
     kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     authors: [pubkey],
   });
+
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
 
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
@@ -327,6 +333,9 @@ export async function fetchCardsByAuthor(pubkey: string, limit: number = 50): Pr
     authors: [pubkey],
     limit: limit,
   });
+
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
 
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
@@ -349,6 +358,9 @@ export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50)
     authors: pubkeys,
     limit: limit,
   });
+
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
 
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
@@ -381,6 +393,9 @@ export async function fetchPublicGalleryCards(limit: number = 50): Promise<Nostr
     limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
   });
 
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
+
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
     const card = parseNostrDrawPost(event);
@@ -412,12 +427,38 @@ export function subscribeToPublicGalleryCards(
   onEose?: () => void,
   limit: number = 50
 ): () => void {
+  // キャッシュ済みのイベントIDを追跡（重複防止）
+  const seenIds = new Set<string>();
+  
+  // まずキャッシュから条件に合うイベントを即座に返却
+  const cachedEvents = getCachedEventsByFilter({
+    kinds: [NOSTRDRAW_KIND],
+    limit: limit * 2,
+  });
+  
+  for (const event of cachedEvents) {
+    const card = parseNostrDrawPost(event);
+    // 宛先なし（公開）のカードのみ
+    if (card && !card.recipientPubkey) {
+      seenIds.add(card.id);
+      onCard(card);
+    }
+  }
+  
+  // リレーからのストリーミングを開始
   return subscribeToEvents(
     {
       kinds: [NOSTRDRAW_KIND],
       limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
     },
     (event) => {
+      // 既にキャッシュから返却済みならスキップ
+      if (seenIds.has(event.id)) return;
+      seenIds.add(event.id);
+      
+      // キャッシュに追加
+      cacheEvent(event);
+      
       const card = parseNostrDrawPost(event);
       // 宛先なし（公開）のカードのみ
       if (card && !card.recipientPubkey) {
@@ -435,6 +476,25 @@ export function subscribeToCardsByAuthor(
   onEose?: () => void,
   limit: number = 50
 ): () => void {
+  // キャッシュ済みのイベントIDを追跡（重複防止）
+  const seenIds = new Set<string>();
+  
+  // まずキャッシュから条件に合うイベントを即座に返却
+  const cachedEvents = getCachedEventsByFilter({
+    kinds: [NOSTRDRAW_KIND],
+    authors: [pubkey],
+    limit,
+  });
+  
+  for (const event of cachedEvents) {
+    const card = parseNostrDrawPost(event);
+    if (card) {
+      seenIds.add(card.id);
+      onCard(card);
+    }
+  }
+  
+  // リレーからのストリーミングを開始
   return subscribeToEvents(
     {
       kinds: [NOSTRDRAW_KIND],
@@ -442,6 +502,13 @@ export function subscribeToCardsByAuthor(
       limit,
     },
     (event) => {
+      // 既にキャッシュから返却済みならスキップ
+      if (seenIds.has(event.id)) return;
+      seenIds.add(event.id);
+      
+      // キャッシュに追加
+      cacheEvent(event);
+      
       const card = parseNostrDrawPost(event);
       if (card) {
         onCard(card);
@@ -464,6 +531,25 @@ export function subscribeToCardsByAuthors(
     return () => {};
   }
   
+  // キャッシュ済みのイベントIDを追跡（重複防止）
+  const seenIds = new Set<string>();
+  
+  // まずキャッシュから条件に合うイベントを即座に返却
+  const cachedEvents = getCachedEventsByFilter({
+    kinds: [NOSTRDRAW_KIND],
+    authors: pubkeys,
+    limit,
+  });
+  
+  for (const event of cachedEvents) {
+    const card = parseNostrDrawPost(event);
+    if (card) {
+      seenIds.add(card.id);
+      onCard(card);
+    }
+  }
+  
+  // リレーからのストリーミングを開始
   return subscribeToEvents(
     {
       kinds: [NOSTRDRAW_KIND],
@@ -471,6 +557,13 @@ export function subscribeToCardsByAuthors(
       limit,
     },
     (event) => {
+      // 既にキャッシュから返却済みならスキップ
+      if (seenIds.has(event.id)) return;
+      seenIds.add(event.id);
+      
+      // キャッシュに追加
+      cacheEvent(event);
+      
       const card = parseNostrDrawPost(event);
       if (card) {
         onCard(card);
@@ -534,6 +627,9 @@ export async function fetchPopularCards(days: number = 3, limit: number = 20): P
     since: sinceTimestamp,
     limit: 100, // 十分な数を取得
   });
+
+  // 取得したイベントをキャッシュに追加
+  cacheEvents(events);
 
   const cards: NostrDrawPost[] = [];
   for (const event of events) {
@@ -665,6 +761,9 @@ export async function sendCard(
 
   const signedEvent = await signEvent(eventTemplate);
   await publishEvent(signedEvent);
+  
+  // 投稿したイベントをキャッシュに追加
+  cacheEvent(signedEvent);
   
   // kind 1（タイムライン）にも投稿する場合
   if (params.isPublic) {
