@@ -58,7 +58,17 @@ function loadCanvasState(): CanvasStorageData | null {
     
     // 新形式（layers配列がある場合）
     if (data.layers && Array.isArray(data.layers)) {
-      return data as CanvasStorageData;
+      // レイヤーのvisibleプロパティが欠落または不正な場合はtrueに設定
+      const normalizedLayers = data.layers.map((layer: Layer) => ({
+        ...layer,
+        visible: layer.visible !== false, // undefined や true の場合は true
+        locked: layer.locked === true, // undefined の場合は false
+        opacity: typeof layer.opacity === 'number' ? layer.opacity : 1,
+      }));
+      return {
+        ...data,
+        layers: normalizedLayers,
+      } as CanvasStorageData;
     }
     
     // 旧形式からの変換（後方互換性）
@@ -116,15 +126,59 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const [lineWidth, setLineWidth] = useState(3);
   const [tool, setTool] = useState<ToolType>('pen');
   const lastPointRef = useRef<Point | null>(null);
-  const templateImageRef = useRef<HTMLImageElement | null>(null);
-  const currentTemplateUri = useRef<string>('');
   
   // ローカルストレージから初期状態を読み込む
   const savedState = useMemo(() => loadCanvasState(), []);
   
-  // レイヤー状態
-  const [layers, setLayers] = useState<Layer[]>(() => savedState?.layers || createInitialLayers());
-  const [activeLayerId, setActiveLayerId] = useState<string>(() => savedState?.activeLayerId || 'layer-1');
+  // 下書きに内容があるかどうかをチェック
+  const hasSavedDraft = useMemo(() => {
+    if (!savedState?.layers) return false;
+    return savedState.layers.some(layer => 
+      layer.strokes.length > 0 || 
+      layer.placedStamps.length > 0 || 
+      layer.textBoxes.some(tb => tb.text.trim().length > 0)
+    );
+  }, [savedState]);
+  
+  // 下書き確認ダイアログの状態
+  const [showDraftConfirm, setShowDraftConfirm] = useState(hasSavedDraft);
+  
+  // レイヤー状態（下書きを使用するかどうかの決定前は空の状態）
+  const [layers, setLayers] = useState<Layer[]>(() => {
+    // 下書きがあり、まだ決定していない場合は初期レイヤーを使用
+    if (hasSavedDraft) {
+      return createInitialLayers();
+    }
+    return savedState?.layers || createInitialLayers();
+  });
+  const [activeLayerId, setActiveLayerId] = useState<string>(() => {
+    if (hasSavedDraft) {
+      return 'layer-1';
+    }
+    return savedState?.activeLayerId || 'layer-1';
+  });
+  
+  // 下書きを使用する
+  const useDraft = useCallback(() => {
+    if (savedState?.layers) {
+      setLayers(savedState.layers);
+      setActiveLayerId(savedState.activeLayerId || savedState.layers[0]?.id || 'layer-1');
+    }
+    setShowDraftConfirm(false);
+  }, [savedState]);
+  
+  // 下書きを破棄する
+  const discardDraft = useCallback(() => {
+    clearCanvasState();
+    setLayers(createInitialLayers());
+    setActiveLayerId('layer-1');
+    setShowDraftConfirm(false);
+  }, []);
+  
+  // 下書きをクリアする（投稿成功時などに使用）
+  const clearDraft = useCallback(() => {
+    clearCanvasState();
+  }, []);
   
   // アクティブレイヤーの取得
   const activeLayer = useMemo(() => layers.find(l => l.id === activeLayerId) || layers[0], [layers, activeLayerId]);
@@ -352,15 +406,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const message = selectedTextBox?.text || '';
   const messageBox = selectedTextBox || textBoxes[0] || createTextBox();
 
-  // テンプレートのdata URI
-  const templateDataUri = useMemo(() => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">${selectedTemplate.svg}</svg>`;
-    const encoded = btoa(unescape(encodeURIComponent(svg)));
-    return `data:image/svg+xml;base64,${encoded}`;
-  }, [selectedTemplate, width, height]);
-
   // キャンバスの初期化と再描画（全レイヤー対応）
-  const redrawCanvas = useCallback((layersToRender?: Layer[]) => {
+  // 注意: テンプレートはDOMに直接配置されるため、キャンバスにはストロークのみを描画
+  const redrawCanvas = useCallback((layersToRender: Layer[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -368,69 +416,42 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     if (!ctx) return;
     contextRef.current = ctx;
 
-    // 描画対象のレイヤー（引数がない場合は現在のlayers状態を使用）
-    const renderLayers = layersToRender || layers;
-
-    const doRedraw = (templateImg: HTMLImageElement) => {
-      // 背景をクリア
-      ctx.clearRect(0, 0, width, height);
+    // 背景をクリア（透明）
+    ctx.clearRect(0, 0, width, height);
+    
+    // すべての表示中のレイヤーのストロークを描画（下から上へ）
+    layersToRender.forEach(layer => {
+      if (!layer.visible) return; // 非表示レイヤーはスキップ
       
-      // テンプレートを描画
-      ctx.drawImage(templateImg, 0, 0, width, height);
+      // レイヤーの不透明度を設定
+      ctx.globalAlpha = layer.opacity;
       
-      // すべての表示中のレイヤーのストロークを描画（下から上へ）
-      renderLayers.forEach(layer => {
-        if (!layer.visible) return; // 非表示レイヤーはスキップ
-        
-        // レイヤーの不透明度を設定
-        ctx.globalAlpha = layer.opacity;
-        
-        // ストロークを再描画
-        layer.strokes.forEach(stroke => {
-          if (stroke.points.length < 2) return;
-          ctx.beginPath();
-          ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-          for (let i = 1; i < stroke.points.length; i++) {
-            ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-          }
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.lineWidth = stroke.lineWidth;
-          ctx.strokeStyle = stroke.color;
-          ctx.stroke();
-        });
+      // ストロークを再描画
+      layer.strokes.forEach(stroke => {
+        if (stroke.points.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i++) {
+          ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        }
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = stroke.lineWidth;
+        ctx.strokeStyle = stroke.color;
+        ctx.stroke();
       });
-      
-      // 不透明度をリセット
-      ctx.globalAlpha = 1;
-      
-      // スタンプはオーバーレイで表示するため、キャンバスには描画しない
-    };
+    });
+    
+    // 不透明度をリセット
+    ctx.globalAlpha = 1;
+    
+    // スタンプはオーバーレイで表示するため、キャンバスには描画しない
+  }, [width, height]);
 
-    // テンプレートが変わった場合のみ画像を再読み込み
-    if (currentTemplateUri.current !== templateDataUri || !templateImageRef.current) {
-      const img = new Image();
-      img.onload = () => {
-        templateImageRef.current = img;
-        currentTemplateUri.current = templateDataUri;
-        doRedraw(img);
-      };
-      img.src = templateDataUri;
-    } else {
-      // キャッシュされた画像を使用して同期的に描画
-      doRedraw(templateImageRef.current);
-    }
-  }, [templateDataUri, width, height, layers]);
-
-  // 初期化（テンプレート変更時）
+  // テンプレートまたはレイヤー変更時に再描画（1つのuseEffectで管理して競合を防ぐ）
   useEffect(() => {
-    redrawCanvas();
-  }, [selectedTemplate]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // レイヤー変更時に再描画
-  useEffect(() => {
-    redrawCanvas();
-  }, [layers]); // eslint-disable-line react-hooks/exhaustive-deps
+    redrawCanvas(layers);
+  }, [selectedTemplate, layers, redrawCanvas]);
 
   // ポインター位置取得
   const getPointerPosition = useCallback((e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -536,7 +557,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     if (ctx) {
       ctx.beginPath();
     }
-  }, [isDrawing, color, lineWidth, tool]);
+  }, [isDrawing, color, lineWidth, tool, layers, saveToHistory, activeLayerId, activeLayer]);
 
   // キャンバスクリア
   const clearCanvas = useCallback(() => {
@@ -1199,6 +1220,13 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     
     // キャンバスサイズ（投稿用）
     canvasSize: { width, height },
+    
+    // 下書き機能
+    hasSavedDraft,
+    showDraftConfirm,
+    useDraft,
+    discardDraft,
+    clearDraft,
   };
 }
 

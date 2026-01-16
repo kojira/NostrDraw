@@ -499,7 +499,28 @@
   transition: transform 0.1s ease-out;
 }
 
+/* 背景SVG（外部画像参照を正しく表示するためDOMに直接配置） */
+.backgroundSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.backgroundSvg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .canvas {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
   width: 100%;
   height: auto;
@@ -507,6 +528,7 @@
   cursor: crosshair;
   touch-action: none;
   display: block;
+  background: transparent; /* キャンバス背景を透明に */
 }
 
 @media (max-width: 480px) {
@@ -1696,4 +1718,106 @@
 :global(body.light-theme) .fontButtonCompact.active {
   color: #d63050;
   background: rgba(233, 69, 96, 0.12);
+}
+
+/* 下書き確認ダイアログ */
+.draftConfirmOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.draftConfirmModal {
+  background: #1a1a2e;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.draftConfirmTitle {
+  font-size: 1.5rem;
+  color: #fff;
+  margin: 0 0 1rem;
+}
+
+.draftConfirmMessage {
+  color: #aaa;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+}
+
+.draftConfirmActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.draftConfirmButtonPrimary,
+.draftConfirmButtonSecondary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.draftConfirmButtonPrimary {
+  background: linear-gradient(135deg, #e94560, #d63050);
+  color: #fff;
+}
+
+.draftConfirmButtonPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.4);
+}
+
+.draftConfirmButtonSecondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.draftConfirmButtonSecondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+/* ライトテーマ */
+:global(body.light-theme) .draftConfirmModal {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+:global(body.light-theme) .draftConfirmTitle {
+  color: #222;
+}
+
+:global(body.light-theme) .draftConfirmMessage {
+  color: #666;
+}
+
+:global(body.light-theme) .draftConfirmButtonSecondary {
+  background: #f5f5f5;
+  color: #444;
+  border-color: #ddd;
+}
+
+:global(body.light-theme) .draftConfirmButtonSecondary:hover {
+  background: #eee;
+  color: #222;
 }

@@ -7,7 +7,7 @@ import { LanguageSwitch } from './components/LanguageSwitch';
 import { useAuth } from './hooks/useAuth';
 import { useFollowees } from './hooks/useNostr';
 import { usePublicGalleryCards, useFollowCards, usePopularCards, useSendCard, useCardEditor } from './hooks/useCards';
-import { fetchCardById } from './services/card';
+import { fetchCardById, getCardFullSvg } from './services/card';
 import { pubkeyToNpub } from './services/profile';
 import { CardFlip } from './components/CardViewer/CardFlip';
 import { Gallery } from './components/Gallery';
@@ -124,10 +124,18 @@ function App() {
   }, [goToCreate, resetEditor]);
 
   // 描き足しを開始
-  const handleExtend = useCallback((card: NostrDrawPost) => {
+  const handleExtend = useCallback(async (card: NostrDrawPost) => {
     setLastSentEventId(null); // 前回の投稿成功状態をクリア
     resetEditor(); // エディタの状態をリセット
-    setExtendingCard(card);
+    
+    // 差分保存されたカードの場合、完全なSVGを取得してから設定
+    const fullSvg = await getCardFullSvg(card);
+    
+    setExtendingCard({
+      ...card,
+      svg: fullSvg,
+    });
+    
     setSelectedCard(null); // モーダルを閉じる
     goToCreate();
   }, [goToCreate, resetEditor]);

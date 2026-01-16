@@ -99,6 +99,12 @@ export function DrawingCanvas({
     renameLayer,
     // キャンバスサイズ
     canvasSize,
+    // 下書き機能
+    hasSavedDraft,
+    showDraftConfirm,
+    useDraft,
+    discardDraft,
+    clearDraft,
   } = useDrawingCanvas({ width, height, initialMessage });
 
   // 描き足し元のSVGが渡されたらテンプレートとして設定
@@ -128,6 +134,13 @@ export function DrawingCanvas({
     }
   }, [baseImageSvg]);
 
+  // 投稿成功時に下書きをクリア
+  useEffect(() => {
+    if (postSuccess) {
+      clearDraft();
+    }
+  }, [postSuccess, clearDraft]);
+
   const handleSave = useCallback(() => {
     const svg = generateSvg();
     onSave(svg, message);
@@ -152,6 +165,33 @@ export function DrawingCanvas({
 
   return (
     <div className={styles.drawingCanvas}>
+      {/* 下書き確認ダイアログ */}
+      {showDraftConfirm && hasSavedDraft && (
+        <div className={styles.draftConfirmOverlay}>
+          <div className={styles.draftConfirmModal}>
+            <h3 className={styles.draftConfirmTitle}>📝 下書きがあります</h3>
+            <p className={styles.draftConfirmMessage}>
+              前回の下書きが保存されています。<br />
+              続きから描きますか？
+            </p>
+            <div className={styles.draftConfirmActions}>
+              <button
+                className={styles.draftConfirmButtonPrimary}
+                onClick={useDraft}
+              >
+                ✏️ 下書きを使う
+              </button>
+              <button
+                className={styles.draftConfirmButtonSecondary}
+                onClick={discardDraft}
+              >
+                🗑️ 新規作成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 台紙選択 */}
       <TemplateSelector
         selectedTemplate={selectedTemplate}
@@ -246,6 +286,13 @@ export function DrawingCanvas({
             transformOrigin: 'center center',
           }}
         >
+          {/* 背景SVG（キャンバスの後ろに配置、外部画像参照が正しく表示される） */}
+          <div 
+            className={styles.backgroundSvg}
+            dangerouslySetInnerHTML={{ 
+              __html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">${selectedTemplate.svg}</svg>` 
+            }}
+          />
           <canvas
             ref={canvasRef}
             width={width}
