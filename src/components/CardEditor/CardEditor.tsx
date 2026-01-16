@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { DrawingCanvas } from './DrawingCanvas';
 import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import { ETO_IMAGES } from '../../data/etoGallery';
-import type { NewYearCard } from '../../types';
+import type { NostrDrawPost } from '../../types';
 import type { PostData } from './DrawingCanvas/types';
 import styles from './CardEditor.module.css';
 
@@ -15,7 +15,7 @@ interface CardEditorProps {
   onSvgChange: (svg: string | null) => void;
   onMessageChange: (message: string) => void;
   userPubkey?: string | null;
-  extendingCard?: NewYearCard | null; // 描き足し元のカード
+  extendingCard?: NostrDrawPost | null; // 描き足し元のカード
   allowExtend?: boolean;
   onAllowExtendChange?: (allow: boolean) => void;
   postToTimeline?: boolean;

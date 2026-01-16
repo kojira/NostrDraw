@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
+import type { NostrDrawPost, NostrProfile } from '../../types';
 import { fetchNotifications, type Notification } from '../../services/notification';
 import { fetchProfiles, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
@@ -25,7 +25,7 @@ export function Notifications({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
 
   // 通知を取得
   useEffect(() => {
@@ -94,7 +94,7 @@ export function Notifications({
   };
 
   // ツリー内のカードへナビゲート
-  const handleNavigateToCard = useCallback((card: NewYearCard) => {
+  const handleNavigateToCard = useCallback((card: NostrDrawPost) => {
     setSelectedCard(card);
   }, []);
 

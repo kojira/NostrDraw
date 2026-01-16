@@ -6,7 +6,7 @@ import {
   NOSTRDRAW_KIND, 
   NOSTRDRAW_CLIENT_TAG, 
   NOSTRDRAW_VERSION,
-  type NewYearCard, 
+  type NostrDrawPost, 
   type LayoutType 
 } from '../types';
 import { compressSvg, decompressSvg } from '../utils/compression';
@@ -154,7 +154,7 @@ export function isNostrDrawEvent(event: Event): boolean {
   return !!clientTag;
 }
 
-export function parseNewYearCard(event: Event): NewYearCard | null {
+export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
   try {
     // NostrDrawのイベントでない場合はスキップ
     if (!isNostrDrawEvent(event)) {
@@ -254,26 +254,26 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
 }
 
 // イベントIDからカードを取得
-export async function fetchCardById(eventId: string): Promise<NewYearCard | null> {
+export async function fetchCardById(eventId: string): Promise<NostrDrawPost | null> {
   const events = await fetchEvents({
     ids: [eventId],
     kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
   });
 
   if (events.length === 0) return null;
-  return parseNewYearCard(events[0]);
+  return parseNostrDrawPost(events[0]);
 }
 
 // 特定のカードを親として持つ子カード（描き足しされたカード）を取得
-export async function fetchChildCards(parentEventId: string): Promise<NewYearCard[]> {
+export async function fetchChildCards(parentEventId: string): Promise<NostrDrawPost[]> {
   const events = await fetchEvents({
     kinds: [NOSTRDRAW_KIND],
     '#e': [parentEventId],
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     // parentEventIdが一致するもののみ（replyタグで参照されているもの）
     if (card && card.parentEventId === parentEventId) {
       cards.push(card);
@@ -284,15 +284,15 @@ export async function fetchChildCards(parentEventId: string): Promise<NewYearCar
   return cards.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-export async function fetchReceivedCards(pubkey: string): Promise<NewYearCard[]> {
+export async function fetchReceivedCards(pubkey: string): Promise<NostrDrawPost[]> {
   const events = await fetchEvents({
     kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     '#p': [pubkey],
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     if (card) {
       cards.push(card);
     }
@@ -302,15 +302,15 @@ export async function fetchReceivedCards(pubkey: string): Promise<NewYearCard[]>
   return cards.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-export async function fetchSentCards(pubkey: string): Promise<NewYearCard[]> {
+export async function fetchSentCards(pubkey: string): Promise<NostrDrawPost[]> {
   const events = await fetchEvents({
     kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     authors: [pubkey],
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     if (card) {
       cards.push(card);
     }
@@ -321,16 +321,16 @@ export async function fetchSentCards(pubkey: string): Promise<NewYearCard[]> {
 }
 
 // 特定ユーザーの投稿を取得
-export async function fetchCardsByAuthor(pubkey: string, limit: number = 50): Promise<NewYearCard[]> {
+export async function fetchCardsByAuthor(pubkey: string, limit: number = 50): Promise<NostrDrawPost[]> {
   const events = await fetchEvents({
     kinds: [NOSTRDRAW_KIND],
     authors: [pubkey],
     limit: limit,
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     if (card) {
       cards.push(card);
     }
@@ -341,7 +341,7 @@ export async function fetchCardsByAuthor(pubkey: string, limit: number = 50): Pr
 }
 
 // 複数著者の投稿を取得（フォロータイムライン用）
-export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50): Promise<NewYearCardWithReactions[]> {
+export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50): Promise<NostrDrawPostWithReactions[]> {
   if (pubkeys.length === 0) return [];
 
   const events = await fetchEvents({
@@ -350,9 +350,9 @@ export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50)
     limit: limit,
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     if (card) {
       cards.push(card);
     }
@@ -375,15 +375,15 @@ export async function fetchCardsByAuthors(pubkeys: string[], limit: number = 50)
 }
 
 // 公開ギャラリー（宛先なしの投稿）を取得
-export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYearCardWithReactions[]> {
+export async function fetchPublicGalleryCards(limit: number = 50): Promise<NostrDrawPostWithReactions[]> {
   const events = await fetchEvents({
     kinds: [NOSTRDRAW_KIND], // 新旧両方のkindをサポート
     limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     // 宛先なし（公開）のカードのみ
     if (card && !card.recipientPubkey) {
       cards.push(card);
@@ -408,7 +408,7 @@ export async function fetchPublicGalleryCards(limit: number = 50): Promise<NewYe
 
 // ストリーミングでギャラリーカードを取得（リアルタイム表示用）
 export function subscribeToPublicGalleryCards(
-  onCard: (card: NewYearCard) => void,
+  onCard: (card: NostrDrawPost) => void,
   onEose?: () => void,
   limit: number = 50
 ): () => void {
@@ -418,7 +418,7 @@ export function subscribeToPublicGalleryCards(
       limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
     },
     (event) => {
-      const card = parseNewYearCard(event);
+      const card = parseNostrDrawPost(event);
       // 宛先なし（公開）のカードのみ
       if (card && !card.recipientPubkey) {
         onCard(card);
@@ -431,7 +431,7 @@ export function subscribeToPublicGalleryCards(
 // ストリーミングで作者別カードを取得（リアルタイム表示用）
 export function subscribeToCardsByAuthor(
   pubkey: string,
-  onCard: (card: NewYearCard) => void,
+  onCard: (card: NostrDrawPost) => void,
   onEose?: () => void,
   limit: number = 50
 ): () => void {
@@ -442,7 +442,7 @@ export function subscribeToCardsByAuthor(
       limit,
     },
     (event) => {
-      const card = parseNewYearCard(event);
+      const card = parseNostrDrawPost(event);
       if (card) {
         onCard(card);
       }
@@ -454,7 +454,7 @@ export function subscribeToCardsByAuthor(
 // ストリーミングで複数作者のカードを取得（フォロータイムライン用）
 export function subscribeToCardsByAuthors(
   pubkeys: string[],
-  onCard: (card: NewYearCard) => void,
+  onCard: (card: NostrDrawPost) => void,
   onEose?: () => void,
   limit: number = 50
 ): () => void {
@@ -471,7 +471,7 @@ export function subscribeToCardsByAuthors(
       limit,
     },
     (event) => {
-      const card = parseNewYearCard(event);
+      const card = parseNostrDrawPost(event);
       if (card) {
         onCard(card);
       }
@@ -481,7 +481,7 @@ export function subscribeToCardsByAuthors(
 }
 
 // リアクション数付きのカード型
-export interface NewYearCardWithReactions extends NewYearCard {
+export interface NostrDrawPostWithReactions extends NostrDrawPost {
   reactionCount: number;
   userReacted?: boolean; // ユーザーがリアクション済みかどうか
 }
@@ -525,7 +525,7 @@ export async function fetchReactionCounts(eventIds: string[]): Promise<Map<strin
 }
 
 // 過去N日間の人気投稿を取得（リアクション数順）
-export async function fetchPopularCards(days: number = 3, limit: number = 20): Promise<NewYearCardWithReactions[]> {
+export async function fetchPopularCards(days: number = 3, limit: number = 20): Promise<NostrDrawPostWithReactions[]> {
   const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
 
   // 過去N日間の公開投稿を取得
@@ -535,9 +535,9 @@ export async function fetchPopularCards(days: number = 3, limit: number = 20): P
     limit: 100, // 十分な数を取得
   });
 
-  const cards: NewYearCard[] = [];
+  const cards: NostrDrawPost[] = [];
   for (const event of events) {
-    const card = parseNewYearCard(event);
+    const card = parseNostrDrawPost(event);
     // 宛先なし（公開）のカードのみ
     if (card && !card.recipientPubkey) {
       cards.push(card);
@@ -551,7 +551,7 @@ export async function fetchPopularCards(days: number = 3, limit: number = 20): P
   const reactionCounts = await fetchReactionCounts(eventIds);
 
   // リアクション数を付与し、1以上のもののみフィルタ
-  const cardsWithReactions: NewYearCardWithReactions[] = cards
+  const cardsWithReactions: NostrDrawPostWithReactions[] = cards
     .map(card => ({
       ...card,
       reactionCount: reactionCounts.get(card.id) || 0,
@@ -794,13 +794,13 @@ export async function hasUserReacted(eventId: string, userPubkey: string): Promi
 
 // ツリー構造を取得（すべての祖先と子孫）
 export interface CardTreeNode {
-  card: NewYearCard;
+  card: NostrDrawPost;
   isCurrent: boolean;
 }
 
 // すべての祖先を取得（ルートまで遡る）
-export async function fetchAncestors(card: NewYearCard): Promise<NewYearCard[]> {
-  const ancestors: NewYearCard[] = [];
+export async function fetchAncestors(card: NostrDrawPost): Promise<NostrDrawPost[]> {
+  const ancestors: NostrDrawPost[] = [];
   let currentCard = card;
   
   while (currentCard.parentEventId) {
@@ -814,9 +814,9 @@ export async function fetchAncestors(card: NewYearCard): Promise<NewYearCard[]> 
 }
 
 // すべての子孫を取得（再帰的）
-export async function fetchDescendants(cardId: string): Promise<NewYearCard[]> {
+export async function fetchDescendants(cardId: string): Promise<NostrDrawPost[]> {
   const children = await fetchChildCards(cardId);
-  const allDescendants: NewYearCard[] = [...children];
+  const allDescendants: NostrDrawPost[] = [...children];
   
   for (const child of children) {
     const grandchildren = await fetchDescendants(child.id);

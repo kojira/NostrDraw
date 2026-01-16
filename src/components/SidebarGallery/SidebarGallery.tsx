@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
+import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import type { NewYearCardWithReactions } from '../../services/card';
+import type { NostrDrawPostWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
@@ -31,14 +31,14 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
 
 interface SidebarGalleryProps {
   type: 'popular' | 'recent';
-  cards: (NewYearCard | NewYearCardWithReactions)[];
+  cards: (NostrDrawPost | NostrDrawPostWithReactions)[];
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
   onViewAll?: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void;
+  onExtend?: (card: NostrDrawPost) => void;
 }
 
 export function SidebarGallery({
@@ -54,7 +54,7 @@ export function SidebarGallery({
 }: SidebarGalleryProps) {
   const { t } = useTranslation();
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
 
   const title = type === 'popular' ? t('sidebar.popular') : t('sidebar.recent');
@@ -103,7 +103,7 @@ export function SidebarGallery({
     return profiles.get(pubkey)?.picture;
   };
 
-  const handleSelectCard = (card: NewYearCard) => {
+  const handleSelectCard = (card: NostrDrawPost) => {
     setSelectedCard(card);
   };
 
@@ -112,12 +112,12 @@ export function SidebarGallery({
   };
 
   // 親子カードナビゲーション
-  const handleNavigateToCard = (card: NewYearCard) => {
+  const handleNavigateToCard = (card: NostrDrawPost) => {
     setSelectedCard(card);
   };
 
-  // リアクション数を取得（NewYearCardWithReactionsの場合）
-  const getReactionCount = (card: NewYearCard | NewYearCardWithReactions): number | undefined => {
+  // リアクション数を取得（NostrDrawPostWithReactionsの場合）
+  const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number | undefined => {
     if ('reactionCount' in card) {
       return card.reactionCount;
     }

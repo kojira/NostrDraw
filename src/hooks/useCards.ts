@@ -1,7 +1,7 @@
 // 年賀状データ管理フック
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { NewYearCard, LayoutType } from '../types';
+import type { NostrDrawPost, LayoutType } from '../types';
 import { 
   fetchReceivedCards, 
   fetchSentCards, 
@@ -9,12 +9,12 @@ import {
   subscribeToPublicGalleryCards,
   subscribeToCardsByAuthors,
   type SendCardParams,
-  type NewYearCardWithReactions,
+  type NostrDrawPostWithReactions,
 } from '../services/card';
 import type { Event, EventTemplate } from 'nostr-tools';
 
 export function useReceivedCards(pubkey: string | null) {
-  const [cards, setCards] = useState<NewYearCard[]>([]);
+  const [cards, setCards] = useState<NostrDrawPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +51,7 @@ export function useReceivedCards(pubkey: string | null) {
 }
 
 export function useSentCards(pubkey: string | null) {
-  const [cards, setCards] = useState<NewYearCard[]>([]);
+  const [cards, setCards] = useState<NostrDrawPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,10 +89,10 @@ export function useSentCards(pubkey: string | null) {
 
 // 公開ギャラリー（みんなの作品・新着）を取得 - ストリーミング対応
 export function usePublicGalleryCards() {
-  const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
+  const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const allCardsRef = useRef<NewYearCard[]>([]);
+  const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -108,7 +108,7 @@ export function usePublicGalleryCards() {
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
 
-    const handleCard = (card: NewYearCard) => {
+    const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);
@@ -158,10 +158,10 @@ export function usePublicGalleryCards() {
 
 // 人気投稿（過去N日間でリアクション多い順）を取得 - ストリーミング対応
 export function usePopularCards(days: number = 3) {
-  const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
+  const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const allCardsRef = useRef<NewYearCard[]>([]);
+  const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -180,7 +180,7 @@ export function usePopularCards(days: number = 3) {
 
     const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
 
-    const handleCard = (card: NewYearCard) => {
+    const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);
@@ -255,10 +255,10 @@ export function usePopularCards(days: number = 3) {
 
 // フォロー中のユーザーの投稿を取得 - ストリーミング対応
 export function useFollowCards(followees: string[]) {
-  const [cards, setCards] = useState<NewYearCardWithReactions[]>([]);
+  const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const allCardsRef = useRef<NewYearCard[]>([]);
+  const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -281,7 +281,7 @@ export function useFollowCards(followees: string[]) {
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
 
-    const handleCard = (card: NewYearCard) => {
+    const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);

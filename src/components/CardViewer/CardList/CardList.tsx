@@ -1,6 +1,6 @@
 // 年賀状リストコンポーネント
 
-import type { NewYearCard, NostrProfile } from '../../../types';
+import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub } from '../../../services/profile';
 import styles from './CardList.module.css';
 
@@ -27,9 +27,9 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
 }
 
 interface CardListProps {
-  cards: NewYearCard[];
+  cards: NostrDrawPost[];
   profiles: Map<string, NostrProfile>;
-  onSelectCard: (card: NewYearCard) => void;
+  onSelectCard: (card: NostrDrawPost) => void;
   isLoading: boolean;
   error: string | null;
   type: 'gallery' | 'received' | 'sent';

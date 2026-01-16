@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
+import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { fetchProfile } from '../../services/profile';
 import { CardList } from './CardList';
@@ -10,8 +10,8 @@ import { CardFlip } from './CardFlip';
 import styles from './CardViewer.module.css';
 
 interface CardViewerProps {
-  receivedCards: NewYearCard[];
-  sentCards: NewYearCard[];
+  receivedCards: NostrDrawPost[];
+  sentCards: NostrDrawPost[];
   receivedCount: number;
   sentCount: number;
   isLoadingReceived: boolean;
@@ -21,7 +21,7 @@ interface CardViewerProps {
   onRefresh: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void;
+  onExtend?: (card: NostrDrawPost) => void;
 }
 
 type TabType = 'received' | 'sent';
@@ -42,7 +42,7 @@ export function CardViewer({
 }: CardViewerProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('received');
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
   const [recipientProfile, setRecipientProfile] = useState<NostrProfile | null>(null);
@@ -92,7 +92,7 @@ export function CardViewer({
     loadProfiles();
   }, [selectedCard]);
 
-  const handleSelectCard = (card: NewYearCard) => {
+  const handleSelectCard = (card: NostrDrawPost) => {
     setSelectedCard(card);
   };
 

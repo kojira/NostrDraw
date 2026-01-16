@@ -2,8 +2,8 @@
 
 import type { Filter } from 'nostr-tools';
 import { fetchEvents } from './relay';
-import { NOSTRDRAW_KIND, type NewYearCard } from '../types';
-import { parseNewYearCard, fetchCardById } from './card';
+import { NOSTRDRAW_KIND, type NostrDrawPost } from '../types';
+import { parseNostrDrawPost, fetchCardById } from './card';
 
 // 通知の種類
 export type NotificationType = 'reaction' | 'extend';
@@ -15,9 +15,9 @@ export interface Notification {
   createdAt: number;
   fromPubkey: string;
   targetCardId: string;
-  targetCard?: NewYearCard;
+  targetCard?: NostrDrawPost;
   // 描き足しの場合、新しいカードの情報
-  extendCard?: NewYearCard;
+  extendCard?: NostrDrawPost;
 }
 
 // 自分のカードに対するリアクション通知を取得
@@ -106,7 +106,7 @@ async function fetchExtendNotifications(
         // 自分自身の描き足しは除外
         if (event.pubkey === myPubkey) continue;
         
-        const card = parseNewYearCard(event);
+        const card = parseNostrDrawPost(event);
         if (!card) continue;
         
         // parentEventIdが自分のカードIDかチェック
@@ -169,7 +169,7 @@ export async function fetchNotifications(
 
   // 対象カードの情報を取得
   const uniqueCardIds = [...new Set(allNotifications.map(n => n.targetCardId))];
-  const cardMap = new Map<string, NewYearCard>();
+  const cardMap = new Map<string, NostrDrawPost>();
   
   for (const cardId of uniqueCardIds) {
     try {

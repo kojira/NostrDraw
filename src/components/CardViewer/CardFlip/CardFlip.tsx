@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../../types';
+import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
@@ -14,14 +14,14 @@ import { NOSTRDRAW_KIND } from '../../../types';
 import styles from './CardFlip.module.css';
 
 interface CardFlipProps {
-  card: NewYearCard;
+  card: NostrDrawPost;
   senderProfile?: NostrProfile | null;
   recipientProfile?: NostrProfile | null;
   onClose?: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void; // 描き足しボタンのコールバック
-  onNavigateToCard?: (card: NewYearCard) => void; // 親子カードへのナビゲーション
+  onExtend?: (card: NostrDrawPost) => void; // 描き足しボタンのコールバック
+  onNavigateToCard?: (card: NostrDrawPost) => void; // 親子カードへのナビゲーション
 }
 
 export function CardFlip({
@@ -51,8 +51,8 @@ export function CardFlip({
   const [isLoadingParent, setIsLoadingParent] = useState(!!card.parentEventId);
   
   // ツリー構造の状態（すべての祖先と子孫）
-  const [ancestors, setAncestors] = useState<NewYearCard[]>([]);
-  const [descendants, setDescendants] = useState<NewYearCard[]>([]);
+  const [ancestors, setAncestors] = useState<NostrDrawPost[]>([]);
+  const [descendants, setDescendants] = useState<NostrDrawPost[]>([]);
   const [isLoadingTree, setIsLoadingTree] = useState(true);
   
   // ツリーカード用のプロファイルとリアクション数
@@ -838,7 +838,7 @@ function CardContent({
   animatedSvg, 
   isLoadingParent 
 }: { 
-  card: NewYearCard; 
+  card: NostrDrawPost; 
   animatedSvg?: string | null;
   isLoadingParent?: boolean;
 }) {

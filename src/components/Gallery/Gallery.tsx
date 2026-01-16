@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
+import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import type { NewYearCardWithReactions } from '../../services/card';
+import type { NostrDrawPostWithReactions } from '../../services/card';
 import { sendReaction, hasUserReacted, fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
@@ -36,7 +36,7 @@ interface GalleryProps {
   initialAuthor?: string;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void;
+  onExtend?: (card: NostrDrawPost) => void;
   onBack: () => void;
   onUserClick?: (npub: string) => void;
   // UserGalleryから使う場合のオプション
@@ -77,11 +77,11 @@ export function Gallery({
   const [period, setPeriod] = useState<PeriodType>(initialPeriod as PeriodType || 'week');
   const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
   const [authorFilter, setAuthorFilter] = useState<string>(initialAuthor || '');
-  const [cards, setCards] = useState<(NewYearCard | NewYearCardWithReactions)[]>([]);
+  const [cards, setCards] = useState<(NostrDrawPost | NostrDrawPostWithReactions)[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
   const [displayLimit, setDisplayLimit] = useState(20);
   const displayLimitRef = useRef(20); // コールバック内で最新の値を参照するためのref
@@ -90,7 +90,7 @@ export function Gallery({
   const FETCH_LIMIT = 100;
   
   // 全受信カードを保持（再購読なしで「もっと見る」を実現）
-  const allReceivedCardsRef = useRef<NewYearCard[]>([]);
+  const allReceivedCardsRef = useRef<NostrDrawPost[]>([]);
   const reactionCountsRef = useRef<Map<string, number>>(new Map());
   
   // EOSE完了フラグ（EOSE後はhandleCardでcardsを更新しない）
@@ -143,7 +143,7 @@ export function Gallery({
       }
     }
     
-    const handleCard = (card: NewYearCard) => {
+    const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);
@@ -239,7 +239,7 @@ export function Gallery({
       
       const eventIds = cards.map(card => card.id);
       
-      // リアクション数を取得（NewYearCardWithReactionsでない場合）
+      // リアクション数を取得（NostrDrawPostWithReactionsでない場合）
       const counts = await fetchReactionCounts(eventIds);
       setReactionCounts(counts);
       
@@ -287,7 +287,7 @@ export function Gallery({
     return profiles.get(pubkey)?.picture;
   };
 
-  const handleSelectCard = (card: NewYearCard) => {
+  const handleSelectCard = (card: NostrDrawPost) => {
     setSelectedCard(card);
   };
 
@@ -296,7 +296,7 @@ export function Gallery({
   };
 
   // ツリー内のカードへナビゲート
-  const handleNavigateToCard = useCallback((card: NewYearCard) => {
+  const handleNavigateToCard = useCallback((card: NostrDrawPost) => {
     setSelectedCard(card);
   }, []);
 
@@ -325,7 +325,7 @@ export function Gallery({
   }, [displayLimit, activeTab, sortOrder]);
 
   // 一覧からリアクションを送信
-  const handleReaction = useCallback(async (e: React.MouseEvent, card: NewYearCard) => {
+  const handleReaction = useCallback(async (e: React.MouseEvent, card: NostrDrawPost) => {
     e.stopPropagation(); // カード選択を防ぐ
     
     if (!signEvent || !userPubkey) return;
@@ -360,12 +360,12 @@ export function Gallery({
   };
 
   // リアクション数を取得
-  const getReactionCount = (card: NewYearCard | NewYearCardWithReactions): number => {
+  const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number => {
     // stateから取得（リアルタイム更新用）
     if (reactionCounts.has(card.id)) {
       return reactionCounts.get(card.id) || 0;
     }
-    // NewYearCardWithReactionsから取得
+    // NostrDrawPostWithReactionsから取得
     if ('reactionCount' in card) {
       return card.reactionCount;
     }

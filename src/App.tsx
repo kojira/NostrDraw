@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard } from './types';
+import type { NostrDrawPost } from './types';
 import { LanguageSwitch } from './components/LanguageSwitch';
 import { useAuth } from './hooks/useAuth';
 import { useFollowees } from './hooks/useNostr';
@@ -106,14 +106,14 @@ function App() {
   const [lastSentEventId, setLastSentEventId] = useState<string | null>(null);
   const [allowExtend, setAllowExtend] = useState(true); // 描き足しを許可
   const [postToTimeline, setPostToTimeline] = useState(true); // kind 1にも投稿
-  const [extendingCard, setExtendingCard] = useState<NewYearCard | null>(null); // 描き足し元のカード
+  const [extendingCard, setExtendingCard] = useState<NostrDrawPost | null>(null); // 描き足し元のカード
   
   // URLパラメータからeventidを取得して表示するカード
-  const [sharedCard, setSharedCard] = useState<NewYearCard | null>(null);
+  const [sharedCard, setSharedCard] = useState<NostrDrawPost | null>(null);
   const [isLoadingSharedCard, setIsLoadingSharedCard] = useState(false);
   
   // タイムラインでクリックされたカード（モーダル表示用）
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
 
   // 新規投稿を開始
   const handleCreatePost = useCallback(() => {
@@ -124,7 +124,7 @@ function App() {
   }, [goToCreate, resetEditor]);
 
   // 描き足しを開始
-  const handleExtend = useCallback((card: NewYearCard) => {
+  const handleExtend = useCallback((card: NostrDrawPost) => {
     setLastSentEventId(null); // 前回の投稿成功状態をクリア
     resetEditor(); // エディタの状態をリセット
     setExtendingCard(card);
@@ -133,7 +133,7 @@ function App() {
   }, [goToCreate, resetEditor]);
 
   // タイムラインのカードをクリック（大きく表示）
-  const handleCardClick = useCallback((card: NewYearCard) => {
+  const handleCardClick = useCallback((card: NostrDrawPost) => {
     setSelectedCard(card);
   }, []);
 

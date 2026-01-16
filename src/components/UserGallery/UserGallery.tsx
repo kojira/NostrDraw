@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
+import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { fetchProfile, npubToPubkey, pubkeyToNpub } from '../../services/profile';
 import { Gallery } from '../Gallery/Gallery';
@@ -12,7 +12,7 @@ interface UserGalleryProps {
   npub: string;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void;
+  onExtend?: (card: NostrDrawPost) => void;
   onBack: () => void;
 }
 

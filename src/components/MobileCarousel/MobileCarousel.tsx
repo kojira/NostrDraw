@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
+import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import type { NewYearCardWithReactions } from '../../services/card';
+import type { NostrDrawPostWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
@@ -31,14 +31,14 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
 
 interface MobileCarouselProps {
   type: 'popular' | 'recent';
-  cards: (NewYearCard | NewYearCardWithReactions)[];
+  cards: (NostrDrawPost | NostrDrawPostWithReactions)[];
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
   onViewAll?: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
-  onExtend?: (card: NewYearCard) => void;
+  onExtend?: (card: NostrDrawPost) => void;
 }
 
 export function MobileCarousel({
@@ -55,7 +55,7 @@ export function MobileCarousel({
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
-  const [selectedCard, setSelectedCard] = useState<NewYearCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -121,7 +121,7 @@ export function MobileCarousel({
     return profiles.get(pubkey)?.picture;
   };
 
-  const handleSelectCard = (card: NewYearCard) => {
+  const handleSelectCard = (card: NostrDrawPost) => {
     setSelectedCard(card);
   };
 
@@ -130,7 +130,7 @@ export function MobileCarousel({
   };
 
   // リアクション数を取得
-  const getReactionCount = (card: NewYearCard | NewYearCardWithReactions): number | undefined => {
+  const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number | undefined => {
     if ('reactionCount' in card) {
       return card.reactionCount;
     }

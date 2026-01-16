@@ -10,7 +10,7 @@ export interface NostrProfile {
   nip05?: string;
 }
 
-export interface NewYearCard {
+export interface NostrDrawPost {
   id: string;
   pubkey: string; // 送信者
   recipientPubkey: string | null; // 宛先（nullの場合はパブリック）

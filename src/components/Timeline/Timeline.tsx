@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { NewYearCard, NostrProfile } from '../../types';
-import { sendReaction, type NewYearCardWithReactions } from '../../services/card';
+import type { NostrDrawPost, NostrProfile } from '../../types';
+import { sendReaction, type NostrDrawPostWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { BASE_URL } from '../../config';
 import type { EventTemplate, Event } from 'nostr-tools';
@@ -23,8 +23,8 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
 }
 
 interface TimelineProps {
-  followCards: (NewYearCard | NewYearCardWithReactions)[];
-  globalCards: (NewYearCard | NewYearCardWithReactions)[];
+  followCards: (NostrDrawPost | NostrDrawPostWithReactions)[];
+  globalCards: (NostrDrawPost | NostrDrawPostWithReactions)[];
   isLoadingFollow: boolean;
   isLoadingGlobal: boolean;
   errorFollow: string | null;
@@ -35,8 +35,8 @@ interface TimelineProps {
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onUserClick?: (npub: string) => void;
   onCreatePost?: () => void;
-  onExtend?: (card: NewYearCard) => void; // 描き足しボタン押下時
-  onCardClick?: (card: NewYearCard) => void; // カードクリック時（大きく表示）
+  onExtend?: (card: NostrDrawPost) => void; // 描き足しボタン押下時
+  onCardClick?: (card: NostrDrawPost) => void; // カードクリック時（大きく表示）
 }
 
 type TabType = 'follow' | 'global';
@@ -113,14 +113,14 @@ export function Timeline({
     }
   };
 
-  const getReactionCount = (card: NewYearCard | NewYearCardWithReactions): number => {
+  const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number => {
     if ('reactionCount' in card) {
       return card.reactionCount;
     }
     return 0;
   };
 
-  const getUserReacted = (card: NewYearCard | NewYearCardWithReactions): boolean => {
+  const getUserReacted = (card: NostrDrawPost | NostrDrawPostWithReactions): boolean => {
     // ローカルでリアクション済みならtrue
     if (localReactedIds.has(card.id)) {
       return true;
@@ -133,7 +133,7 @@ export function Timeline({
   };
 
   // リアクションを送信
-  const handleReaction = useCallback(async (card: NewYearCard | NewYearCardWithReactions) => {
+  const handleReaction = useCallback(async (card: NostrDrawPost | NostrDrawPostWithReactions) => {
     if (!signEvent || !userPubkey) {
       return;
     }
@@ -174,7 +174,7 @@ export function Timeline({
   };
 
   // シェアボタンのハンドラ
-  const handleShare = useCallback(async (card: NewYearCard | NewYearCardWithReactions) => {
+  const handleShare = useCallback(async (card: NostrDrawPost | NostrDrawPostWithReactions) => {
     const url = `${BASE_URL}/?eventid=${card.id}`;
     try {
       await navigator.clipboard.writeText(url);
