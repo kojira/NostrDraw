@@ -1,9 +1,10 @@
 // 設定ページコンポーネント
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_RELAYS, type RelayConfig } from '../../types';
 import { fetchUserRelayList } from '../../services/relay';
+import { getEventCacheStats, setMaxCacheSize, clearEventCache } from '../../services/eventCache';
 import styles from './Settings.module.css';
 
 interface SettingsProps {
@@ -29,6 +30,33 @@ export function Settings({
   const [isLoadingNip65, setIsLoadingNip65] = useState(false);
   const [nip65Error, setNip65Error] = useState<string | null>(null);
   const [nip65Success, setNip65Success] = useState<string | null>(null);
+  
+  // キャッシュ統計
+  const [cacheStats, setCacheStats] = useState(() => getEventCacheStats());
+  
+  // キャッシュ統計を定期更新
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCacheStats(getEventCacheStats());
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // 最大キャッシュサイズを変更
+  const handleMaxCacheSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const sizeMB = parseInt(e.target.value, 10);
+    const sizeBytes = sizeMB * 1024 * 1024;
+    setMaxCacheSize(sizeBytes);
+    setCacheStats(getEventCacheStats());
+  }, []);
+  
+  // キャッシュをクリア
+  const handleClearCache = useCallback(() => {
+    if (window.confirm(t('settings.cacheClearConfirm'))) {
+      clearEventCache();
+      setCacheStats(getEventCacheStats());
+    }
+  }, [t]);
 
   // リレーがデフォルトかどうかを判定
   const isDefaultRelay = useCallback((url: string) => {
@@ -142,6 +170,54 @@ export function Settings({
             onClick={() => onThemeChange('light')}
           >
             ☀️ {t('settings.themeLight')}
+          </button>
+        </div>
+      </section>
+
+      {/* キャッシュ設定 */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>{t('settings.cache')}</h3>
+        
+        <div className={styles.cacheInfo}>
+          <div className={styles.cacheStatRow}>
+            <span className={styles.cacheStatLabel}>{t('settings.cacheSize')}</span>
+            <span className={styles.cacheStatValue}>
+              {cacheStats.sizeMB} {t('settings.cacheSizeUnit')} / {cacheStats.maxSizeMB} {t('settings.cacheSizeUnit')}
+              <span className={styles.cachePercent}>({cacheStats.usagePercent}%)</span>
+            </span>
+          </div>
+          <div className={styles.cacheProgressBar}>
+            <div 
+              className={styles.cacheProgressFill} 
+              style={{ width: `${cacheStats.usagePercent}%` }}
+            />
+          </div>
+          <div className={styles.cacheStatRow}>
+            <span className={styles.cacheStatLabel}>{t('settings.cacheCount')}</span>
+            <span className={styles.cacheStatValue}>{cacheStats.count.toLocaleString()}</span>
+          </div>
+        </div>
+        
+        <div className={styles.cacheControls}>
+          <div className={styles.cacheMaxSizeControl}>
+            <label className={styles.cacheLabel}>{t('settings.cacheMaxSize')}</label>
+            <select 
+              className={styles.cacheSelect}
+              value={parseInt(cacheStats.maxSizeMB, 10)}
+              onChange={handleMaxCacheSizeChange}
+            >
+              <option value="10">{t('settings.cacheMaxSizeOptions.10')}</option>
+              <option value="25">{t('settings.cacheMaxSizeOptions.25')}</option>
+              <option value="50">{t('settings.cacheMaxSizeOptions.50')}</option>
+              <option value="100">{t('settings.cacheMaxSizeOptions.100')}</option>
+              <option value="200">{t('settings.cacheMaxSizeOptions.200')}</option>
+            </select>
+          </div>
+          <button 
+            className={styles.cacheClearButton}
+            onClick={handleClearCache}
+          >
+            {t('settings.cacheClear')}
           </button>
         </div>
       </section>

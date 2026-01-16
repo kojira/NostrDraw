@@ -5,7 +5,29 @@ import type { Event, Filter } from 'nostr-tools';
 
 // キャッシュ設定
 const STORAGE_KEY = 'nostrdraw-event-cache';
-const MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_CACHE_SIZE_STORAGE_KEY = 'nostrdraw-cache-max-size';
+const DEFAULT_MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
+// 最大キャッシュサイズ（変更可能）
+let maxCacheSizeBytes = DEFAULT_MAX_CACHE_SIZE_BYTES;
+
+// ローカルストレージから最大キャッシュサイズを読み込み
+function loadMaxCacheSize(): void {
+  try {
+    const saved = localStorage.getItem(MAX_CACHE_SIZE_STORAGE_KEY);
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 1024 * 1024) { // 最低1MB
+        maxCacheSizeBytes = parsed;
+      }
+    }
+  } catch {
+    // エラーを無視
+  }
+}
+
+// 初期化時に最大サイズを読み込み
+loadMaxCacheSize();
 
 // メモリキャッシュ
 const eventCache = new Map<string, Event>();
@@ -22,6 +44,20 @@ const authorIndex = new Map<string, Set<string>>();
 
 // 現在のキャッシュサイズ（バイト）
 let currentCacheSize = 0;
+
+// ローカルストレージへの保存をデバウンス
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+const SAVE_DEBOUNCE_MS = 1000; // 1秒後に保存
+
+function scheduleSaveToStorage(): void {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  saveTimeout = setTimeout(() => {
+    saveCacheToStorage();
+    saveTimeout = null;
+  }, SAVE_DEBOUNCE_MS);
+}
 
 // イベントのサイズを計算
 function getEventSize(event: Event): number {
@@ -98,7 +134,7 @@ function loadCacheFromStorage(): void {
     const events: Event[] = JSON.parse(saved);
     for (const event of events) {
       const size = getEventSize(event);
-      if (currentCacheSize + size <= MAX_CACHE_SIZE_BYTES) {
+      if (currentCacheSize + size <= maxCacheSizeBytes) {
         eventCache.set(event.id, event);
         addToIndex(event);
         currentCacheSize += size;
@@ -136,13 +172,16 @@ export function cacheEvent(event: Event): void {
   const size = getEventSize(event);
   
   // サイズ制限チェック
-  if (currentCacheSize + size > MAX_CACHE_SIZE_BYTES) {
+  if (currentCacheSize + size > maxCacheSizeBytes) {
     evictOldEvents(size);
   }
   
   eventCache.set(event.id, event);
   addToIndex(event);
   currentCacheSize += size;
+  
+  // ローカルストレージへの保存をスケジュール（デバウンス）
+  scheduleSaveToStorage();
 }
 
 /**
@@ -152,7 +191,7 @@ export function cacheEvents(events: Event[]): void {
   for (const event of events) {
     cacheEvent(event);
   }
-  saveCacheToStorage();
+  // cacheEvent内でscheduleSaveToStorageが呼ばれるので、ここでは不要
 }
 
 /**
@@ -329,6 +368,71 @@ export function getEventsFromCache(filter: Filter): Event[] {
 }
 
 /**
+ * ストリーミングでイベントを取得（キャッシュ優先）
+ * キャッシュから即座にイベントを返し、その後リレーからのイベントをコールバックで返す
+ * @param filter フィルタ
+ * @param fetchFromRelay リレーからストリーミングで取得する関数
+ * @param onEvent イベント受信時のコールバック
+ * @param onComplete 完了時のコールバック
+ * @returns unsubscribe関数
+ */
+export function streamEventsWithCache(
+  filter: Filter,
+  fetchFromRelay: (
+    filter: Filter,
+    onEvent: (event: Event) => void,
+    onComplete: () => void
+  ) => () => void,
+  onEvent: (event: Event) => void,
+  onComplete?: () => void
+): () => void {
+  const seenIds = new Set<string>();
+  let unsubscribed = false;
+  
+  console.log('[streamEventsWithCache] filter:', JSON.stringify(filter));
+  
+  // まずキャッシュから取得して即座に1つずつ返す
+  const cachedEvents = getCachedEventsByFilter(filter);
+  console.log('[streamEventsWithCache] cached events count:', cachedEvents.length);
+  for (const event of cachedEvents) {
+    if (unsubscribed) break;
+    if (!seenIds.has(event.id)) {
+      seenIds.add(event.id);
+      onEvent(event);
+    }
+  }
+  
+  // リレーから取得（fetchFromRelayを使用）
+  let relayEventCount = 0;
+  const unsubscribeRelay = fetchFromRelay(
+    filter,
+    (event: Event) => {
+      relayEventCount++;
+      if (relayEventCount <= 5) {
+        console.log('[streamEventsWithCache] relay event:', event.id);
+      }
+      if (unsubscribed) return;
+      if (!seenIds.has(event.id)) {
+        seenIds.add(event.id);
+        cacheEvent(event);
+        onEvent(event);
+      }
+    },
+    () => {
+      console.log('[streamEventsWithCache] complete, total relay events:', relayEventCount);
+      if (onComplete && !unsubscribed) {
+        onComplete();
+      }
+    }
+  );
+  
+  return () => {
+    unsubscribed = true;
+    unsubscribeRelay();
+  };
+}
+
+/**
  * キャッシュをクリア
  */
 export function clearEventCache(): void {
@@ -353,11 +457,41 @@ export function getEventCacheStats(): {
   sizeBytes: number; 
   maxSizeBytes: number;
   sizeMB: string;
+  maxSizeMB: string;
+  usagePercent: number;
 } {
   return {
     count: eventCache.size,
     sizeBytes: currentCacheSize,
-    maxSizeBytes: MAX_CACHE_SIZE_BYTES,
+    maxSizeBytes: maxCacheSizeBytes,
     sizeMB: (currentCacheSize / (1024 * 1024)).toFixed(2),
+    maxSizeMB: (maxCacheSizeBytes / (1024 * 1024)).toFixed(0),
+    usagePercent: maxCacheSizeBytes > 0 
+      ? Math.round((currentCacheSize / maxCacheSizeBytes) * 100)
+      : 0,
   };
+}
+
+/**
+ * 最大キャッシュサイズを設定
+ * @param sizeBytes 最大サイズ（バイト）、最低1MB
+ */
+export function setMaxCacheSize(sizeBytes: number): void {
+  const minSize = 1024 * 1024; // 1MB
+  const newSize = Math.max(sizeBytes, minSize);
+  
+  maxCacheSizeBytes = newSize;
+  
+  // ローカルストレージに保存
+  try {
+    localStorage.setItem(MAX_CACHE_SIZE_STORAGE_KEY, newSize.toString());
+  } catch {
+    // エラーを無視
+  }
+  
+  // 新しい最大サイズを超えている場合は古いイベントを削除
+  if (currentCacheSize > maxCacheSizeBytes) {
+    evictOldEvents(currentCacheSize - maxCacheSizeBytes);
+    scheduleSaveToStorage();
+  }
 }

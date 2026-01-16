@@ -200,7 +200,21 @@
     "nip65LoginRequired": "Login required to fetch relays",
     "nip65NotFound": "No NIP-65 relay list found",
     "nip65Success": "Fetched {{count}} relays",
-    "nip65Error": "Failed to fetch relays"
+    "nip65Error": "Failed to fetch relays",
+    "cache": "Event Cache",
+    "cacheSize": "Current Size",
+    "cacheMaxSize": "Max Size",
+    "cacheCount": "Events",
+    "cacheClear": "Clear Cache",
+    "cacheClearConfirm": "Clear the cache?",
+    "cacheSizeUnit": "MB",
+    "cacheMaxSizeOptions": {
+      "10": "10 MB",
+      "25": "25 MB",
+      "50": "50 MB",
+      "100": "100 MB",
+      "200": "200 MB"
+    }
   },
   "help": {
     "title": "How to Use",

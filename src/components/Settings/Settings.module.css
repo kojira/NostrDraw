@@ -264,6 +264,105 @@
   cursor: not-allowed;
 }
 
+/* キャッシュ設定 */
+.cacheInfo {
+  margin-bottom: var(--space-4);
+}
+
+.cacheStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.cacheStatLabel {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.cacheStatValue {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.cachePercent {
+  margin-left: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+.cacheProgressBar {
+  height: 8px;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: var(--space-2) 0 var(--space-3) 0;
+}
+
+.cacheProgressFill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+  transition: width var(--duration-normal) var(--easing-default);
+}
+
+.cacheControls {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.cacheMaxSizeControl {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cacheLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.cacheSelect {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-family: var(--font-family-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-subtle);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--easing-default);
+}
+
+.cacheSelect:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.cacheClearButton {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  font-family: var(--font-family-base);
+  color: var(--color-error);
+  background: var(--color-error-muted);
+  border: var(--border-thin) solid var(--color-error);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default);
+}
+
+.cacheClearButton:hover {
+  color: #fff;
+  background: var(--color-error);
+}
+
 /* レスポンシブ */
 @media (max-width: 640px) {
   .settingsContainer {
@@ -293,5 +392,17 @@
 
   .addRelaySection {
     flex-direction: column;
+  }
+
+  .cacheControls {
+    flex-direction: column;
+  }
+
+  .cacheMaxSizeControl {
+    width: 100%;
+  }
+
+  .cacheClearButton {
+    width: 100%;
   }
 }

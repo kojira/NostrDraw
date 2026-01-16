@@ -200,7 +200,21 @@
     "nip65LoginRequired": "リレー取得にはログインが必要です",
     "nip65NotFound": "NIP-65のリレーリストが見つかりませんでした",
     "nip65Success": "{{count}}件のリレーを取得しました",
-    "nip65Error": "リレーの取得に失敗しました"
+    "nip65Error": "リレーの取得に失敗しました",
+    "cache": "イベントキャッシュ",
+    "cacheSize": "現在のサイズ",
+    "cacheMaxSize": "最大サイズ",
+    "cacheCount": "イベント数",
+    "cacheClear": "キャッシュをクリア",
+    "cacheClearConfirm": "キャッシュをクリアしますか？",
+    "cacheSizeUnit": "MB",
+    "cacheMaxSizeOptions": {
+      "10": "10 MB",
+      "25": "25 MB",
+      "50": "50 MB",
+      "100": "100 MB",
+      "200": "200 MB"
+    }
   },
   "help": {
     "title": "使い方",

@@ -4,7 +4,7 @@ import { createRxNostr, createRxBackwardReq, createRxForwardReq, type RxNostr } 
 import { verifier } from '@rx-nostr/crypto';
 import type { Filter, Event } from 'nostr-tools';
 import { DEFAULT_RELAYS, type RelayConfig } from '../types';
-import { fetchEventsWithCache, cacheEvent, getCachedEventsByFilter } from './eventCache';
+import { fetchEventsWithCache, cacheEvent, streamEventsWithCache } from './eventCache';
 
 let rxNostr: RxNostr | null = null;
 let activeRelays: RelayConfig[] = [...DEFAULT_RELAYS];
@@ -117,50 +117,24 @@ export async function fetchEvents(filter: Filter): Promise<Event[]> {
   return fetchEventsWithCache(filter, fetchEventsFromRelay);
 }
 
-// ストリーミングでイベントを取得（キャッシュ優先）
-// キャッシュから即座に1つずつ返し、リレーからも1つずつ返す
-export function streamEvents(
+// リレーからストリーミングでイベントを取得（内部用、キャッシュなし）
+function streamEventsFromRelay(
   filter: Filter,
   onEvent: (event: Event) => void,
-  onComplete?: () => void
+  onComplete: () => void
 ): () => void {
-  const seenIds = new Set<string>();
-  let unsubscribed = false;
-  
-  console.log('[streamEvents] filter:', JSON.stringify(filter));
-  
-  // まずキャッシュから取得して即座に1つずつ返す
-  const cachedEvents = getCachedEventsByFilter(filter);
-  console.log('[streamEvents] cached events count:', cachedEvents.length);
-  for (const event of cachedEvents) {
-    if (unsubscribed) break;
-    if (!seenIds.has(event.id)) {
-      seenIds.add(event.id);
-      onEvent(event);
-    }
-  }
-  
-  // リレーから過去イベントを取得（BackwardReq使用）
   const rx = getRxNostr();
   const rxReq = createRxBackwardReq();
   
-  let relayEventCount = 0;
+  let completed = false;
+  
   const subscription = rx.use(rxReq).subscribe({
     next: (packet) => {
-      relayEventCount++;
-      if (relayEventCount <= 5) {
-        console.log('[streamEvents] relay event:', packet.event.id);
-      }
-      if (unsubscribed) return;
-      if (!seenIds.has(packet.event.id)) {
-        seenIds.add(packet.event.id);
-        cacheEvent(packet.event);
-        onEvent(packet.event);
-      }
+      onEvent(packet.event);
     },
     complete: () => {
-      console.log('[streamEvents] complete, total relay events:', relayEventCount);
-      if (onComplete && !unsubscribed) {
+      if (!completed) {
+        completed = true;
         onComplete();
       }
     },
@@ -171,18 +145,32 @@ export function streamEvents(
   
   // タイムアウト処理
   const timeout = setTimeout(() => {
-    console.log('[streamEvents] timeout, total relay events:', relayEventCount);
-    if (onComplete && !unsubscribed) {
+    if (!completed) {
+      completed = true;
       onComplete();
     }
     subscription.unsubscribe();
   }, 10000);
   
   return () => {
-    unsubscribed = true;
     clearTimeout(timeout);
     subscription.unsubscribe();
   };
+}
+
+// ストリーミングでイベントを取得（キャッシュ経由）
+// キャッシュから即座に1つずつ返し、リレーからも1つずつ返す
+export function streamEvents(
+  filter: Filter,
+  onEvent: (event: Event) => void,
+  onComplete?: () => void
+): () => void {
+  return streamEventsWithCache(
+    filter,
+    streamEventsFromRelay,
+    onEvent,
+    onComplete
+  );
 }
 
 // ストリーミングでイベントを購読（受信イベントはキャッシュに追加）
@@ -250,65 +238,67 @@ export function closePool(): void {
   }
 }
 
-// NIP-65: ユーザーのリレーリストを取得
+// NIP-65: ユーザーのリレーリストを取得（シードリレーを使用）
+// シードリレーは特殊なケースのため直接アクセスするが、キャッシュにも保存する
 export async function fetchUserRelayList(pubkey: string, language: string = 'ja'): Promise<RelayConfig[]> {
-  const rx = getRxNostr();
-  const seedRelays = getSeedRelays(language);
-  const rxReq = createRxBackwardReq();
+  const filter: Filter = {
+    kinds: [10002],
+    authors: [pubkey],
+    limit: 1,
+  };
   
-  return new Promise((resolve) => {
-    const events: Event[] = [];
+  // fetchEventsWithCacheを使用し、シードリレーからの取得関数を渡す
+  const seedRelays = getSeedRelays(language);
+  
+  const fetchFromSeedRelays = async (f: Filter): Promise<Event[]> => {
+    const rx = getRxNostr();
+    const rxReq = createRxBackwardReq();
     
-    const subscription = rx.use(rxReq, { relays: seedRelays }).subscribe({
-      next: (packet) => {
-        events.push(packet.event);
-        // キャッシュに追加
-        cacheEvent(packet.event);
-      },
-      complete: () => {
-        processEvents();
-      },
+    return new Promise((resolve) => {
+      const events: Event[] = [];
+      
+      const subscription = rx.use(rxReq, { relays: seedRelays }).subscribe({
+        next: (packet) => {
+          events.push(packet.event);
+        },
+        complete: () => {
+          resolve(events);
+        },
+      });
+      
+      rxReq.emit(f);
+      rxReq.over();
+      
+      setTimeout(() => {
+        subscription.unsubscribe();
+        resolve(events);
+      }, 5000);
     });
-    
-    rxReq.emit({
-      kinds: [10002],
-      authors: [pubkey],
-      limit: 1,
-    });
-    rxReq.over();
-    
-    const timeout = setTimeout(() => {
-      subscription.unsubscribe();
-      processEvents();
-    }, 5000);
-    
-    function processEvents() {
-      clearTimeout(timeout);
+  };
+  
+  const events = await fetchEventsWithCache(filter, fetchFromSeedRelays);
+  
+  if (events.length === 0) {
+    console.log('NIP-65 relay list not found for user');
+    return [];
+  }
+  
+  const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+  const relays: RelayConfig[] = [];
+  
+  for (const tag of latestEvent.tags) {
+    if (tag[0] === 'r' && tag[1]) {
+      const url = tag[1];
+      const marker = tag[2];
       
-      if (events.length === 0) {
-        console.log('NIP-65 relay list not found for user');
-        resolve([]);
-        return;
-      }
-      
-      const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
-      const relays: RelayConfig[] = [];
-      
-      for (const tag of latestEvent.tags) {
-        if (tag[0] === 'r' && tag[1]) {
-          const url = tag[1];
-          const marker = tag[2];
-          
-          relays.push({
-            url,
-            read: marker === undefined || marker === 'read',
-            write: marker === undefined || marker === 'write',
-          });
-        }
-      }
-      
-      console.log('Found', relays.length, 'relays from NIP-65');
-      resolve(relays);
+      relays.push({
+        url,
+        read: marker === undefined || marker === 'read',
+        write: marker === undefined || marker === 'write',
+      });
     }
-  });
+  }
+  
+  console.log('Found', relays.length, 'relays from NIP-65');
+  return relays;
 }
