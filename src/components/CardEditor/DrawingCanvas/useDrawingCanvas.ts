@@ -873,9 +873,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   }, []);
 
   // SVGを生成（レイヤー対応）
-  const generateSvg = useCallback((): string => {
-    // 表示中のレイヤーのみをSVGに変換
-    const layerElements = layers
+  // レイヤー要素をSVGに変換（共通処理）
+  const layersToSvgElements = useCallback((): string => {
+    return layers
       .filter(layer => layer.visible)
       .map(layer => {
         const pathElements = strokesToSvg(layer.strokes);
@@ -895,12 +895,24 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       })
       .filter(Boolean)
       .join('\n  ');
+  }, [layers, strokesToSvg, stampsToSvg, textBoxesToSvg]);
 
+  // 完全なSVGを生成（テンプレート含む）- プレビュー用
+  const generateSvg = useCallback((): string => {
+    const layerElements = layersToSvgElements();
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
   ${selectedTemplate.svg}
   ${layerElements}
 </svg>`;
-  }, [layers, width, height, selectedTemplate, strokesToSvg, stampsToSvg, textBoxesToSvg]);
+  }, [layersToSvgElements, width, height, selectedTemplate]);
+
+  // 差分SVGを生成（テンプレートを含まない）- 描き足し保存用
+  const generateDiffSvg = useCallback((): string => {
+    const layerElements = layersToSvgElements();
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+  ${layerElements}
+</svg>`;
+  }, [layersToSvgElements, width, height]);
 
   // テキストボックスのドラッグハンドラ（マウス・タッチ両対応）
   const handleTextBoxPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: DragMode) => {
@@ -1131,6 +1143,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     setFontCategory,
     clearCanvas,
     generateSvg,
+    generateDiffSvg,
     
     // テキストボックス操作
     addTextBox,

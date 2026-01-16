@@ -81,11 +81,13 @@ export type StampTab = 'builtin' | 'custom';
 
 // 投稿データの型
 export interface PostData {
-  svg: string;
+  svg: string;           // 完全なSVG（プレビュー・画像アップロード用）
+  diffSvg: string;       // 差分SVG（描き足し時の保存用）
   message: string;
   layers: Layer[];
   canvasSize: { width: number; height: number };
   templateId: string | null;
+  isExtend: boolean;     // 描き足しかどうか
 }
 
 export interface DrawingCanvasProps {

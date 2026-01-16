@@ -14,7 +14,7 @@ export interface NewYearCard {
   id: string;
   pubkey: string; // 送信者
   recipientPubkey: string | null; // 宛先（nullの場合はパブリック）
-  svg: string; // SVGデータ
+  svg: string; // SVGデータ（差分の場合は差分のみ、表示時に合成が必要）
   message: string;
   layoutId: LayoutType;
   createdAt: number;
@@ -23,6 +23,7 @@ export interface NewYearCard {
   parentEventId?: string | null; // 描き足し元のイベントID（直接の親）
   parentPubkey?: string | null; // 描き足し元の投稿者
   rootEventId?: string | null; // スレッドのルートイベントID（最初の親）
+  isDiff?: boolean; // 差分保存されているかどうか（trueの場合は親SVGとの合成が必要）
 }
 
 export type LayoutType = 'vertical' | 'horizontal' | 'fullscreen' | 'classic';

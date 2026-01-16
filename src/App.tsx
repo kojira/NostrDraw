@@ -258,6 +258,7 @@ function App() {
                       try {
                         const result = await sendCard({
                           svg: data.svg,
+                          diffSvg: data.diffSvg,
                           layers: data.layers,
                           canvasSize: data.canvasSize,
                           templateId: data.templateId,
@@ -273,6 +274,7 @@ function App() {
                           // 1. 親にrootEventIdがある場合、それがルート
                           // 2. 親にrootEventIdがなく、親自身がルートの場合、親のidがルート
                           rootEventId: extendingCard?.rootEventId || extendingCard?.id || null,
+                          isExtend: data.isExtend, // 描き足しかどうか
                           // 画像アップロード失敗時の確認コールバック
                           onImageUploadFailed: async (error) => {
                             return window.confirm(

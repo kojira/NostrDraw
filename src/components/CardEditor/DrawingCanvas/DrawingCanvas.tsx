@@ -60,6 +60,7 @@ export function DrawingCanvas({
     setFontCategory,
     clearCanvas,
     generateSvg,
+    generateDiffSvg,
     addTextBox,
     removeTextBox,
     selectTextBox,
@@ -135,15 +136,19 @@ export function DrawingCanvas({
   const handlePost = useCallback(async () => {
     if (onPost) {
       const svg = generateSvg();
+      const diffSvg = generateDiffSvg();
+      const isExtend = !!baseImageSvg; // 描き足し元がある場合はtrue
       await onPost({
         svg,
+        diffSvg,
         message,
         layers,
         canvasSize,
         templateId: selectedTemplate?.id || null,
+        isExtend,
       });
     }
-  }, [generateSvg, onPost, message, layers, canvasSize, selectedTemplate]);
+  }, [generateSvg, generateDiffSvg, onPost, message, layers, canvasSize, selectedTemplate, baseImageSvg]);
 
   return (
     <div className={styles.drawingCanvas}>

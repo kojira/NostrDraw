@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants } from '../../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -244,8 +244,18 @@ export function CardFlip({
           const parentCard = await fetchCardById(card.parentEventId);
           
           if (parentCard?.svg) {
+            // card.isDiffがtrueの場合、card.svgは差分のみなので親と合成が必要
+            let fullSvg: string;
+            if (card.isDiff) {
+              // 差分保存の場合：親SVGと差分を合成
+              fullSvg = mergeSvgWithDiff(parentCard.svg, card.svg);
+            } else {
+              // 従来形式（完全SVG保存）の場合
+              fullSvg = card.svg;
+            }
+            
             // 差分検出してアニメーションクラスを追加
-            const svgWithAnimation = addAnimationToNewElements(card.svg, parentCard.svg);
+            const svgWithAnimation = addAnimationToNewElements(fullSvg, parentCard.svg);
             // アニメーションスタイルを注入
             const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
             setAnimatedSvg(finalSvg);
@@ -273,7 +283,7 @@ export function CardFlip({
     };
     
     loadAndAnimate();
-  }, [card.parentEventId, card.svg]);
+  }, [card.parentEventId, card.svg, card.isDiff]);
 
   const handleFlip = () => {
     // 宛先がない場合はフリップしない（常に裏面表示）
