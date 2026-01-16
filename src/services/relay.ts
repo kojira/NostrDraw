@@ -151,4 +151,3 @@ export async function fetchUserRelayList(pubkey: string, language: string = 'ja'
     return [];
   }
 }
-

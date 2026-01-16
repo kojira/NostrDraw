@@ -9,6 +9,8 @@ import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetch
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
+import { fetchEvents } from '../../../services/relay';
+import { NOSTRDRAW_KIND } from '../../../types';
 import styles from './CardFlip.module.css';
 
 interface CardFlipProps {
@@ -59,6 +61,42 @@ export function CardFlip({
   
   // シェアボタン用の状態
   const [isCopied, setIsCopied] = useState(false);
+
+  // イベントJSON表示用の状態
+  const [showEventJson, setShowEventJson] = useState(false);
+  const [eventJson, setEventJson] = useState<Event | null>(null);
+  const [isLoadingEvent, setIsLoadingEvent] = useState(false);
+  const [eventSize, setEventSize] = useState<number | null>(null);
+
+  // イベントJSONを取得
+  const loadEventJson = useCallback(async () => {
+    if (eventJson) {
+      setShowEventJson(true);
+      return;
+    }
+    
+    setIsLoadingEvent(true);
+    try {
+      const events = await fetchEvents({
+        ids: [card.id],
+        kinds: [NOSTRDRAW_KIND],
+      });
+      
+      if (events.length > 0) {
+        const event = events[0];
+        setEventJson(event);
+        // イベントサイズを計算（JSON文字列のバイト数）
+        const jsonString = JSON.stringify(event);
+        const sizeInBytes = new TextEncoder().encode(jsonString).length;
+        setEventSize(sizeInBytes);
+        setShowEventJson(true);
+      }
+    } catch (error) {
+      console.error('Failed to load event JSON:', error);
+    } finally {
+      setIsLoadingEvent(false);
+    }
+  }, [card.id, eventJson]);
 
   // 初期ローディング状態（アニメーションSVGが準備できるまで表示）
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -443,6 +481,25 @@ export function CardFlip({
           )}
         </button>
         
+        {/* イベントJSON表示ボタン */}
+        <button
+          className={styles.eventJsonButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            loadEventJson();
+          }}
+          title="イベントJSONを表示"
+          disabled={isLoadingEvent}
+        >
+          {isLoadingEvent ? (
+            <Spinner size="sm" />
+          ) : (
+            <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h400L520-400 400-280l-80-80-40 40v120Zm-80 80v-560 560Z"/>
+            </svg>
+          )}
+        </button>
+        
         {/* 描き足しボタン（許可されている場合のみ表示） */}
         {card.allowExtend && onExtend && userPubkey && signEvent && (
           <button
@@ -624,6 +681,60 @@ export function CardFlip({
       {card.parentEventId && !onNavigateToCard && (
         <div className={styles.parentInfo}>
           <span>{t('extend.label')}</span>
+        </div>
+      )}
+
+      {/* イベントJSONモーダル */}
+      {showEventJson && (
+        <div className={styles.eventJsonModal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.eventJsonHeader}>
+            <h3>イベントJSON</h3>
+            {eventSize !== null && (
+              <span className={styles.eventSize}>
+                サイズ: {(eventSize / 1024).toFixed(2)} KB ({eventSize.toLocaleString()} bytes)
+              </span>
+            )}
+            <button
+              className={styles.closeButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEventJson(false);
+              }}
+              title="閉じる"
+            >
+              <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor">
+                <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+              </svg>
+            </button>
+          </div>
+          <div className={styles.eventJsonContent}>
+            {eventJson ? (
+              <pre className={styles.eventJson}>
+                {JSON.stringify(eventJson, null, 2)}
+              </pre>
+            ) : (
+              <div className={styles.loadingContainer}>
+                <Spinner size="md" />
+                <span>読み込み中...</span>
+              </div>
+            )}
+          </div>
+          {eventJson && (
+            <div className={styles.eventJsonActions}>
+              <button
+                className={styles.copyButton}
+                onClick={async () => {
+                  if (eventJson) {
+                    await navigator.clipboard.writeText(JSON.stringify(eventJson, null, 2));
+                    setIsCopied(true);
+                    setTimeout(() => setIsCopied(false), 2000);
+                  }
+                }}
+              >
+                {isCopied ? 'コピーしました' : 'JSONをコピー'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>,

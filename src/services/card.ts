@@ -110,12 +110,12 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
 
     const dTag = tags.get('d') || '';
     const year = parseInt(dTag.split('-')[0]) || new Date().getFullYear();
-    const allowExtend = tags.get('allow_extend') === 'true';
 
-    // contentからSVGとメッセージを取得
+    // contentからSVG、メッセージ、レイアウト、描き足し許可を取得
     let message = '';
     let svg = '';
     let layoutId: LayoutType = 'vertical';
+    let allowExtend = false;
 
     try {
       const parsed = JSON.parse(event.content);
@@ -134,14 +134,16 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
       }
       
       layoutId = parsed.layoutId || 'vertical';
+      allowExtend = parsed.allowExtend === true;
     } catch {
       // JSONパース失敗
     }
 
-    // タグからフォールバック（後方互換性）
+    // タグからフォールバック（後方互換性：既存のイベントに対応）
     if (!message) message = tags.get('message') || '';
     if (!svg) svg = tags.get('svg') || '';
     if (!layoutId) layoutId = (tags.get('layout') as LayoutType) || 'vertical';
+    if (!allowExtend) allowExtend = tags.get('allow_extend') === 'true';
 
     return {
       id: event.id,
@@ -504,24 +506,15 @@ export async function sendCard(
     ? `${year}-${params.recipientPubkey}` 
     : `${year}-public-${timestamp}`;
 
-  // タグを構築
+  // タグを構築（検索・フィルタリングに必要な情報のみ）
   const tags: string[][] = [
     ['d', dTag],
     ['client', NOSTRDRAW_CLIENT_TAG], // アプリ識別タグ
-    ['v', NOSTRDRAW_VERSION], // バージョンタグ
-    ['message', params.message],
-    ['layout', params.layoutId],
-    ['year', year.toString()],
   ];
   
   // 宛先がある場合のみpタグを追加
   if (params.recipientPubkey) {
     tags.push(['p', params.recipientPubkey]);
-  }
-
-  // 描き足し許可
-  if (params.allowExtend) {
-    tags.push(['allow_extend', 'true']);
   }
 
   // 描き足し元の参照（NIP-10スレッド形式）
@@ -734,4 +727,3 @@ export async function fetchDescendants(cardId: string): Promise<NewYearCard[]> {
   
   return allDescendants;
 }
-
