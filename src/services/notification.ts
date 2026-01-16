@@ -28,51 +28,48 @@ async function fetchReactionNotifications(
 ): Promise<Notification[]> {
   if (myCardIds.length === 0) return [];
 
-  const notifications: Notification[] = [];
+  const myCardIdSet = new Set(myCardIds);
   
-  // 大量のeventIdがある場合は分割して取得
-  const batchSize = 20;
-  for (let i = 0; i < myCardIds.length; i += batchSize) {
-    const batch = myCardIds.slice(i, i + batchSize);
+  try {
+    const filter: Filter = {
+      kinds: [7], // リアクション
+      '#e': myCardIds, // 全てのカードIDを一度に指定
+      limit: 500,
+    };
+    if (since) {
+      filter.since = since;
+    }
     
-    try {
-      const filter: Filter = {
-        kinds: [7], // リアクション
-        '#e': batch,
-        limit: 100,
-      };
-      if (since) {
-        filter.since = since;
-      }
-      
-      const reactions = await fetchEvents(filter);
+    const reactions = await fetchEvents(filter);
+    const notifications: Notification[] = [];
 
-      for (const reaction of reactions) {
-        // 自分自身のリアクションは除外
-        if (reaction.pubkey === myPubkey) continue;
-        
-        const eTags = reaction.tags.filter(tag => tag[0] === 'e');
-        // NIP-25: 最後のeタグがリアクション対象
-        if (eTags.length > 0) {
-          const lastETag = eTags[eTags.length - 1];
-          const eventId = lastETag[1];
-          if (eventId && batch.includes(eventId)) {
-            notifications.push({
-              id: reaction.id,
-              type: 'reaction',
-              createdAt: reaction.created_at,
-              fromPubkey: reaction.pubkey,
-              targetCardId: eventId,
-            });
-          }
+    for (const reaction of reactions) {
+      // 自分自身のリアクションは除外
+      if (reaction.pubkey === myPubkey) continue;
+      
+      const eTags = reaction.tags.filter(tag => tag[0] === 'e');
+      // NIP-25: 最後のeタグがリアクション対象
+      if (eTags.length > 0) {
+        const lastETag = eTags[eTags.length - 1];
+        const eventId = lastETag[1];
+        // 最後のeタグが自分のカードIDかチェック
+        if (eventId && myCardIdSet.has(eventId)) {
+          notifications.push({
+            id: reaction.id,
+            type: 'reaction',
+            createdAt: reaction.created_at,
+            fromPubkey: reaction.pubkey,
+            targetCardId: eventId,
+          });
         }
       }
-    } catch (error) {
-      console.error('リアクション通知取得エラー:', error);
     }
-  }
 
-  return notifications;
+    return notifications;
+  } catch (error) {
+    console.error('リアクション通知取得エラー:', error);
+    return [];
+  }
 }
 
 // 自分のカードに対する描き足し通知を取得
@@ -83,50 +80,46 @@ async function fetchExtendNotifications(
 ): Promise<Notification[]> {
   if (myCardIds.length === 0) return [];
 
-  const notifications: Notification[] = [];
+  const myCardIdSet = new Set(myCardIds);
   
-  // 大量のeventIdがある場合は分割して取得
-  const batchSize = 20;
-  for (let i = 0; i < myCardIds.length; i += batchSize) {
-    const batch = myCardIds.slice(i, i + batchSize);
-    
-    try {
-      const filter: Filter = {
-        kinds: [NOSTRDRAW_KIND],
-        '#e': batch,
-        limit: 100,
-      };
-      if (since) {
-        filter.since = since;
-      }
-      
-      const events = await fetchEvents(filter);
-
-      for (const event of events) {
-        // 自分自身の描き足しは除外
-        if (event.pubkey === myPubkey) continue;
-        
-        const card = parseNostrDrawPost(event);
-        if (!card) continue;
-        
-        // parentEventIdが自分のカードIDかチェック
-        if (card.parentEventId && batch.includes(card.parentEventId)) {
-          notifications.push({
-            id: event.id,
-            type: 'extend',
-            createdAt: event.created_at,
-            fromPubkey: event.pubkey,
-            targetCardId: card.parentEventId,
-            extendCard: card,
-          });
-        }
-      }
-    } catch (error) {
-      console.error('描き足し通知取得エラー:', error);
+  try {
+    const filter: Filter = {
+      kinds: [NOSTRDRAW_KIND],
+      '#e': myCardIds, // 全てのカードIDを一度に指定
+      limit: 500,
+    };
+    if (since) {
+      filter.since = since;
     }
-  }
+    
+    const events = await fetchEvents(filter);
+    const notifications: Notification[] = [];
 
-  return notifications;
+    for (const event of events) {
+      // 自分自身の描き足しは除外
+      if (event.pubkey === myPubkey) continue;
+      
+      const card = parseNostrDrawPost(event);
+      if (!card) continue;
+      
+      // parentEventIdが自分のカードIDかチェック
+      if (card.parentEventId && myCardIdSet.has(card.parentEventId)) {
+        notifications.push({
+          id: event.id,
+          type: 'extend',
+          createdAt: event.created_at,
+          fromPubkey: event.pubkey,
+          targetCardId: card.parentEventId,
+          extendCard: card,
+        });
+      }
+    }
+
+    return notifications;
+  } catch (error) {
+    console.error('描き足し通知取得エラー:', error);
+    return [];
+  }
 }
 
 // 自分が投稿したカードのIDリストを取得
