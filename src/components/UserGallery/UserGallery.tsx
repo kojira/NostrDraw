@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import { fetchProfile, npubToPubkey, pubkeyToNpub } from '../../services/profile';
+import { refreshProfile, npubToPubkey, pubkeyToNpub } from '../../services/profile';
 import { Gallery } from '../Gallery/Gallery';
 import styles from './UserGallery.module.css';
 
@@ -60,10 +60,10 @@ export function UserGallery({
     }
   }, [fullNpub]);
 
-  // プロフィールを取得
+  // プロフィールを取得（プロフィールページでは常に最新を取得）
   useEffect(() => {
     if (pubkey) {
-      fetchProfile(pubkey).then((p) => {
+      refreshProfile(pubkey).then((p) => {
         if (p) setProfile(p);
       });
     }
