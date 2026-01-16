@@ -59,6 +59,10 @@ export function CardFlip({
   const [treeProfiles, setTreeProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [treeReactions, setTreeReactions] = useState<Map<string, number>>(new Map());
   
+  // ツリーカード用の完全なSVG（差分マージ済み）
+  const [treeMergedSvgs, setTreeMergedSvgs] = useState<Map<string, string>>(new Map());
+  const fetchingTreeSvgsRef = useRef<Set<string>>(new Set());
+  
   // シェアボタン用の状態
   const [isCopied, setIsCopied] = useState(false);
 
@@ -226,6 +230,27 @@ export function CardFlip({
     
     loadTreeDetails();
   }, [ancestors, descendants]);
+
+  // ツリーカードの完全なSVGを取得（差分マージ）
+  useEffect(() => {
+    const allTreeCards = [...ancestors, ...descendants];
+    
+    allTreeCards.forEach(async (treeCard) => {
+      // isDiffでない、または親がない場合はスキップ
+      if (!treeCard.isDiff || !treeCard.parentEventId) return;
+      // 既に取得中または取得済みならスキップ
+      if (fetchingTreeSvgsRef.current.has(treeCard.id) || treeMergedSvgs.has(treeCard.id)) return;
+      
+      fetchingTreeSvgsRef.current.add(treeCard.id);
+      
+      try {
+        const fullSvg = await getCardFullSvg(treeCard);
+        setTreeMergedSvgs(prev => new Map(prev).set(treeCard.id, fullSvg));
+      } catch (error) {
+        console.error('Failed to get tree card full SVG:', error);
+      }
+    });
+  }, [ancestors, descendants, treeMergedSvgs]);
 
   // SVGにストロークアニメーションを適用
   // 描き足しの場合は差分のみ、通常の場合は全てのストロークにアニメーション
@@ -596,6 +621,10 @@ export function CardFlip({
           {ancestors.map((ancestor, index) => {
             const profile = treeProfiles.get(ancestor.pubkey);
             const reactions = treeReactions.get(ancestor.id) || 0;
+            // isDiffの場合はマージ済みSVGを使用
+            const displaySvg = ancestor.isDiff && ancestor.parentEventId
+              ? treeMergedSvgs.get(ancestor.id) || null
+              : ancestor.svg;
             return (
               <div key={ancestor.id} className={styles.treeRow}>
                 <div 
@@ -610,12 +639,14 @@ export function CardFlip({
                   }}
                 >
                   <div className={styles.cardPreview}>
-                    {ancestor.svg && (
+                    {displaySvg ? (
                       <div 
                         className={styles.miniSvg}
-                        dangerouslySetInnerHTML={{ __html: ancestor.svg }}
+                        dangerouslySetInnerHTML={{ __html: displaySvg }}
                       />
-                    )}
+                    ) : ancestor.isDiff ? (
+                      <Spinner size="sm" />
+                    ) : null}
                   </div>
                   <div className={styles.cardInfo}>
                     <div className={styles.cardAuthor}>
@@ -648,12 +679,17 @@ export function CardFlip({
             />
             <div className={styles.currentCard}>
               <div className={styles.cardPreview}>
-                {card.svg && (
+                {animatedSvg ? (
+                  <div 
+                    className={styles.miniSvg}
+                    dangerouslySetInnerHTML={{ __html: animatedSvg }}
+                  />
+                ) : card.svg ? (
                   <div 
                     className={styles.miniSvg}
                     dangerouslySetInnerHTML={{ __html: card.svg }}
                   />
-                )}
+                ) : null}
               </div>
               <div className={styles.cardInfo}>
                 <div className={styles.cardAuthor}>
@@ -680,6 +716,10 @@ export function CardFlip({
           {descendants.map((descendant) => {
             const profile = treeProfiles.get(descendant.pubkey);
             const reactions = treeReactions.get(descendant.id) || 0;
+            // isDiffの場合はマージ済みSVGを使用
+            const displaySvg = descendant.isDiff && descendant.parentEventId
+              ? treeMergedSvgs.get(descendant.id) || null
+              : descendant.svg;
             return (
               <div key={descendant.id} className={styles.treeRow}>
                 <div 
@@ -694,12 +734,14 @@ export function CardFlip({
                   }}
                 >
                   <div className={styles.cardPreview}>
-                    {descendant.svg && (
+                    {displaySvg ? (
                       <div 
                         className={styles.miniSvg}
-                        dangerouslySetInnerHTML={{ __html: descendant.svg }}
+                        dangerouslySetInnerHTML={{ __html: displaySvg }}
                       />
-                    )}
+                    ) : descendant.isDiff ? (
+                      <Spinner size="sm" />
+                    ) : null}
                   </div>
                   <div className={styles.cardInfo}>
                     <div className={styles.cardAuthor}>

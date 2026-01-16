@@ -9,6 +9,10 @@
   max-width: 100%;
   width: 100%;
   overflow: hidden;
+  /* 描画中の文字選択を防止 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 @media (max-width: 480px) {
@@ -469,6 +473,10 @@
   box-sizing: border-box;
   position: relative;
   touch-action: pan-x pan-y;
+  /* 描画中の文字選択を防止 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .zoomResetButton {
@@ -529,6 +537,9 @@
   touch-action: none;
   display: block;
   background: transparent; /* キャンバス背景を透明に */
+  /* 描画中の文字選択を防止 */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 @media (max-width: 480px) {
