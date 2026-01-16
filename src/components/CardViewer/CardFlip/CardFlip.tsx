@@ -379,11 +379,13 @@ export const CardFlip = memo(function CardFlip({
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
-    const dateStr = date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    const dateStr = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
     const timeStr = date.toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit',

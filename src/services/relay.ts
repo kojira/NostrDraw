@@ -4,6 +4,7 @@ import { createRxNostr, createRxBackwardReq, createRxForwardReq, type RxNostr } 
 import { verifier } from '@rx-nostr/crypto';
 import type { Filter, Event } from 'nostr-tools';
 import { DEFAULT_RELAYS, type RelayConfig } from '../types';
+import { fetchEventsWithCache, cacheEvent, getCachedEventsByFilter } from './eventCache';
 
 let rxNostr: RxNostr | null = null;
 let activeRelays: RelayConfig[] = [...DEFAULT_RELAYS];
@@ -81,20 +82,23 @@ export function removeRelay(url: string): void {
   updateDefaultRelays();
 }
 
-// イベントを取得（過去のイベント向け）
-export async function fetchEvents(filter: Filter): Promise<Event[]> {
+// リレーから直接イベントを取得（キャッシュなし、内部用）
+async function fetchEventsFromRelay(filter: Filter): Promise<Event[]> {
   const rx = getRxNostr();
   const rxReq = createRxBackwardReq();
   
   return new Promise((resolve) => {
-    const events: Event[] = [];
+    const eventMap = new Map<string, Event>(); // IDで重複排除
     
     const subscription = rx.use(rxReq).subscribe({
       next: (packet) => {
-        events.push(packet.event);
+        // 複数リレーから同じイベントが来ても1つだけ保持
+        if (!eventMap.has(packet.event.id)) {
+          eventMap.set(packet.event.id, packet.event);
+        }
       },
       complete: () => {
-        resolve(events);
+        resolve(Array.from(eventMap.values()));
       },
     });
     
@@ -103,12 +107,85 @@ export async function fetchEvents(filter: Filter): Promise<Event[]> {
     
     setTimeout(() => {
       subscription.unsubscribe();
-      resolve(events);
+      resolve(Array.from(eventMap.values()));
     }, 10000);
   });
 }
 
-// ストリーミングでイベントを購読
+// イベントを取得（キャッシュ経由）
+export async function fetchEvents(filter: Filter): Promise<Event[]> {
+  return fetchEventsWithCache(filter, fetchEventsFromRelay);
+}
+
+// ストリーミングでイベントを取得（キャッシュ優先）
+// キャッシュから即座に1つずつ返し、リレーからも1つずつ返す
+export function streamEvents(
+  filter: Filter,
+  onEvent: (event: Event) => void,
+  onComplete?: () => void
+): () => void {
+  const seenIds = new Set<string>();
+  let unsubscribed = false;
+  
+  console.log('[streamEvents] filter:', JSON.stringify(filter));
+  
+  // まずキャッシュから取得して即座に1つずつ返す
+  const cachedEvents = getCachedEventsByFilter(filter);
+  console.log('[streamEvents] cached events count:', cachedEvents.length);
+  for (const event of cachedEvents) {
+    if (unsubscribed) break;
+    if (!seenIds.has(event.id)) {
+      seenIds.add(event.id);
+      onEvent(event);
+    }
+  }
+  
+  // リレーから過去イベントを取得（BackwardReq使用）
+  const rx = getRxNostr();
+  const rxReq = createRxBackwardReq();
+  
+  let relayEventCount = 0;
+  const subscription = rx.use(rxReq).subscribe({
+    next: (packet) => {
+      relayEventCount++;
+      if (relayEventCount <= 5) {
+        console.log('[streamEvents] relay event:', packet.event.id);
+      }
+      if (unsubscribed) return;
+      if (!seenIds.has(packet.event.id)) {
+        seenIds.add(packet.event.id);
+        cacheEvent(packet.event);
+        onEvent(packet.event);
+      }
+    },
+    complete: () => {
+      console.log('[streamEvents] complete, total relay events:', relayEventCount);
+      if (onComplete && !unsubscribed) {
+        onComplete();
+      }
+    },
+  });
+  
+  rxReq.emit(filter);
+  rxReq.over();
+  
+  // タイムアウト処理
+  const timeout = setTimeout(() => {
+    console.log('[streamEvents] timeout, total relay events:', relayEventCount);
+    if (onComplete && !unsubscribed) {
+      onComplete();
+    }
+    subscription.unsubscribe();
+  }, 10000);
+  
+  return () => {
+    unsubscribed = true;
+    clearTimeout(timeout);
+    subscription.unsubscribe();
+  };
+}
+
+// ストリーミングでイベントを購読（受信イベントはキャッシュに追加）
 export function subscribeToEvents(
   filter: Filter,
   onEvent: (event: Event) => void,
@@ -119,6 +196,8 @@ export function subscribeToEvents(
   
   const subscription = rx.use(rxReq).subscribe({
     next: (packet) => {
+      // キャッシュに追加
+      cacheEvent(packet.event);
       onEvent(packet.event);
     },
   });
@@ -183,6 +262,8 @@ export async function fetchUserRelayList(pubkey: string, language: string = 'ja'
     const subscription = rx.use(rxReq, { relays: seedRelays }).subscribe({
       next: (packet) => {
         events.push(packet.event);
+        // キャッシュに追加
+        cacheEvent(packet.event);
       },
       complete: () => {
         processEvents();

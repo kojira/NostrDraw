@@ -1,18 +1,93 @@
 // イベントキャッシュサービス
-// 利用側から透過的に使用できるNostrイベントのキャッシュ機構
+// 全てのリレーリクエストで透過的に使用されるNostrイベントのキャッシュ機構
 
-import type { Event } from 'nostr-tools';
-import { fetchEvents } from './relay';
+import type { Event, Filter } from 'nostr-tools';
 
 // キャッシュ設定
 const STORAGE_KEY = 'nostrdraw-event-cache';
-const MAX_CACHE_SIZE = 500; // 最大キャッシュ数
+const MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
 // メモリキャッシュ
-const memoryCache = new Map<string, Event>();
+const eventCache = new Map<string, Event>();
 
-// 重複リクエスト防止用
-const pendingRequests = new Map<string, Promise<Event | null>>();
+// タグインデックス: tagKey -> Set<eventId>
+// tagKeyの形式: "e:eventId" または "p:pubkey" など
+const tagIndex = new Map<string, Set<string>>();
+
+// kindインデックス: kind -> Set<eventId>
+const kindIndex = new Map<number, Set<string>>();
+
+// authorインデックス: pubkey -> Set<eventId>
+const authorIndex = new Map<string, Set<string>>();
+
+// 現在のキャッシュサイズ（バイト）
+let currentCacheSize = 0;
+
+// イベントのサイズを計算
+function getEventSize(event: Event): number {
+  return JSON.stringify(event).length * 2; // UTF-16を考慮
+}
+
+// インデックスにイベントを追加
+function addToIndex(event: Event): void {
+  // kindインデックス
+  if (!kindIndex.has(event.kind)) {
+    kindIndex.set(event.kind, new Set());
+  }
+  kindIndex.get(event.kind)!.add(event.id);
+  
+  // authorインデックス
+  if (!authorIndex.has(event.pubkey)) {
+    authorIndex.set(event.pubkey, new Set());
+  }
+  authorIndex.get(event.pubkey)!.add(event.id);
+  
+  // タグインデックス
+  for (const tag of event.tags) {
+    if (tag.length >= 2) {
+      const tagKey = `${tag[0]}:${tag[1]}`;
+      if (!tagIndex.has(tagKey)) {
+        tagIndex.set(tagKey, new Set());
+      }
+      tagIndex.get(tagKey)!.add(event.id);
+    }
+  }
+}
+
+// インデックスからイベントを削除
+function removeFromIndex(event: Event): void {
+  // kindインデックス
+  kindIndex.get(event.kind)?.delete(event.id);
+  
+  // authorインデックス
+  authorIndex.get(event.pubkey)?.delete(event.id);
+  
+  // タグインデックス
+  for (const tag of event.tags) {
+    if (tag.length >= 2) {
+      const tagKey = `${tag[0]}:${tag[1]}`;
+      tagIndex.get(tagKey)?.delete(event.id);
+    }
+  }
+}
+
+// LRU削除（古いイベントから削除）
+function evictOldEvents(requiredSpace: number): void {
+  // created_atでソートして古い順に削除
+  const sortedEvents = Array.from(eventCache.values())
+    .sort((a, b) => a.created_at - b.created_at);
+  
+  let freedSpace = 0;
+  for (const event of sortedEvents) {
+    if (freedSpace >= requiredSpace) break;
+    
+    const size = getEventSize(event);
+    removeFromIndex(event);
+    eventCache.delete(event.id);
+    currentCacheSize -= size;
+    freedSpace += size;
+  }
+}
 
 // ローカルストレージからキャッシュを読み込み
 function loadCacheFromStorage(): void {
@@ -20,9 +95,14 @@ function loadCacheFromStorage(): void {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
     
-    const entries: [string, Event][] = JSON.parse(saved);
-    for (const [id, event] of entries) {
-      memoryCache.set(id, event);
+    const events: Event[] = JSON.parse(saved);
+    for (const event of events) {
+      const size = getEventSize(event);
+      if (currentCacheSize + size <= MAX_CACHE_SIZE_BYTES) {
+        eventCache.set(event.id, event);
+        addToIndex(event);
+        currentCacheSize += size;
+      }
     }
   } catch {
     // エラーを無視
@@ -32,17 +112,13 @@ function loadCacheFromStorage(): void {
 // ローカルストレージにキャッシュを保存
 function saveCacheToStorage(): void {
   try {
-    // サイズ制限
-    const entries = Array.from(memoryCache.entries());
-    if (entries.length > MAX_CACHE_SIZE) {
-      // 古いエントリを削除（挿入順）
-      const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE);
-      for (const [id] of toRemove) {
-        memoryCache.delete(id);
-      }
-    }
+    const events = Array.from(eventCache.values());
+    const json = JSON.stringify(events);
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(memoryCache.entries())));
+    // ローカルストレージの制限（通常5MB）を考慮
+    if (json.length < 4 * 1024 * 1024) {
+      localStorage.setItem(STORAGE_KEY, json);
+    }
   } catch {
     // ストレージ容量オーバーなどのエラーを無視
   }
@@ -52,95 +128,21 @@ function saveCacheToStorage(): void {
 loadCacheFromStorage();
 
 /**
- * イベントIDでイベントを取得（キャッシュ付き）
- * 利用側から透過的に使用可能
- */
-export async function fetchEventById(eventId: string, kinds?: number[]): Promise<Event | null> {
-  // メモリキャッシュをチェック
-  const cached = memoryCache.get(eventId);
-  if (cached) {
-    return cached;
-  }
-  
-  // 重複リクエストをチェック
-  const pending = pendingRequests.get(eventId);
-  if (pending) {
-    return pending;
-  }
-  
-  // リレーから取得
-  const promise = (async (): Promise<Event | null> => {
-    try {
-      const filter: { ids: string[]; kinds?: number[] } = { ids: [eventId] };
-      if (kinds) {
-        filter.kinds = kinds;
-      }
-      
-      const events = await fetchEvents(filter);
-      
-      if (events.length > 0) {
-        const event = events[0];
-        // キャッシュに追加
-        memoryCache.set(eventId, event);
-        saveCacheToStorage();
-        return event;
-      }
-      
-      return null;
-    } finally {
-      pendingRequests.delete(eventId);
-    }
-  })();
-  
-  pendingRequests.set(eventId, promise);
-  return promise;
-}
-
-/**
- * 複数のイベントIDでイベントを取得（キャッシュ付き）
- * キャッシュにないものだけリレーに問い合わせ
- */
-export async function fetchEventsByIds(eventIds: string[], kinds?: number[]): Promise<Event[]> {
-  const results: Event[] = [];
-  const uncachedIds: string[] = [];
-  
-  // キャッシュからチェック
-  for (const id of eventIds) {
-    const cached = memoryCache.get(id);
-    if (cached) {
-      results.push(cached);
-    } else {
-      uncachedIds.push(id);
-    }
-  }
-  
-  // キャッシュにないものをリレーから取得
-  if (uncachedIds.length > 0) {
-    const filter: { ids: string[]; kinds?: number[] } = { ids: uncachedIds };
-    if (kinds) {
-      filter.kinds = kinds;
-    }
-    
-    const events = await fetchEvents(filter);
-    
-    // キャッシュに追加
-    for (const event of events) {
-      memoryCache.set(event.id, event);
-      results.push(event);
-    }
-    
-    saveCacheToStorage();
-  }
-  
-  return results;
-}
-
-/**
- * イベントをキャッシュに追加（新規投稿時など）
+ * イベントをキャッシュに追加
  */
 export function cacheEvent(event: Event): void {
-  memoryCache.set(event.id, event);
-  saveCacheToStorage();
+  if (eventCache.has(event.id)) return;
+  
+  const size = getEventSize(event);
+  
+  // サイズ制限チェック
+  if (currentCacheSize + size > MAX_CACHE_SIZE_BYTES) {
+    evictOldEvents(size);
+  }
+  
+  eventCache.set(event.id, event);
+  addToIndex(event);
+  currentCacheSize += size;
 }
 
 /**
@@ -148,23 +150,194 @@ export function cacheEvent(event: Event): void {
  */
 export function cacheEvents(events: Event[]): void {
   for (const event of events) {
-    memoryCache.set(event.id, event);
+    cacheEvent(event);
   }
   saveCacheToStorage();
 }
 
 /**
- * キャッシュからイベントを取得（同期的、キャッシュヒットのみ）
+ * キャッシュからイベントを取得（同期的）
  */
 export function getCachedEvent(eventId: string): Event | null {
-  return memoryCache.get(eventId) || null;
+  return eventCache.get(eventId) || null;
+}
+
+/**
+ * フィルタに合致するイベントをキャッシュから取得
+ * @returns マッチしたイベント（created_at降順）
+ */
+export function getCachedEventsByFilter(filter: Filter): Event[] {
+  let candidateIds: Set<string> | null = null;
+  
+  // idsフィルタ
+  if (filter.ids && filter.ids.length > 0) {
+    candidateIds = new Set(filter.ids.filter(id => eventCache.has(id)));
+  }
+  
+  // kindsフィルタ
+  if (filter.kinds && filter.kinds.length > 0) {
+    const kindMatches = new Set<string>();
+    for (const kind of filter.kinds) {
+      const ids = kindIndex.get(kind);
+      if (ids) {
+        for (const id of ids) {
+          kindMatches.add(id);
+        }
+      }
+    }
+    candidateIds = candidateIds 
+      ? new Set([...candidateIds].filter(id => kindMatches.has(id)))
+      : kindMatches;
+  }
+  
+  // authorsフィルタ
+  if (filter.authors && filter.authors.length > 0) {
+    const authorMatches = new Set<string>();
+    for (const author of filter.authors) {
+      const ids = authorIndex.get(author);
+      if (ids) {
+        for (const id of ids) {
+          authorMatches.add(id);
+        }
+      }
+    }
+    candidateIds = candidateIds
+      ? new Set([...candidateIds].filter(id => authorMatches.has(id)))
+      : authorMatches;
+  }
+  
+  // #eタグフィルタ
+  if (filter['#e'] && filter['#e'].length > 0) {
+    const tagMatches = new Set<string>();
+    for (const value of filter['#e']) {
+      const ids = tagIndex.get(`e:${value}`);
+      if (ids) {
+        for (const id of ids) {
+          tagMatches.add(id);
+        }
+      }
+    }
+    candidateIds = candidateIds
+      ? new Set([...candidateIds].filter(id => tagMatches.has(id)))
+      : tagMatches;
+  }
+  
+  // #pタグフィルタ
+  if (filter['#p'] && filter['#p'].length > 0) {
+    const tagMatches = new Set<string>();
+    for (const value of filter['#p']) {
+      const ids = tagIndex.get(`p:${value}`);
+      if (ids) {
+        for (const id of ids) {
+          tagMatches.add(id);
+        }
+      }
+    }
+    candidateIds = candidateIds
+      ? new Set([...candidateIds].filter(id => tagMatches.has(id)))
+      : tagMatches;
+  }
+  
+  // #dタグフィルタ
+  if (filter['#d'] && filter['#d'].length > 0) {
+    const tagMatches = new Set<string>();
+    for (const value of filter['#d']) {
+      const ids = tagIndex.get(`d:${value}`);
+      if (ids) {
+        for (const id of ids) {
+          tagMatches.add(id);
+        }
+      }
+    }
+    candidateIds = candidateIds
+      ? new Set([...candidateIds].filter(id => tagMatches.has(id)))
+      : tagMatches;
+  }
+  
+  // 候補がない場合は全イベントを対象
+  if (candidateIds === null) {
+    candidateIds = new Set(eventCache.keys());
+  }
+  
+  // イベントを取得してフィルタリング
+  const results: Event[] = [];
+  for (const id of candidateIds) {
+    const event = eventCache.get(id);
+    if (!event) continue;
+    
+    // sinceフィルタ
+    if (filter.since && event.created_at < filter.since) continue;
+    
+    // untilフィルタ
+    if (filter.until && event.created_at > filter.until) continue;
+    
+    results.push(event);
+  }
+  
+  // created_at降順でソート
+  results.sort((a, b) => b.created_at - a.created_at);
+  
+  // limitを適用
+  if (filter.limit && results.length > filter.limit) {
+    return results.slice(0, filter.limit);
+  }
+  
+  return results;
+}
+
+/**
+ * フィルタでイベントを取得（従来のPromiseベースAPI、後方互換性のため）
+ */
+export async function fetchEventsWithCache(
+  filter: Filter,
+  fetchFromRelay: (filter: Filter) => Promise<Event[]>
+): Promise<Event[]> {
+  const eventMap = new Map<string, Event>();
+  
+  // キャッシュから取得
+  const cachedEvents = getCachedEventsByFilter(filter);
+  for (const event of cachedEvents) {
+    eventMap.set(event.id, event);
+  }
+  
+  // リレーから取得
+  const relayEvents = await fetchFromRelay(filter);
+  
+  for (const event of relayEvents) {
+    cacheEvent(event);
+    if (!eventMap.has(event.id)) {
+      eventMap.set(event.id, event);
+    }
+  }
+  
+  const results = Array.from(eventMap.values())
+    .sort((a, b) => b.created_at - a.created_at);
+  
+  if (filter.limit && results.length > filter.limit) {
+    return results.slice(0, filter.limit);
+  }
+  
+  return results;
+}
+
+/**
+ * キャッシュからイベントを即座に取得（同期的）
+ * リレーへのリクエストなし
+ */
+export function getEventsFromCache(filter: Filter): Event[] {
+  return getCachedEventsByFilter(filter);
 }
 
 /**
  * キャッシュをクリア
  */
 export function clearEventCache(): void {
-  memoryCache.clear();
+  eventCache.clear();
+  tagIndex.clear();
+  kindIndex.clear();
+  authorIndex.clear();
+  currentCacheSize = 0;
+  
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -175,52 +348,16 @@ export function clearEventCache(): void {
 /**
  * キャッシュの統計情報を取得
  */
-export function getEventCacheStats(): { size: number; maxSize: number } {
+export function getEventCacheStats(): { 
+  count: number; 
+  sizeBytes: number; 
+  maxSizeBytes: number;
+  sizeMB: string;
+} {
   return {
-    size: memoryCache.size,
-    maxSize: MAX_CACHE_SIZE,
+    count: eventCache.size,
+    sizeBytes: currentCacheSize,
+    maxSizeBytes: MAX_CACHE_SIZE_BYTES,
+    sizeMB: (currentCacheSize / (1024 * 1024)).toFixed(2),
   };
-}
-
-/**
- * 条件に合うイベントをキャッシュから検索（同期的）
- * @param filter フィルタ条件
- * @returns 条件に合うイベントの配列（新しい順）
- */
-export function getCachedEventsByFilter(filter: {
-  kinds?: number[];
-  authors?: string[];
-  since?: number;
-  limit?: number;
-}): Event[] {
-  const results: Event[] = [];
-  
-  for (const event of memoryCache.values()) {
-    // kind フィルタ
-    if (filter.kinds && !filter.kinds.includes(event.kind)) {
-      continue;
-    }
-    
-    // authors フィルタ
-    if (filter.authors && !filter.authors.includes(event.pubkey)) {
-      continue;
-    }
-    
-    // since フィルタ
-    if (filter.since && event.created_at < filter.since) {
-      continue;
-    }
-    
-    results.push(event);
-  }
-  
-  // 新しい順にソート
-  results.sort((a, b) => b.created_at - a.created_at);
-  
-  // limit適用
-  if (filter.limit && results.length > filter.limit) {
-    return results.slice(0, filter.limit);
-  }
-  
-  return results;
 }

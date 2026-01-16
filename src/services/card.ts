@@ -2,7 +2,8 @@
 
 import { type Event, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import { fetchEvents, publishEvent, subscribeToEvents } from './relay';
-import { fetchEventById, cacheEvent, cacheEvents, getCachedEventsByFilter } from './eventCache';
+import { cacheEvent, cacheEvents, getCachedEventsByFilter, getCachedEvent } from './eventCache';
+import { streamEvents } from './relay';
 import { 
   NOSTRDRAW_KIND, 
   NOSTRDRAW_CLIENT_TAG, 
@@ -256,9 +257,20 @@ export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
 
 // イベントIDからカードを取得（キャッシュ付き）
 export async function fetchCardById(eventId: string): Promise<NostrDrawPost | null> {
-  const event = await fetchEventById(eventId, [NOSTRDRAW_KIND]);
-  if (!event) return null;
-  return parseNostrDrawPost(event);
+  // まずキャッシュをチェック
+  const cached = getCachedEvent(eventId);
+  if (cached) {
+    return parseNostrDrawPost(cached);
+  }
+  
+  // リレーから取得（fetchEventsは内部でキャッシュを使用）
+  const events = await fetchEvents({
+    ids: [eventId],
+    kinds: [NOSTRDRAW_KIND],
+  });
+  
+  if (events.length === 0) return null;
+  return parseNostrDrawPost(events[0]);
 }
 
 // 特定のカードを親として持つ子カード（描き足しされたカード）を取得
@@ -644,38 +656,89 @@ export interface NostrDrawPostWithReactions extends NostrDrawPost {
   userReacted?: boolean; // ユーザーがリアクション済みかどうか
 }
 
-// 特定のイベントIDに対するリアクション数を取得
+// 特定のイベントIDに対するリアクション数をストリーミングで取得
+// イベント1つ受信するごとにonUpdateが呼ばれる
+export function streamReactionCounts(
+  eventIds: string[],
+  onUpdate: (counts: Map<string, number>) => void,
+  onComplete?: () => void
+): () => void {
+  if (eventIds.length === 0) {
+    onComplete?.();
+    return () => {};
+  }
+
+  console.log('[streamReactionCounts] starting for', eventIds.length, 'events');
+  const counts = new Map<string, number>();
+  const seenReactionIds = new Set<string>();
+  const eventIdSet = new Set(eventIds);
+  let matchedCount = 0;
+  
+  // リアクションをカウントするヘルパー
+  const countReaction = (reaction: Event): boolean => {
+    if (seenReactionIds.has(reaction.id)) return false;
+    seenReactionIds.add(reaction.id);
+    
+    const eTags = reaction.tags.filter(tag => tag[0] === 'e');
+    if (eTags.length > 0) {
+      const lastETag = eTags[eTags.length - 1];
+      const eventId = lastETag[1];
+      if (eventId && eventIdSet.has(eventId)) {
+        counts.set(eventId, (counts.get(eventId) || 0) + 1);
+        matchedCount++;
+        if (matchedCount <= 5) {
+          console.log('[streamReactionCounts] matched reaction for event', eventId);
+        }
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  // streamEventsを使ってキャッシュ・リレーから1つずつ取得
+  const unsubscribe = streamEvents(
+    {
+      kinds: [7],
+      '#e': eventIds,
+      limit: 1000,
+    },
+    (reaction) => {
+      // リアクションを1つ受信するたびにカウントを更新してコールバック
+      if (countReaction(reaction)) {
+        onUpdate(new Map(counts));
+      }
+    },
+    onComplete
+  );
+  
+  return unsubscribe;
+}
+
+// 特定のイベントIDに対するリアクション数を取得（従来のPromiseベースAPI）
 export async function fetchReactionCounts(eventIds: string[]): Promise<Map<string, number>> {
   if (eventIds.length === 0) return new Map();
 
   const counts = new Map<string, number>();
+  const seenReactionIds = new Set<string>();
+  const eventIdSet = new Set(eventIds);
   
-  // 大量のeventIdがある場合は分割して取得
-  const batchSize = 20;
-  for (let i = 0; i < eventIds.length; i += batchSize) {
-    const batch = eventIds.slice(i, i + batchSize);
-    
-    try {
-      const reactions = await fetchEvents({
-        kinds: [7], // リアクション
-        '#e': batch,
-        limit: 500, // 十分な数を取得
-      });
+  const reactions = await fetchEvents({
+    kinds: [7],
+    '#e': eventIds,
+    limit: 1000,
+  });
 
-      for (const reaction of reactions) {
-        const eTags = reaction.tags.filter(tag => tag[0] === 'e');
-        // NIP-25: 最後のeタグがリアクション対象
-        // 最後のeタグがbatchに含まれる場合のみカウント
-        if (eTags.length > 0) {
-          const lastETag = eTags[eTags.length - 1];
-          const eventId = lastETag[1];
-          if (eventId && batch.includes(eventId)) {
-            counts.set(eventId, (counts.get(eventId) || 0) + 1);
-          }
-        }
+  for (const reaction of reactions) {
+    if (seenReactionIds.has(reaction.id)) continue;
+    seenReactionIds.add(reaction.id);
+    
+    const eTags = reaction.tags.filter(tag => tag[0] === 'e');
+    if (eTags.length > 0) {
+      const lastETag = eTags[eTags.length - 1];
+      const eventId = lastETag[1];
+      if (eventId && eventIdSet.has(eventId)) {
+        counts.set(eventId, (counts.get(eventId) || 0) + 1);
       }
-    } catch (error) {
-      console.error('リアクション取得エラー:', error);
     }
   }
 

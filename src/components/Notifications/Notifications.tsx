@@ -27,29 +27,54 @@ export function Notifications({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
 
-  // 通知を取得
+  // プロフィールを更新
+  const updateProfiles = useCallback(async (notifs: Notification[]) => {
+    const pubkeys = [...new Set(notifs.map(n => n.fromPubkey))];
+    if (pubkeys.length > 0) {
+      const profilesMap = await fetchProfiles(pubkeys);
+      setProfiles(prev => {
+        const newMap = new Map(prev);
+        profilesMap.forEach((v, k) => newMap.set(k, v));
+        return newMap;
+      });
+    }
+  }, []);
+
+  // 通知を取得（キャッシュ優先、ストリーミング対応）
   useEffect(() => {
+    let isMounted = true;
+    
     const loadNotifications = async () => {
       setIsLoading(true);
+      
       try {
-        const result = await fetchNotifications(userPubkey);
-        setNotifications(result);
-
-        // プロフィールを取得
-        const pubkeys = [...new Set(result.map(n => n.fromPubkey))];
-        if (pubkeys.length > 0) {
-          const profilesMap = await fetchProfiles(pubkeys);
-          setProfiles(profilesMap);
-        }
+        // onUpdateコールバックでキャッシュ・リレーの結果を即座に反映
+        await fetchNotifications(
+          userPubkey,
+          undefined,
+          (updatedNotifications) => {
+            if (!isMounted) return;
+            setNotifications(updatedNotifications);
+            setIsLoading(false);
+            // プロフィールも更新
+            updateProfiles(updatedNotifications);
+          }
+        );
       } catch (error) {
         console.error('通知取得エラー:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadNotifications();
-  }, [userPubkey]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [userPubkey, updateProfiles]);
 
   // 日時フォーマット
   const formatDate = (timestamp: number) => {
@@ -59,7 +84,8 @@ export function Notifications({
     const day = date.getDate();
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${year}/${month}/${day} ${hours}:${minutes}`;
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
   };
 
   // ユーザー名を取得
