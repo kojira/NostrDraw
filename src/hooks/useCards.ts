@@ -130,7 +130,27 @@ export function usePublicGalleryCards() {
       setCards(sortedCards);
     };
 
-    const handleEose = () => {
+    const handleEose = async () => {
+      // EOSE後にリアクション数を取得
+      if (allCardsRef.current.length > 0) {
+        try {
+          const { fetchReactionCounts } = await import('../services/card');
+          const cardIds = allCardsRef.current.map(c => c.id);
+          const reactions = await fetchReactionCounts(cardIds);
+          
+          // リアクション数を付与して更新
+          const cardsWithReactions = [...allCardsRef.current]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map(card => ({
+              ...card,
+              reactionCount: reactions.get(card.id) || 0,
+            }));
+          
+          setCards(cardsWithReactions);
+        } catch (err) {
+          console.error('Failed to fetch reaction counts:', err);
+        }
+      }
       setIsLoading(false);
     };
 
@@ -352,7 +372,27 @@ export function useFollowCards(followees: string[]) {
       setCards(sortedCards);
     };
 
-    const handleEose = () => {
+    const handleEose = async () => {
+      // EOSE後にリアクション数を取得
+      if (allCardsRef.current.length > 0) {
+        try {
+          const { fetchReactionCounts } = await import('../services/card');
+          const cardIds = allCardsRef.current.map(c => c.id);
+          const reactions = await fetchReactionCounts(cardIds);
+          
+          // リアクション数を付与して更新
+          const cardsWithReactions = [...allCardsRef.current]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map(card => ({
+              ...card,
+              reactionCount: reactions.get(card.id) || 0,
+            }));
+          
+          setCards(cardsWithReactions);
+        } catch (err) {
+          console.error('Failed to fetch reaction counts:', err);
+        }
+      }
       setIsLoading(false);
     };
 
