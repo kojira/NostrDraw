@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
-import { sendReaction, type NostrDrawPostWithReactions } from '../../services/card';
+import { sendReaction, type NostrDrawPostWithReactions, fetchCardById, mergeSvgWithDiff } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { BASE_URL } from '../../config';
 import type { EventTemplate, Event } from 'nostr-tools';
@@ -62,6 +62,10 @@ export function Timeline({
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   // 既に取得中または取得済みのpubkeyを追跡（重複フェッチ防止）
   const fetchedPubkeysRef = useRef<Set<string>>(new Set());
+  // 差分保存されたカードの合成済みSVGを管理
+  const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
+  // 差分SVG取得中のIDを追跡
+  const fetchingDiffRef = useRef<Set<string>>(new Set());
   // リアクション中のイベントIDを追跡
   const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
   // ローカルでリアクション済みのイベントIDを追跡
@@ -93,6 +97,28 @@ export function Timeline({
       }
     });
   }, [cards]);
+
+  // 差分保存されたカードの親を取得して合成
+  useEffect(() => {
+    cards.forEach(async (card) => {
+      // isDiffでない、または親がない場合はスキップ
+      if (!card.isDiff || !card.parentEventId) return;
+      // 既に取得中または取得済みならスキップ
+      if (fetchingDiffRef.current.has(card.id) || mergedSvgs.has(card.id)) return;
+      
+      fetchingDiffRef.current.add(card.id);
+      
+      try {
+        const parentCard = await fetchCardById(card.parentEventId);
+        if (parentCard?.svg) {
+          const mergedSvg = mergeSvgWithDiff(parentCard.svg, card.svg);
+          setMergedSvgs(prev => new Map(prev).set(card.id, mergedSvg));
+        }
+      } catch (error) {
+        console.error('Failed to merge SVG:', error);
+      }
+    });
+  }, [cards, mergedSvgs]);
 
   const getProfileName = (pubkey: string) => {
     const profile = profiles.get(pubkey);
@@ -255,11 +281,17 @@ export function Timeline({
                     className={`${styles.postImage} ${onCardClick ? styles.clickable : ''}`}
                     onClick={() => onCardClick?.(card)}
                   >
-                    {card.svg ? (
-                      <SvgRenderer svg={card.svg} className={styles.svg} />
-                    ) : (
-                      <div className={styles.placeholder}>🎨</div>
-                    )}
+                    {(() => {
+                      // isDiffの場合は合成済みSVGを使用、なければ元のSVG
+                      const displaySvg = card.isDiff && mergedSvgs.has(card.id) 
+                        ? mergedSvgs.get(card.id)! 
+                        : card.svg;
+                      return displaySvg ? (
+                        <SvgRenderer svg={displaySvg} className={styles.svg} />
+                      ) : (
+                        <div className={styles.placeholder}>🎨</div>
+                      );
+                    })()}
                   </div>
 
                   {/* フッター（リアクション・描き足し） */}
