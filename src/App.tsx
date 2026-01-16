@@ -250,15 +250,18 @@ function App() {
                       setExtendingCard(null); // 描き足し元をクリア
                       goHome();
                     }}
-                    onPost={async (svg, msg) => {
+                    onPost={async (data) => {
                       if (!authState.isNip07) {
                         alert(t('auth.nip07Required'));
                         return;
                       }
                       try {
                         const result = await sendCard({
-                          svg,
-                          message: msg,
+                          svg: data.svg,
+                          layers: data.layers,
+                          canvasSize: data.canvasSize,
+                          templateId: data.templateId,
+                          message: data.message,
                           year: new Date().getFullYear() + 1,
                           layoutId: 'vertical',
                           recipientPubkey: null,

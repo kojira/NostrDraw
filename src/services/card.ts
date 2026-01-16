@@ -10,6 +10,8 @@ import {
   type LayoutType 
 } from '../types';
 import { compressSvg, decompressSvg } from '../utils/compression';
+import { encodeLayersToBinary, decodeBinaryToLayers } from '../utils/binaryFormat';
+import type { Layer } from '../components/CardEditor/DrawingCanvas/types';
 import { BASE_URL } from '../config';
 import { uploadWithNip96 } from './imageUpload';
 
@@ -71,6 +73,55 @@ async function svgToPngBlob(svgString: string, width: number = 800, height: numb
   });
 }
 
+
+// レイヤーデータからSVGを生成するヘルパー関数
+function layersToSvg(layers: Layer[], canvasSize: { width: number; height: number }, _templateId: string | null): string {
+  const { width, height } = canvasSize;
+  
+  const svgParts: string[] = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+  ];
+  
+  // 背景（白）
+  svgParts.push(`<rect width="${width}" height="${height}" fill="white"/>`);
+  
+  // 各レイヤーを処理
+  for (const layer of layers) {
+    if (!layer.visible) continue;
+    
+    const opacity = layer.opacity !== 1 ? ` opacity="${layer.opacity}"` : '';
+    svgParts.push(`<g${opacity}>`);
+    
+    // ストローク
+    for (const stroke of layer.strokes) {
+      if (stroke.points.length < 2) continue;
+      const pathData = stroke.points
+        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+        .join(' ');
+      svgParts.push(`<path d="${pathData}" stroke="${stroke.color}" stroke-width="${stroke.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`);
+    }
+    
+    // スタンプ（簡易的にプレースホルダー）
+    for (const stamp of layer.placedStamps) {
+      if (stamp.isCustomEmoji && stamp.customEmojiUrl) {
+        const size = 64 * stamp.scale;
+        svgParts.push(`<image href="${stamp.customEmojiUrl}" x="${stamp.x - size/2}" y="${stamp.y - size/2}" width="${size}" height="${size}"/>`);
+      }
+    }
+    
+    // テキストボックス
+    for (const textBox of layer.textBoxes) {
+      if (!textBox.text) continue;
+      svgParts.push(`<text x="${textBox.x}" y="${textBox.y + textBox.fontSize}" font-size="${textBox.fontSize}" fill="${textBox.color}" font-family="${textBox.fontFamily}">${textBox.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`);
+    }
+    
+    svgParts.push('</g>');
+  }
+  
+  svgParts.push('</svg>');
+  return svgParts.join('\n');
+}
+
 // NostrDrawのイベントかどうかをチェック
 export function isNostrDrawEvent(event: Event): boolean {
   // clientタグでNostrDrawのイベントか確認
@@ -121,8 +172,17 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
       const parsed = JSON.parse(event.content);
       message = parsed.message || '';
       
-      // 圧縮されたSVGがあれば解凍、なければ通常のSVG
-      if (parsed.svgCompressed) {
+      // 新バイナリフォーマット（layerData）を優先、なければ従来形式
+      if (parsed.layerData && parsed.compression === 'binary+gzip+base64') {
+        try {
+          const decoded = decodeBinaryToLayers(parsed.layerData);
+          svg = layersToSvg(decoded.layers, decoded.canvasSize, decoded.templateId);
+        } catch (decodeError) {
+          console.error('Failed to decode layerData:', decodeError);
+          svg = '';
+        }
+      } else if (parsed.svgCompressed) {
+        // 従来の圧縮SVG形式
         try {
           svg = decompressSvg(parsed.svgCompressed);
         } catch (decompressError) {
@@ -130,6 +190,7 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
           svg = '';
         }
       } else {
+        // 生SVG
         svg = parsed.svg || '';
       }
       
@@ -482,7 +543,10 @@ export async function fetchPopularCards(days: number = 3, limit: number = 20): P
 
 export interface SendCardParams {
   recipientPubkey?: string | null; // 任意（宛先なしでも送信可能）
-  svg: string; // SVGデータ
+  svg: string; // SVGデータ（画像アップロード用）
+  layers?: Layer[]; // レイヤーデータ（新バイナリフォーマット用）
+  canvasSize?: { width: number; height: number }; // キャンバスサイズ
+  templateId?: string | null; // テンプレートID
   message: string;
   layoutId: LayoutType;
   year?: number;
@@ -534,23 +598,57 @@ export async function sendCard(
     tags.push(['parent_p', params.parentPubkey]);
   }
 
-  // SVGを圧縮してサイズを削減
-  let svgCompressed: string;
-  try {
-    svgCompressed = compressSvg(params.svg);
-  } catch (error) {
-    console.error('Failed to compress SVG, using original:', error);
-    // 圧縮失敗時は元のSVGを使用
-    svgCompressed = '';
-  }
-
-  // SVGデータはcontentに含める（タグには長すぎる可能性がある）
-  // 圧縮に成功した場合はsvgCompressedを使用、失敗時はsvgを使用
-  const eventTemplate: EventTemplate = {
-    kind: NOSTRDRAW_KIND,
-    created_at: timestamp,
-    tags,
-    content: JSON.stringify({
+  // contentに含めるデータを構築
+  let contentData: Record<string, unknown>;
+  
+  // レイヤーデータがある場合は新バイナリフォーマットを使用
+  if (params.layers && params.layers.length > 0 && params.canvasSize) {
+    try {
+      const layerData = encodeLayersToBinary(
+        params.layers,
+        params.templateId || null,
+        params.canvasSize
+      );
+      console.log('[sendCard] Using new binary format, size:', layerData.length);
+      contentData = {
+        message: params.message,
+        layerData,
+        compression: 'binary+gzip+base64',
+        layoutId: params.layoutId,
+        year,
+        version: NOSTRDRAW_VERSION,
+        isPublic: !params.recipientPubkey,
+        allowExtend: params.allowExtend,
+        parentEventId: params.parentEventId,
+      };
+    } catch (error) {
+      console.error('Failed to encode layers to binary, falling back to SVG:', error);
+      // バイナリエンコード失敗時はSVG圧縮にフォールバック
+      const svgCompressed = compressSvg(params.svg);
+      contentData = {
+        message: params.message,
+        ...(svgCompressed 
+          ? { svgCompressed, compression: 'gzip+base64' }
+          : { svg: params.svg }
+        ),
+        layoutId: params.layoutId,
+        year,
+        version: NOSTRDRAW_VERSION,
+        isPublic: !params.recipientPubkey,
+        allowExtend: params.allowExtend,
+        parentEventId: params.parentEventId,
+      };
+    }
+  } else {
+    // レイヤーデータがない場合は従来のSVG圧縮を使用
+    let svgCompressed: string;
+    try {
+      svgCompressed = compressSvg(params.svg);
+    } catch (error) {
+      console.error('Failed to compress SVG, using original:', error);
+      svgCompressed = '';
+    }
+    contentData = {
       message: params.message,
       ...(svgCompressed 
         ? { svgCompressed, compression: 'gzip+base64' }
@@ -559,10 +657,17 @@ export async function sendCard(
       layoutId: params.layoutId,
       year,
       version: NOSTRDRAW_VERSION,
-      isPublic: !params.recipientPubkey, // 宛先なしの場合はpublicフラグ
+      isPublic: !params.recipientPubkey,
       allowExtend: params.allowExtend,
       parentEventId: params.parentEventId,
-    }),
+    };
+  }
+
+  const eventTemplate: EventTemplate = {
+    kind: NOSTRDRAW_KIND,
+    created_at: timestamp,
+    tags,
+    content: JSON.stringify(contentData),
   };
 
   const signedEvent = await signEvent(eventTemplate);

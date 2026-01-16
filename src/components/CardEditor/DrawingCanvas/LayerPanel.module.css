@@ -1,0 +1,523 @@
+/* レイヤーパネルスタイル */
+
+.layerPanel {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.layerPanel.collapsed {
+  min-width: auto;
+  max-width: auto;
+}
+
+/* ヘッダー */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.collapseButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.collapseButton:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+.addButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-color, #4d96ff);
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.addButton:hover:not(:disabled) {
+  transform: scale(1.1);
+  background: var(--primary-hover, #3d7fe0);
+}
+
+.addButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* レイヤーリスト */
+.layerList {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.layerItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  cursor: pointer;
+  transition: background 0.2s;
+  gap: 8px;
+}
+
+.layerItem:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.03));
+}
+
+.layerItem.active {
+  background: var(--primary-light, rgba(77, 150, 255, 0.15));
+  border-left: 3px solid var(--primary-color, #4d96ff);
+}
+
+.layerItem.dragging {
+  opacity: 0.5;
+  background: var(--drag-bg, rgba(0, 0, 0, 0.1));
+}
+
+.layerItem.hidden {
+  opacity: 0.5;
+}
+
+.layerItem.locked {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 0, 0, 0.03) 4px,
+    rgba(0, 0, 0, 0.03) 8px
+  );
+}
+
+/* ドラッグハンドル */
+.dragHandle {
+  cursor: grab;
+  color: var(--text-muted, #999);
+  font-size: 12px;
+  padding: 4px;
+  user-select: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+/* レイヤー名 */
+.layerName {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-color, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nameInput {
+  width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--primary-color, #4d96ff);
+  border-radius: 3px;
+  font-size: 13px;
+  outline: none;
+}
+
+/* コントロールボタン */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.moveButton {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-muted, #999);
+  padding: 0;
+  display: none; /* デフォルトは非表示 */
+}
+
+.moveButton:hover:not(:disabled) {
+  color: var(--text-color, #333);
+}
+
+.moveButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* モバイルでは並び替えボタンを表示 */
+@media (max-width: 768px) {
+  .moveButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .dragHandle {
+    display: none;
+  }
+}
+
+.iconButton {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconButton:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.05));
+  color: #333;
+}
+
+.iconButton.off {
+  opacity: 0.4;
+  color: #888;
+}
+
+.iconButton.on {
+  color: var(--primary-color, #4d96ff);
+}
+
+.deleteButton {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: rgba(255, 0, 0, 0.1);
+  color: #d32f2f;
+}
+
+.deleteButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* 不透明度コントロール */
+.opacityControl {
+  padding: 12px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.opacityLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted, #666);
+  margin-bottom: 6px;
+}
+
+.opacitySlider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-bg, #e0e0e0);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.opacitySlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-color, #4d96ff);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.opacitySlider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-color, #4d96ff);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* レイヤー数表示 */
+.layerCount {
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-muted, #999);
+  text-align: center;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-secondary, #f5f5f5);
+}
+
+/* ダークテーマ対応 */
+:global([data-theme="dark"]) .layerPanel {
+  background: var(--card-bg, #2a2a2a);
+  border-color: var(--border-color, #444);
+}
+
+:global([data-theme="dark"]) .header {
+  background: var(--bg-secondary, #333);
+  border-color: var(--border-color, #444);
+}
+
+:global([data-theme="dark"]) .collapseButton {
+  color: var(--text-color, #eee);
+}
+
+:global([data-theme="dark"]) .layerItem {
+  border-color: var(--border-color, #444);
+}
+
+:global([data-theme="dark"]) .layerItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:global([data-theme="dark"]) .layerItem.active {
+  background: rgba(77, 150, 255, 0.2);
+}
+
+:global([data-theme="dark"]) .layerName {
+  color: var(--text-color, #eee);
+}
+
+:global([data-theme="dark"]) .nameInput {
+  background: var(--card-bg, #2a2a2a);
+  color: var(--text-color, #eee);
+}
+
+:global([data-theme="dark"]) .opacityControl {
+  border-color: var(--border-color, #444);
+}
+
+:global([data-theme="dark"]) .layerCount {
+  border-color: var(--border-color, #444);
+  background: var(--bg-secondary, #333);
+}
+
+:global([data-theme="dark"]) .iconButton {
+  color: #bbb;
+}
+
+:global([data-theme="dark"]) .iconButton:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:global([data-theme="dark"]) .iconButton.off {
+  color: #666;
+}
+
+:global([data-theme="dark"]) .iconButton.on {
+  color: var(--primary-color, #4d96ff);
+}
+
+:global([data-theme="dark"]) .deleteButton {
+  color: #999;
+}
+
+:global([data-theme="dark"]) .deleteButton:hover:not(:disabled) {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+}
+
+:global([data-theme="dark"]) .dragHandle {
+  color: #666;
+}
+
+:global([data-theme="dark"]) .moveButton {
+  color: #888;
+}
+
+:global([data-theme="dark"]) .moveButton:hover:not(:disabled) {
+  color: #ccc;
+}
+
+/* 削除確認モーダル */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  min-width: 280px;
+  max-width: 90vw;
+  overflow: hidden;
+  animation: slideIn 0.2s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #d32f2f 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.modalBody {
+  padding: 20px;
+}
+
+.modalBody p {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 14px;
+}
+
+.modalBody p:last-child {
+  margin-bottom: 0;
+}
+
+.modalWarning {
+  color: #888 !important;
+  font-size: 12px !important;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #f5f5f5;
+  justify-content: flex-end;
+}
+
+.modalCancelButton {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modalCancelButton:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+}
+
+.modalDeleteButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #d32f2f 100%);
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modalDeleteButton:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #c62828 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+/* ダークテーマのモーダル */
+:global([data-theme="dark"]) .modal {
+  background: #2a2a2a;
+}
+
+:global([data-theme="dark"]) .modalBody p {
+  color: #eee;
+}
+
+:global([data-theme="dark"]) .modalWarning {
+  color: #888 !important;
+}
+
+:global([data-theme="dark"]) .modalFooter {
+  background: #333;
+}
+
+:global([data-theme="dark"]) .modalCancelButton {
+  background: #444;
+  border-color: #555;
+  color: #ccc;
+}
+
+:global([data-theme="dark"]) .modalCancelButton:hover {
+  background: #555;
+  border-color: #666;
+}

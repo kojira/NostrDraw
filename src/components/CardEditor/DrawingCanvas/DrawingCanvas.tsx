@@ -6,6 +6,7 @@ import { TemplateSelector } from './TemplateSelector';
 import { Toolbar } from './Toolbar';
 import { StampPalette } from './StampPalette';
 import { FontSelector } from './FontSelector';
+import { LayerPanel } from './LayerPanel';
 import { STAMPS } from '../../../data/templates';
 import type { DrawingCanvasProps, Template } from './types';
 import styles from './DrawingCanvas.module.css';
@@ -34,7 +35,6 @@ export function DrawingCanvas({
     selectedTemplate,
     selectedStamp,
     selectedCustomEmoji,
-    placedStamps,
     selectedPlacedStampId,
     stampScale,
     stampTab,
@@ -84,6 +84,20 @@ export function DrawingCanvas({
     handlePinchMove,
     handlePinchEnd,
     resetZoom,
+    // レイヤー機能
+    layers,
+    activeLayerId,
+    allPlacedStamps,
+    addLayer,
+    removeLayer,
+    selectLayer,
+    toggleLayerVisibility,
+    toggleLayerLock,
+    setLayerOpacity,
+    reorderLayers,
+    renameLayer,
+    // キャンバスサイズ
+    canvasSize,
   } = useDrawingCanvas({ width, height, initialMessage });
 
   // 描き足し元のSVGが渡されたらテンプレートとして設定
@@ -121,9 +135,15 @@ export function DrawingCanvas({
   const handlePost = useCallback(async () => {
     if (onPost) {
       const svg = generateSvg();
-      await onPost(svg, message);
+      await onPost({
+        svg,
+        message,
+        layers,
+        canvasSize,
+        templateId: selectedTemplate?.id || null,
+      });
     }
-  }, [generateSvg, onPost, message]);
+  }, [generateSvg, onPost, message, layers, canvasSize, selectedTemplate]);
 
   return (
     <div className={styles.drawingCanvas}>
@@ -248,7 +268,7 @@ export function DrawingCanvas({
             onTouchEnd={tool === 'stamp' ? handleStampPointerUp : undefined}
             style={{ pointerEvents: tool === 'stamp' ? 'auto' : 'none' }}
           >
-            {placedStamps.map(stamp => {
+            {allPlacedStamps.map(stamp => {
               const isCustom = stamp.isCustomEmoji;
               const builtinStamp = !isCustom ? STAMPS.find(s => s.id === stamp.stampId) : null;
               const defaultSize = isCustom ? 50 : (builtinStamp ? Math.max(builtinStamp.width, builtinStamp.height) : 40);
@@ -383,57 +403,74 @@ export function DrawingCanvas({
         </div>
       </div>
 
-      {/* テキストモード時のオプション（キャンバスの下に配置） */}
-      {tool === 'text' && (
-        <div className={styles.textOptionsSection}>
-          {/* テキストボックス操作 */}
-          <div className={styles.textBoxControls}>
-            <button
-              className={styles.addTextBoxButton}
-              onClick={addTextBox}
-              title="テキストボックスを追加"
-            >
-              ➕ テキスト追加
-            </button>
-            {textBoxes.length > 0 && selectedTextBoxId && (
+      {/* レイヤーパネルとテキストオプションの横並びコンテナ */}
+      <div className={styles.bottomSection}>
+        {/* レイヤーパネル */}
+        <LayerPanel
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onAddLayer={addLayer}
+          onRemoveLayer={removeLayer}
+          onSelectLayer={selectLayer}
+          onToggleVisibility={toggleLayerVisibility}
+          onToggleLock={toggleLayerLock}
+          onSetOpacity={setLayerOpacity}
+          onReorderLayers={reorderLayers}
+          onRenameLayer={renameLayer}
+        />
+
+        {/* テキストモード時のオプション（キャンバスの下に配置） */}
+        {tool === 'text' && (
+          <div className={styles.textOptionsSection}>
+            {/* テキストボックス操作 */}
+            <div className={styles.textBoxControls}>
               <button
-                className={styles.removeTextBoxButton}
-                onClick={() => removeTextBox(selectedTextBoxId)}
-                title="選択中のテキストボックスを削除"
+                className={styles.addTextBoxButton}
+                onClick={addTextBox}
+                title="テキストボックスを追加"
               >
-                🗑️ 削除
+                ➕ テキスト追加
               </button>
-            )}
-            {textBoxes.length > 0 && (
-              <span className={styles.textBoxLabel}>
-                {selectedTextBox 
-                  ? `${textBoxes.findIndex(tb => tb.id === selectedTextBoxId) + 1}/${textBoxes.length}を編集中`
-                  : `${textBoxes.length}個のテキスト`
-                }
-              </span>
+              {textBoxes.length > 0 && selectedTextBoxId && (
+                <button
+                  className={styles.removeTextBoxButton}
+                  onClick={() => removeTextBox(selectedTextBoxId)}
+                  title="選択中のテキストボックスを削除"
+                >
+                  🗑️ 削除
+                </button>
+              )}
+              {textBoxes.length > 0 && (
+                <span className={styles.textBoxLabel}>
+                  {selectedTextBox 
+                    ? `${textBoxes.findIndex(tb => tb.id === selectedTextBoxId) + 1}/${textBoxes.length}を編集中`
+                    : `${textBoxes.length}個のテキスト`
+                  }
+                </span>
+              )}
+            </div>
+
+            {/* フォント選択とテキスト入力（テキストボックス選択時のみ） */}
+            {selectedTextBox && (
+              <div className={styles.textEditSection}>
+                <FontSelector
+                  messageBox={messageBox}
+                  fontCategory={fontCategory}
+                  onMessageBoxChange={setMessageBox}
+                  onFontCategoryChange={setFontCategory}
+                />
+                <textarea
+                  className={styles.messageTextarea}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="メッセージを入力..."
+                  rows={2}
+                />
+              </div>
             )}
           </div>
-
-          {/* フォント選択とテキスト入力（テキストボックス選択時のみ） */}
-          {selectedTextBox && (
-            <div className={styles.textEditSection}>
-              <FontSelector
-                messageBox={messageBox}
-                fontCategory={fontCategory}
-                onMessageBoxChange={setMessageBox}
-                onFontCategoryChange={setFontCategory}
-              />
-              <textarea
-                className={styles.messageTextarea}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="メッセージを入力..."
-                rows={2}
-              />
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* アクションボタン */}
       <div className={styles.actions}>

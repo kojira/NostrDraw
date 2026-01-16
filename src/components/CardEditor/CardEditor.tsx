@@ -6,6 +6,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import { ETO_IMAGES } from '../../data/etoGallery';
 import type { NewYearCard } from '../../types';
+import type { PostData } from './DrawingCanvas/types';
 import styles from './CardEditor.module.css';
 
 interface CardEditorProps {
@@ -19,7 +20,7 @@ interface CardEditorProps {
   onAllowExtendChange?: (allow: boolean) => void;
   postToTimeline?: boolean;
   onPostToTimelineChange?: (post: boolean) => void;
-  onPost?: (svg: string, message: string) => Promise<void>; // 投稿処理
+  onPost?: (data: PostData) => Promise<void>; // 投稿処理
   isPosting?: boolean; // 投稿中フラグ
   postSuccess?: boolean; // 投稿成功フラグ
   onNewPost?: () => void; // 新規投稿開始時のコールバック

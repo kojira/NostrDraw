@@ -42,13 +42,55 @@ export interface TextBox {
 // 後方互換性のためのエイリアス
 export type MessageBox = TextBox;
 
+// レイヤー型定義
+export interface Layer {
+  id: string;
+  name: string;
+  visible: boolean;
+  locked: boolean;
+  opacity: number; // 0-1
+  strokes: Stroke[];
+  placedStamps: PlacedStamp[];
+  textBoxes: TextBox[];
+}
+
+// レイヤー関連の定数
+export const MAX_LAYERS = 5;
+export const DEFAULT_LAYER_OPACITY = 1;
+
+// 履歴関連の定数
+export const MAX_HISTORY_SIZE = 50;
+
+// デフォルトレイヤーを作成するヘルパー関数
+export function createDefaultLayer(id: string, name: string): Layer {
+  return {
+    id,
+    name,
+    visible: true,
+    locked: false,
+    opacity: DEFAULT_LAYER_OPACITY,
+    strokes: [],
+    placedStamps: [],
+    textBoxes: [],
+  };
+}
+
 export type ToolType = 'pen' | 'eraser' | 'stamp' | 'text';
 export type DragMode = 'none' | 'move' | 'resize-se' | 'resize-sw' | 'resize-ne' | 'resize-nw';
 export type StampTab = 'builtin' | 'custom';
 
+// 投稿データの型
+export interface PostData {
+  svg: string;
+  message: string;
+  layers: Layer[];
+  canvasSize: { width: number; height: number };
+  templateId: string | null;
+}
+
 export interface DrawingCanvasProps {
   onSave: (svg: string, message: string) => void;
-  onPost?: (svg: string, message: string) => Promise<void>; // 投稿処理
+  onPost?: (data: PostData) => Promise<void>; // 投稿処理
   isPosting?: boolean; // 投稿中フラグ
   postSuccess?: boolean; // 投稿成功フラグ
   onNewPost?: () => void; // 新規投稿開始時のコールバック

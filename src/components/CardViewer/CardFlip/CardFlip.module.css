@@ -1174,6 +1174,89 @@
   display: block;
 }
 
+/* 三点メニュー */
+.moreMenuContainer {
+  position: relative;
+}
+
+.moreButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #fff;
+}
+
+.moreButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.moreButton svg {
+  display: block;
+}
+
+.moreMenu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  background: rgba(30, 30, 40, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 160px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: menuFadeIn 0.15s ease-out;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+
+.menuItem:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menuItem:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.menuItem svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
 /* イベントJSONモーダル */
 .eventJsonModal {
   position: fixed;
@@ -1328,4 +1411,29 @@
 :global(.light-theme) .eventJsonButton:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.1);
   color: #1a1a2e;
+}
+
+/* ライトテーマ - 三点メニュー */
+:global(.light-theme) .moreButton {
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+}
+
+:global(.light-theme) .moreButton:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #1a1a2e;
+}
+
+:global(.light-theme) .moreMenu {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+:global(.light-theme) .menuItem {
+  color: #333;
+}
+
+:global(.light-theme) .menuItem:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
 }

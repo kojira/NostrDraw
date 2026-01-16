@@ -66,8 +66,9 @@ export const NOSTRDRAW_KIND = 31898;
 // アプリ識別タグ（フィルタリング用）
 export const NOSTRDRAW_CLIENT_TAG = 'nostrdraw';
 
-// バージョン
-export const NOSTRDRAW_VERSION = '1';
+// バージョン（日付ベース YYYYMMDD）
+// 20260116: レイヤー機能追加、カスタムバイナリ圧縮フォーマット
+export const NOSTRDRAW_VERSION = '20260116';
 
 export interface AuthState {
   isLoggedIn: boolean;

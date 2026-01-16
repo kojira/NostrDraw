@@ -1,6 +1,6 @@
 // カードフリップアニメーションコンポーネント
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NewYearCard, NostrProfile } from '../../../types';
@@ -67,6 +67,24 @@ export function CardFlip({
   const [eventJson, setEventJson] = useState<Event | null>(null);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
   const [eventSize, setEventSize] = useState<number | null>(null);
+  
+  // 三点メニュー用の状態
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  
+  // メニューの外側クリックで閉じる
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMoreMenu]);
 
   // イベントJSONを取得
   const loadEventJson = useCallback(async () => {
@@ -481,25 +499,6 @@ export function CardFlip({
           )}
         </button>
         
-        {/* イベントJSON表示ボタン */}
-        <button
-          className={styles.eventJsonButton}
-          onClick={(e) => {
-            e.stopPropagation();
-            loadEventJson();
-          }}
-          title="イベントJSONを表示"
-          disabled={isLoadingEvent}
-        >
-          {isLoadingEvent ? (
-            <Spinner size="sm" />
-          ) : (
-            <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor">
-              <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h400L520-400 400-280l-80-80-40 40v120Zm-80 80v-560 560Z"/>
-            </svg>
-          )}
-        </button>
-        
         {/* 描き足しボタン（許可されている場合のみ表示） */}
         {card.allowExtend && onExtend && userPubkey && signEvent && (
           <button
@@ -516,6 +515,45 @@ export function CardFlip({
             </svg>
           </button>
         )}
+        
+        {/* 三点メニュー */}
+        <div className={styles.moreMenuContainer} ref={moreMenuRef}>
+          <button
+            className={styles.moreButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMoreMenu(!showMoreMenu);
+            }}
+            title="その他"
+          >
+            <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/>
+            </svg>
+          </button>
+          
+          {showMoreMenu && (
+            <div className={styles.moreMenu}>
+              <button
+                className={styles.menuItem}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoreMenu(false);
+                  loadEventJson();
+                }}
+                disabled={isLoadingEvent}
+              >
+                {isLoadingEvent ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M320-240 80-480l240-240 57 57-184 184 183 183-56 56Zm320 0-57-57 184-184-183-183 56-56 240 240-240 240Z"/>
+                  </svg>
+                )}
+                <span>JSONを確認</span>
+              </button>
+            </div>
+          )}
+        </div>
         
         {/* アニメーション用のハートパーティクル */}
         {showReactionAnimation && (

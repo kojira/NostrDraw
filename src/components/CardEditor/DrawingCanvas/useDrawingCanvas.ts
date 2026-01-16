@@ -14,14 +14,23 @@ import type {
   Template,
   Stamp,
   CustomEmoji,
+  Layer,
 } from './types';
-import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS } from './types';
+import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer } from './types';
 
 // ローカルストレージのキー
 const STORAGE_KEY = 'nostrdraw-canvas-state';
 
-// 保存するデータの型
+// 保存するデータの型（レイヤー対応）
 interface CanvasStorageData {
+  layers: Layer[];
+  activeLayerId: string;
+  templateId: string;
+  savedAt: number;
+}
+
+// 旧形式のストレージデータ（後方互換性）
+interface LegacyCanvasStorageData {
   strokes: Stroke[];
   placedStamps: PlacedStamp[];
   textBoxes: TextBox[];
@@ -29,18 +38,42 @@ interface CanvasStorageData {
   savedAt: number;
 }
 
+// デフォルトのレイヤーを作成
+function createInitialLayers(): Layer[] {
+  return [createDefaultLayer('layer-1', 'レイヤー 1')];
+}
+
 // ローカルストレージからデータを読み込む
 function loadCanvasState(): CanvasStorageData | null {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return null;
-    const data = JSON.parse(saved) as CanvasStorageData;
+    const data = JSON.parse(saved);
+    
     // 24時間以上経過したデータは無視
     if (Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return data;
+    
+    // 新形式（layers配列がある場合）
+    if (data.layers && Array.isArray(data.layers)) {
+      return data as CanvasStorageData;
+    }
+    
+    // 旧形式からの変換（後方互換性）
+    const legacyData = data as LegacyCanvasStorageData;
+    const migratedLayer = createDefaultLayer('layer-1', 'レイヤー 1');
+    migratedLayer.strokes = legacyData.strokes || [];
+    migratedLayer.placedStamps = legacyData.placedStamps || [];
+    migratedLayer.textBoxes = legacyData.textBoxes || [];
+    
+    return {
+      layers: [migratedLayer],
+      activeLayerId: 'layer-1',
+      templateId: legacyData.templateId,
+      savedAt: legacyData.savedAt,
+    };
   } catch {
     return null;
   }
@@ -89,12 +122,140 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // ローカルストレージから初期状態を読み込む
   const savedState = useMemo(() => loadCanvasState(), []);
   
-  // ストロークの履歴（SVG生成用）
-  const [strokes, setStrokes] = useState<Stroke[]>(() => savedState?.strokes || []);
+  // レイヤー状態
+  const [layers, setLayers] = useState<Layer[]>(() => savedState?.layers || createInitialLayers());
+  const [activeLayerId, setActiveLayerId] = useState<string>(() => savedState?.activeLayerId || 'layer-1');
+  
+  // アクティブレイヤーの取得
+  const activeLayer = useMemo(() => layers.find(l => l.id === activeLayerId) || layers[0], [layers, activeLayerId]);
+  
+  // 後方互換性のためのエイリアス（アクティブレイヤーのデータ）
+  const strokes = activeLayer?.strokes || [];
+  
+  // アクティブレイヤーの配置スタンプ（後方互換性）
+  const placedStamps = activeLayer?.placedStamps || [];
+  
+  // 全レイヤーの配置スタンプを取得（表示中のレイヤーのみ、レンダリング用）
+  const allPlacedStamps = useMemo(() => layers.flatMap(l => l.visible ? l.placedStamps : []), [layers]);
+  
+  // アクティブレイヤーのストロークを更新
+  const setStrokes = useCallback((updater: Stroke[] | ((prev: Stroke[]) => Stroke[])) => {
+    setLayers(prevLayers => prevLayers.map(layer =>
+      layer.id === activeLayerId
+        ? { ...layer, strokes: typeof updater === 'function' ? updater(layer.strokes) : updater }
+        : layer
+    ));
+  }, [activeLayerId]);
+  
+  // アクティブレイヤーの配置スタンプを更新
+  const setPlacedStamps = useCallback((updater: PlacedStamp[] | ((prev: PlacedStamp[]) => PlacedStamp[])) => {
+    setLayers(prevLayers => prevLayers.map(layer =>
+      layer.id === activeLayerId
+        ? { ...layer, placedStamps: typeof updater === 'function' ? updater(layer.placedStamps) : updater }
+        : layer
+    ));
+  }, [activeLayerId]);
+  
+  // アクティブレイヤーのテキストボックスを更新
+  const setLayerTextBoxes = useCallback((updater: TextBox[] | ((prev: TextBox[]) => TextBox[])) => {
+    setLayers(prevLayers => prevLayers.map(layer =>
+      layer.id === activeLayerId
+        ? { ...layer, textBoxes: typeof updater === 'function' ? updater(layer.textBoxes) : updater }
+        : layer
+    ));
+  }, [activeLayerId]);
+  
   const currentStrokeRef = useRef<Point[]>([]);
   
-  // Undo/Redo用の履歴
-  const [undoStack, setUndoStack] = useState<Stroke[]>([]);
+  // Undo/Redo用の履歴（レイヤー全体のスナップショット）
+  const [history, setHistory] = useState<Layer[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // レイヤーの深いコピーを作成
+  const deepCopyLayers = useCallback((layersToClone: Layer[]): Layer[] => {
+    return layersToClone.map(layer => ({
+      ...layer,
+      strokes: layer.strokes.map(s => ({ ...s, points: [...s.points] })),
+      placedStamps: layer.placedStamps.map(p => ({ ...p })),
+      textBoxes: layer.textBoxes.map(t => ({ ...t })),
+    }));
+  }, []);
+  
+  // 履歴に現在の状態を保存
+  const saveToHistory = useCallback((currentLayers: Layer[]) => {
+    const snapshot = deepCopyLayers(currentLayers);
+    setHistory(prev => {
+      // 現在位置より後の履歴を削除して新しい状態を追加
+      const newHistory = [...prev.slice(0, historyIndex + 1), snapshot];
+      // 最大サイズを超えたら古い履歴を削除
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+        return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+      }
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY_SIZE - 1));
+  }, [deepCopyLayers, historyIndex]);
+  
+  // レイヤー操作関数
+  const addLayer = useCallback(() => {
+    if (layers.length >= MAX_LAYERS) return;
+    // 履歴に保存
+    saveToHistory(layers);
+    const newId = `layer-${Date.now()}`;
+    const newLayer = createDefaultLayer(newId, `レイヤー ${layers.length + 1}`);
+    setLayers(prev => [...prev, newLayer]);
+    setActiveLayerId(newId);
+  }, [layers, saveToHistory]);
+
+  const removeLayer = useCallback((layerId: string) => {
+    if (layers.length <= 1) return; // 最低1レイヤーは必要
+    // 履歴に保存
+    saveToHistory(layers);
+    setLayers(prev => prev.filter(l => l.id !== layerId));
+    if (activeLayerId === layerId) {
+      const remaining = layers.filter(l => l.id !== layerId);
+      setActiveLayerId(remaining[0]?.id || '');
+    }
+  }, [layers, activeLayerId, saveToHistory]);
+
+  const selectLayer = useCallback((layerId: string) => {
+    setActiveLayerId(layerId);
+  }, []);
+
+  const toggleLayerVisibility = useCallback((layerId: string) => {
+    setLayers(prev => prev.map(layer =>
+      layer.id === layerId ? { ...layer, visible: !layer.visible } : layer
+    ));
+  }, []);
+
+  const toggleLayerLock = useCallback((layerId: string) => {
+    setLayers(prev => prev.map(layer =>
+      layer.id === layerId ? { ...layer, locked: !layer.locked } : layer
+    ));
+  }, []);
+
+  const setLayerOpacity = useCallback((layerId: string, opacity: number) => {
+    setLayers(prev => prev.map(layer =>
+      layer.id === layerId ? { ...layer, opacity: Math.max(0, Math.min(1, opacity)) } : layer
+    ));
+  }, []);
+
+  const reorderLayers = useCallback((fromIndex: number, toIndex: number) => {
+    // 履歴に保存
+    saveToHistory(layers);
+    setLayers(prev => {
+      const result = [...prev];
+      const [removed] = result.splice(fromIndex, 1);
+      result.splice(toIndex, 0, removed);
+      return result;
+    });
+  }, [layers, saveToHistory]);
+
+  const renameLayer = useCallback((layerId: string, newName: string) => {
+    setLayers(prev => prev.map(layer =>
+      layer.id === layerId ? { ...layer, name: newName } : layer
+    ));
+  }, []);
   
   // テンプレートとスタンプ
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(() => {
@@ -106,7 +267,6 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   });
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null);
   const [selectedCustomEmoji, setSelectedCustomEmoji] = useState<CustomEmoji | null>(null);
-  const [placedStamps, setPlacedStamps] = useState<PlacedStamp[]>(() => savedState?.placedStamps || []);
   const [selectedPlacedStampId, setSelectedPlacedStampId] = useState<string | null>(null);
   const [stampScale, setStampScale] = useState(1);
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
@@ -176,13 +336,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     ...overrides,
   }), [width, height]);
 
-  const [textBoxes, setTextBoxes] = useState<TextBox[]>(() => {
-    if (savedState?.textBoxes && savedState.textBoxes.length > 0) {
-      return savedState.textBoxes;
-    }
-    // 初期状態は空（追加ボタンで追加する）
-    return [];
-  });
+  // テキストボックスはアクティブレイヤーから取得
+  const textBoxes = activeLayer?.textBoxes || [];
+  const setTextBoxes = setLayerTextBoxes;
   const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>('none');
   const [dragStart, setDragStart] = useState<Point | null>(null);
@@ -203,14 +359,17 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     return `data:image/svg+xml;base64,${encoded}`;
   }, [selectedTemplate, width, height]);
 
-  // キャンバスの初期化と再描画
-  const redrawCanvas = useCallback((strokesData: Stroke[], _stampsData: PlacedStamp[]) => {
+  // キャンバスの初期化と再描画（全レイヤー対応）
+  const redrawCanvas = useCallback((layersToRender?: Layer[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     contextRef.current = ctx;
+
+    // 描画対象のレイヤー（引数がない場合は現在のlayers状態を使用）
+    const renderLayers = layersToRender || layers;
 
     const doRedraw = (templateImg: HTMLImageElement) => {
       // 背景をクリア
@@ -219,20 +378,31 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       // テンプレートを描画
       ctx.drawImage(templateImg, 0, 0, width, height);
       
-      // ストロークを再描画
-      strokesData.forEach(stroke => {
-        if (stroke.points.length < 2) return;
-        ctx.beginPath();
-        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-        for (let i = 1; i < stroke.points.length; i++) {
-          ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-        }
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = stroke.lineWidth;
-        ctx.strokeStyle = stroke.color;
-        ctx.stroke();
+      // すべての表示中のレイヤーのストロークを描画（下から上へ）
+      renderLayers.forEach(layer => {
+        if (!layer.visible) return; // 非表示レイヤーはスキップ
+        
+        // レイヤーの不透明度を設定
+        ctx.globalAlpha = layer.opacity;
+        
+        // ストロークを再描画
+        layer.strokes.forEach(stroke => {
+          if (stroke.points.length < 2) return;
+          ctx.beginPath();
+          ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+          for (let i = 1; i < stroke.points.length; i++) {
+            ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+          }
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = stroke.lineWidth;
+          ctx.strokeStyle = stroke.color;
+          ctx.stroke();
+        });
       });
+      
+      // 不透明度をリセット
+      ctx.globalAlpha = 1;
       
       // スタンプはオーバーレイで表示するため、キャンバスには描画しない
     };
@@ -250,12 +420,17 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       // キャッシュされた画像を使用して同期的に描画
       doRedraw(templateImageRef.current);
     }
-  }, [templateDataUri, width, height]);
+  }, [templateDataUri, width, height, layers]);
 
-  // 初期化（テンプレート変更時のみ）
+  // 初期化（テンプレート変更時）
   useEffect(() => {
-    redrawCanvas(strokes, placedStamps);
+    redrawCanvas();
   }, [selectedTemplate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // レイヤー変更時に再描画
+  useEffect(() => {
+    redrawCanvas();
+  }, [layers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ポインター位置取得
   const getPointerPosition = useCallback((e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -289,12 +464,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
           y: point.y,
           scale: stampScale,
         };
-        setPlacedStamps(prev => {
-          const updated = [...prev, newStamp];
-          // スタンプ追加後に再描画
-          setTimeout(() => redrawCanvas(strokes, updated), 0);
-          return updated;
-        });
+        setPlacedStamps(prev => [...prev, newStamp]);
         return;
       }
       if (selectedCustomEmoji) {
@@ -355,9 +525,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
         color: tool === 'eraser' ? '#ffffff' : color,
         lineWidth,
       };
+      // ストローク追加前に履歴を保存
+      saveToHistory(layers);
       setStrokes(prev => [...prev, newStroke]);
-      // 新しいストロークを追加したらundoStackをクリア
-      setUndoStack([]);
       // 注: ストローク追加時は再描画しない（既に描画済み）
     }
     setIsDrawing(false);
@@ -370,43 +540,56 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // キャンバスクリア
   const clearCanvas = useCallback(() => {
-    setStrokes([]);
-    setPlacedStamps([]);
-    setUndoStack([]);
+    // クリア前に履歴を保存
+    saveToHistory(layers);
+    
+    // すべてのレイヤーをクリア
+    setLayers(prev => prev.map(layer => ({
+      ...layer,
+      strokes: [],
+      placedStamps: [],
+      textBoxes: [],
+    })));
     // ローカルストレージもクリア
     clearCanvasState();
-    // クリア後に再描画
-    setTimeout(() => redrawCanvas([], []), 0);
-  }, [redrawCanvas]);
+    // 再描画はlayersのuseEffectでトリガーされる
+  }, [layers, saveToHistory]);
 
-  // Undo
+  // Undo - 履歴から前の状態を復元
   const undo = useCallback(() => {
-    if (strokes.length === 0) return;
+    if (historyIndex < 0) return;
     
-    const lastStroke = strokes[strokes.length - 1];
-    const newStrokes = strokes.slice(0, -1);
+    // 最初のundoの場合、現在の状態を保存してから1つ前に戻る
+    if (historyIndex === history.length - 1) {
+      // 現在の状態がまだ保存されていない場合は保存
+      const currentSnapshot = deepCopyLayers(layers);
+      setHistory(prev => {
+        if (prev.length === 0 || JSON.stringify(prev[prev.length - 1]) !== JSON.stringify(currentSnapshot)) {
+          return [...prev, currentSnapshot];
+        }
+        return prev;
+      });
+    }
     
-    setStrokes(newStrokes);
-    setUndoStack(prev => [...prev, lastStroke]);
-    
-    // 再描画
-    setTimeout(() => redrawCanvas(newStrokes, placedStamps), 0);
-  }, [strokes, placedStamps, redrawCanvas]);
+    const newIndex = historyIndex - 1;
+    if (newIndex >= 0) {
+      const previousState = deepCopyLayers(history[newIndex]);
+      setLayers(previousState);
+      setHistoryIndex(newIndex);
+    }
+    // 再描画はlayersのuseEffectでトリガーされる
+  }, [historyIndex, history, layers, deepCopyLayers]);
 
-  // Redo
+  // Redo - 履歴から次の状態を復元
   const redo = useCallback(() => {
-    if (undoStack.length === 0) return;
+    if (historyIndex >= history.length - 1) return;
     
-    const strokeToRestore = undoStack[undoStack.length - 1];
-    const newUndoStack = undoStack.slice(0, -1);
-    const newStrokes = [...strokes, strokeToRestore];
-    
-    setStrokes(newStrokes);
-    setUndoStack(newUndoStack);
-    
-    // 再描画
-    setTimeout(() => redrawCanvas(newStrokes, placedStamps), 0);
-  }, [strokes, undoStack, placedStamps, redrawCanvas]);
+    const newIndex = historyIndex + 1;
+    const nextState = deepCopyLayers(history[newIndex]);
+    setLayers(nextState);
+    setHistoryIndex(newIndex);
+    // 再描画はlayersのuseEffectでトリガーされる
+  }, [historyIndex, history, deepCopyLayers]);
 
   // キーボードショートカット
   useEffect(() => {
@@ -430,21 +613,23 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // 状態が変わったらローカルストレージに保存
   useEffect(() => {
     // 初回レンダリング時は保存しない（復元したデータを上書きしないため）
-    const hasContent = strokes.length > 0 || placedStamps.length > 0 || 
-      textBoxes.some(tb => tb.text.length > 0);
+    const hasContent = layers.some(layer => 
+      layer.strokes.length > 0 || 
+      layer.placedStamps.length > 0 || 
+      layer.textBoxes.some(tb => tb.text.length > 0)
+    );
     if (hasContent) {
       saveCanvasState({
-        strokes,
-        placedStamps,
-        textBoxes,
+        layers,
+        activeLayerId,
         templateId: selectedTemplate.id,
       });
     }
-  }, [strokes, placedStamps, textBoxes, selectedTemplate.id]);
+  }, [layers, activeLayerId, selectedTemplate.id]);
 
   // Undo/Redo可能かどうか
-  const canUndo = strokes.length > 0;
-  const canRedo = undoStack.length > 0;
+  const canUndo = historyIndex >= 0;
+  const canRedo = historyIndex < history.length - 1;
 
   // テキストボックスのテキスト更新
   const setMessage = useCallback((text: string) => {
@@ -464,6 +649,8 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // テキストボックスの追加
   const addTextBox = useCallback(() => {
+    // 履歴に保存
+    saveToHistory(layers);
     // キャンバス内に収まるようにy座標を計算
     const baseY = 20 + textBoxes.length * 60;
     const maxY = height - 50; // テキストボックスの高さ分を引く
@@ -472,10 +659,12 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     });
     setTextBoxes(prev => [...prev, newBox]);
     setSelectedTextBoxId(newBox.id);
-  }, [createTextBox, textBoxes.length, height]);
+  }, [createTextBox, textBoxes.length, height, layers, saveToHistory]);
 
   // テキストボックスの削除
   const removeTextBox = useCallback((id: string) => {
+    // 履歴に保存
+    saveToHistory(layers);
     setTextBoxes(prev => {
       const filtered = prev.filter(tb => tb.id !== id);
       // 最低1つは残す
@@ -485,7 +674,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     if (selectedTextBoxId === id) {
       setSelectedTextBoxId(textBoxes.find(tb => tb.id !== id)?.id || null);
     }
-  }, [selectedTextBoxId, textBoxes]);
+  }, [selectedTextBoxId, textBoxes, layers, saveToHistory]);
 
   // テキストボックスの選択
   const selectTextBox = useCallback((id: string | null) => {
@@ -504,18 +693,14 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // スタンプの削除
   const removePlacedStamp = useCallback((id: string) => {
+    // 履歴に保存
+    saveToHistory(layers);
     setPlacedStamps(prev => prev.filter(s => s.id !== id));
     if (selectedPlacedStampId === id) {
       setSelectedPlacedStampId(null);
     }
-    // 再描画
-    setTimeout(() => {
-      setPlacedStamps(current => {
-        redrawCanvas(strokes, current);
-        return current;
-      });
-    }, 0);
-  }, [selectedPlacedStampId, strokes, redrawCanvas]);
+    // 再描画はlayersのuseEffectでトリガーされる
+  }, [selectedPlacedStampId, setPlacedStamps, layers, saveToHistory]);
 
   // スタンプのドラッグ開始
   const handleStampPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: 'move' | 'resize' = 'move') => {
@@ -577,14 +762,11 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // スタンプのドラッグ終了
   const handleStampPointerUp = useCallback(() => {
-    if (stampDragStart && stampDragOriginal) {
-      // 再描画
-      setTimeout(() => redrawCanvas(strokes, placedStamps), 0);
-    }
     setStampDragStart(null);
     setStampDragOriginal(null);
     setStampDragMode(null);
-  }, [stampDragStart, stampDragOriginal, strokes, placedStamps, redrawCanvas]);
+    // スタンプはオーバーレイ表示なのでキャンバス再描画は不要
+  }, []);
 
   // オーバーレイクリックで新規スタンプを配置
   const placeStampAtPosition = useCallback((clientX: number, clientY: number) => {
@@ -598,6 +780,8 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     const y = (clientY - rect.top) * scaleY;
     
     if (selectedStamp) {
+      // 履歴に保存
+      saveToHistory(layers);
       const newStamp: PlacedStamp = {
         id: `stamp-${Date.now()}`,
         stampId: selectedStamp.id,
@@ -605,12 +789,10 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
         y,
         scale: stampScale,
       };
-      setPlacedStamps(prev => {
-        const updated = [...prev, newStamp];
-        setTimeout(() => redrawCanvas(strokes, updated), 0);
-        return updated;
-      });
+      setPlacedStamps(prev => [...prev, newStamp]);
     } else if (selectedCustomEmoji) {
+      // 履歴に保存
+      saveToHistory(layers);
       const newStamp: PlacedStamp = {
         id: `emoji-${Date.now()}`,
         stampId: selectedCustomEmoji.shortcode,
@@ -622,7 +804,8 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       };
       setPlacedStamps(prev => [...prev, newStamp]);
     }
-  }, [width, height, selectedStamp, selectedCustomEmoji, stampScale, strokes, redrawCanvas]);
+    // スタンプはオーバーレイ表示なのでキャンバス再描画は不要
+  }, [width, height, selectedStamp, selectedCustomEmoji, stampScale, setPlacedStamps, layers, saveToHistory]);
 
   // ストロークをSVGのpath文字列に変換
   const pointsToPath = useCallback((points: Point[]): string => {
@@ -636,13 +819,17 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   }, []);
 
   // SVGを生成
-  const generateSvg = useCallback((): string => {
-    const pathElements = strokes.map((stroke) => {
+  // レイヤー内のストロークをSVG pathに変換
+  const strokesToSvg = useCallback((layerStrokes: Stroke[]): string => {
+    return layerStrokes.map((stroke) => {
       const d = pointsToPath(stroke.points);
       return `<path d="${d}" stroke="${stroke.color}" stroke-width="${stroke.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
-    }).join('\n  ');
+    }).join('\n    ');
+  }, [pointsToPath]);
 
-    const stampElements = placedStamps.map((placed) => {
+  // レイヤー内のスタンプをSVGに変換
+  const stampsToSvg = useCallback((layerStamps: PlacedStamp[]): string => {
+    return layerStamps.map((placed) => {
       if (placed.isCustomEmoji && placed.customEmojiUrl) {
         const defaultSize = 50;
         const w = defaultSize * placed.scale;
@@ -659,10 +846,12 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
         const y = placed.y - h/2;
         return `<g transform="translate(${x.toFixed(2)}, ${y.toFixed(2)}) scale(${placed.scale})">${stamp.svg}</g>`;
       }
-    }).join('\n  ');
+    }).join('\n    ');
+  }, []);
 
-    // 複数テキストボックスをSVGに変換
-    const textElements = textBoxes
+  // レイヤー内のテキストボックスをSVGに変換
+  const textBoxesToSvg = useCallback((layerTextBoxes: TextBox[]): string => {
+    return layerTextBoxes
       .filter(tb => tb.text.trim())
       .map(tb => {
         const lines = tb.text.split('\n');
@@ -680,15 +869,38 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
         const fontFamilyForSvg = tb.fontFamily.split(',')[0].replace(/"/g, '').trim();
         return `<text font-family="${fontFamilyForSvg}, sans-serif" font-size="${tb.fontSize}" fill="${tb.color}">${textLines}</text>`;
       })
+      .join('\n    ');
+  }, []);
+
+  // SVGを生成（レイヤー対応）
+  const generateSvg = useCallback((): string => {
+    // 表示中のレイヤーのみをSVGに変換
+    const layerElements = layers
+      .filter(layer => layer.visible)
+      .map(layer => {
+        const pathElements = strokesToSvg(layer.strokes);
+        const stampElements = stampsToSvg(layer.placedStamps);
+        const textElements = textBoxesToSvg(layer.textBoxes);
+        
+        const hasContent = pathElements || stampElements || textElements;
+        if (!hasContent) return '';
+        
+        const opacityAttr = layer.opacity < 1 ? ` opacity="${layer.opacity.toFixed(2)}"` : '';
+        
+        return `<g data-layer="${layer.id}"${opacityAttr}>
+    ${pathElements}
+    ${stampElements}
+    ${textElements}
+  </g>`;
+      })
+      .filter(Boolean)
       .join('\n  ');
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
   ${selectedTemplate.svg}
-  ${pathElements}
-  ${stampElements}
-  ${textElements}
+  ${layerElements}
 </svg>`;
-  }, [strokes, placedStamps, width, height, pointsToPath, selectedTemplate, textBoxes]);
+  }, [layers, width, height, selectedTemplate, strokesToSvg, stampsToSvg, textBoxesToSvg]);
 
   // テキストボックスのドラッグハンドラ（マウス・タッチ両対応）
   const handleTextBoxPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: DragMode) => {
@@ -957,6 +1169,23 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     handlePinchMove,
     handlePinchEnd,
     resetZoom,
+    
+    // レイヤー機能
+    layers,
+    activeLayerId,
+    activeLayer,
+    allPlacedStamps,
+    addLayer,
+    removeLayer,
+    selectLayer,
+    toggleLayerVisibility,
+    toggleLayerLock,
+    setLayerOpacity,
+    reorderLayers,
+    renameLayer,
+    
+    // キャンバスサイズ（投稿用）
+    canvasSize: { width, height },
   };
 }
 

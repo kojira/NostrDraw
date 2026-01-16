@@ -1209,9 +1209,25 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
+/* レイヤーパネルとテキストオプションの横並びコンテナ */
+.bottomSection {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .bottomSection {
+    flex-direction: column;
+  }
+}
+
 /* テキストモード時のオプションセクション（キャンバスの下） */
 .textOptionsSection {
-  margin-top: 1rem;
+  flex: 1;
+  min-width: 200px;
   padding: 0.75rem;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
