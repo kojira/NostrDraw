@@ -825,3 +825,53 @@ export async function fetchDescendants(cardId: string): Promise<NostrDrawPost[]>
   
   return allDescendants;
 }
+
+// カードの完全なSVGを取得（差分チェーン全体をマージ）
+export async function getCardFullSvg(card: NostrDrawPost): Promise<string> {
+  // 差分保存でない、または親がない場合はそのまま返す
+  if (!card.isDiff || !card.parentEventId) {
+    return card.svg;
+  }
+  
+  // 祖先チェーンを取得（古い順：[root, ..., parent]）
+  const ancestors = await fetchAncestors(card);
+  
+  if (ancestors.length === 0) {
+    // 親が見つからない場合は差分のみ返す
+    return card.svg;
+  }
+  
+  // 最も古い祖先（ルート）から順にマージ
+  let fullSvg = ancestors[0].svg;
+  
+  // 祖先チェーンをマージ
+  for (let i = 1; i < ancestors.length; i++) {
+    const ancestor = ancestors[i];
+    if (ancestor.isDiff) {
+      // 差分保存の場合はマージ
+      fullSvg = mergeSvgWithDiff(fullSvg, ancestor.svg);
+    } else {
+      // 完全なSVGの場合はそれをベースにする
+      fullSvg = ancestor.svg;
+    }
+  }
+  
+  // 最後に現在のカードの差分をマージ
+  fullSvg = mergeSvgWithDiff(fullSvg, card.svg);
+  
+  return fullSvg;
+}
+
+// カードを取得し、完全なSVG（差分マージ済み）を含めて返す
+export async function fetchCardByIdWithFullSvg(eventId: string): Promise<NostrDrawPost | null> {
+  const card = await fetchCardById(eventId);
+  if (!card) return null;
+  
+  // 完全なSVGを取得
+  const fullSvg = await getCardFullSvg(card);
+  
+  return {
+    ...card,
+    svg: fullSvg,
+  };
+}

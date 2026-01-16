@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff } from '../../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -231,6 +231,7 @@ export function CardFlip({
   // 描き足しの場合は差分のみ、通常の場合は全てのストロークにアニメーション
   useEffect(() => {
     const loadAndAnimate = async () => {
+      
       if (!card.svg) {
         setAnimatedSvg(null);
         return;
@@ -243,19 +244,22 @@ export function CardFlip({
         try {
           const parentCard = await fetchCardById(card.parentEventId);
           
-          if (parentCard?.svg) {
+          if (parentCard) {
+            // 親カードの完全なSVG（差分チェーン全体をマージ済み）を取得
+            const parentFullSvg = await getCardFullSvg(parentCard);
+            
             // card.isDiffがtrueの場合、card.svgは差分のみなので親と合成が必要
             let fullSvg: string;
             if (card.isDiff) {
-              // 差分保存の場合：親SVGと差分を合成
-              fullSvg = mergeSvgWithDiff(parentCard.svg, card.svg);
+              // 差分保存の場合：親の完全なSVGと差分を合成
+              fullSvg = mergeSvgWithDiff(parentFullSvg, card.svg);
             } else {
               // 従来形式（完全SVG保存）の場合
               fullSvg = card.svg;
             }
             
             // 差分検出してアニメーションクラスを追加
-            const svgWithAnimation = addAnimationToNewElements(fullSvg, parentCard.svg);
+            const svgWithAnimation = addAnimationToNewElements(fullSvg, parentFullSvg);
             // アニメーションスタイルを注入
             const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
             setAnimatedSvg(finalSvg);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
-import { sendReaction, type NostrDrawPostWithReactions, fetchCardById, mergeSvgWithDiff } from '../../services/card';
+import { sendReaction, type NostrDrawPostWithReactions, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { BASE_URL } from '../../config';
 import type { EventTemplate, Event } from 'nostr-tools';
@@ -98,7 +98,7 @@ export function Timeline({
     });
   }, [cards]);
 
-  // 差分保存されたカードの親を取得して合成
+  // 差分保存されたカードの完全なSVGを取得
   useEffect(() => {
     cards.forEach(async (card) => {
       // isDiffでない、または親がない場合はスキップ
@@ -109,13 +109,11 @@ export function Timeline({
       fetchingDiffRef.current.add(card.id);
       
       try {
-        const parentCard = await fetchCardById(card.parentEventId);
-        if (parentCard?.svg) {
-          const mergedSvg = mergeSvgWithDiff(parentCard.svg, card.svg);
-          setMergedSvgs(prev => new Map(prev).set(card.id, mergedSvg));
-        }
+        // カードの完全なSVG（差分チェーン全体をマージ済み）を取得
+        const fullSvg = await getCardFullSvg(card);
+        setMergedSvgs(prev => new Map(prev).set(card.id, fullSvg));
       } catch (error) {
-        console.error('Failed to merge SVG:', error);
+        console.error('Failed to get full SVG:', error);
       }
     });
   }, [cards, mergedSvgs]);
