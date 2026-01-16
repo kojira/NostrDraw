@@ -114,12 +114,9 @@ function App() {
   const [postToTimeline, setPostToTimeline] = useState(true); // kind 1にも投稿
   const [extendingCard, setExtendingCard] = useState<NostrDrawPost | null>(null); // 描き足し元のカード
   
-  // URLパラメータからeventidを取得して表示するカード
-  const [sharedCard, setSharedCard] = useState<NostrDrawPost | null>(null);
-  const [isLoadingSharedCard, setIsLoadingSharedCard] = useState(false);
-  
-  // タイムラインでクリックされたカード（モーダル表示用）
+  // カード詳細表示（タイムラインクリック、URLパラメータ共通）
   const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
+  const [isLoadingSelectedCard, setIsLoadingSelectedCard] = useState(false);
 
   // 新規投稿を開始
   const handleCreatePost = useCallback(() => {
@@ -158,16 +155,16 @@ function App() {
     const npub = params.get('npub');
     
     if (eventId) {
-      setIsLoadingSharedCard(true);
+      setIsLoadingSelectedCard(true);
       fetchCardById(eventId)
         .then((card) => {
-          setSharedCard(card);
+          setSelectedCard(card);
         })
         .catch((err) => {
           console.error('カードの読み込みに失敗:', err);
         })
         .finally(() => {
-          setIsLoadingSharedCard(false);
+          setIsLoadingSelectedCard(false);
         });
     }
     
@@ -175,7 +172,8 @@ function App() {
     if (npub && npub.startsWith('npub1')) {
       goToUser(npub);
     }
-  }, [goToUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // マウント時に一度だけ実行
 
   // 送信完了ダイアログを閉じる
   const handleCloseSendSuccess = useCallback(() => {
@@ -590,66 +588,29 @@ function App() {
         </div>
       </header>
 
-      {/* 共有カード表示（URLパラメータからeventidがある場合） - モーダル表示 */}
-      {(sharedCard || isLoadingSharedCard) && (
-        <div className="sharedCardModal">
-          <div className="sharedCardModalHeader">
-            <button
-              onClick={() => {
+      {/* カード詳細モーダル（タイムラインクリック・URLパラメータ共通） */}
+      {/* CardFlipはポータルを使って直接document.bodyにレンダリングするので、ラッパーは不要 */}
+      {(selectedCard || isLoadingSelectedCard) && (
+        selectedCard ? (
+          <CardFlip
+            card={selectedCard}
+            userPubkey={authState.pubkey}
+            signEvent={authState.isNip07 ? signEvent : undefined}
+            onExtend={handleExtend}
+            onClose={() => {
+              // URLパラメータをクリア
+              if (window.location.search.includes('eventid')) {
                 window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-                setSharedCard(null);
-                goHome();
-              }}
-              className="sharedCardHomeButton"
-            >
-              ← {t('nav.home')}
-            </button>
-            <h2 className="sharedCardTitle">{t('viewer.sharedCard')}</h2>
-            <button
-              onClick={() => {
-                window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-                setSharedCard(null);
-              }}
-              className="sharedCardCloseButton"
-            >
-              ✕
-            </button>
+              }
+              setSelectedCard(null);
+            }}
+            onNavigateToCard={setSelectedCard}
+          />
+        ) : (
+          <div className="cardLoadingOverlay">
+            <p className="loading">{t('card.loading')}</p>
           </div>
-          <div className="sharedCardModalContent">
-            {isLoadingSharedCard ? (
-              <p className="loading">{t('card.loading')}</p>
-            ) : sharedCard ? (
-              <div className="sharedCardContainer">
-                <CardFlip 
-                  card={sharedCard} 
-                  userPubkey={authState.pubkey}
-                  signEvent={authState.isNip07 ? signEvent : undefined}
-                  onExtend={handleExtend}
-                  onNavigateToCard={setSharedCard}
-                  usePortal={false}
-                />
-              </div>
-            ) : (
-              <p className="error">{t('card.loading')}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* カード詳細モーダル（タイムラインからクリック時） */}
-      {selectedCard && (
-        <div className="cardModal" onClick={() => setSelectedCard(null)}>
-          <div className="cardModalContent" onClick={(e) => e.stopPropagation()}>
-            <CardFlip
-              card={selectedCard}
-              userPubkey={authState.pubkey}
-              signEvent={authState.isNip07 ? signEvent : undefined}
-              onExtend={handleExtend}
-              onClose={() => setSelectedCard(null)}
-              onNavigateToCard={setSelectedCard}
-            />
-          </div>
-        </div>
+        )
       )}
 
       {/* メインレイアウト */}

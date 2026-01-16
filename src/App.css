@@ -850,6 +850,28 @@ body.light-theme {
   overflow-y: auto;
 }
 
+.cardModalLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #888;
+}
+
+.cardLoadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 99999;
+  color: #888;
+}
+
 .cardModalContent {
   position: relative;
   max-width: 600px;

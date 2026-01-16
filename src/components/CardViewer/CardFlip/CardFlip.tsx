@@ -1,6 +1,6 @@
 // カードフリップアニメーションコンポーネント
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
@@ -25,7 +25,7 @@ interface CardFlipProps {
   usePortal?: boolean; // デフォルトtrue: createPortalでbodyに表示、false: 親コンポーネント内に表示
 }
 
-export function CardFlip({
+export const CardFlip = memo(function CardFlip({
   card,
   senderProfile,
   recipientProfile,
@@ -240,8 +240,8 @@ export function CardFlip({
     allTreeCards.forEach(async (treeCard) => {
       // isDiffでない、または親がない場合はスキップ
       if (!treeCard.isDiff || !treeCard.parentEventId) return;
-      // 既に取得中または取得済みならスキップ
-      if (fetchingTreeSvgsRef.current.has(treeCard.id) || treeMergedSvgs.has(treeCard.id)) return;
+      // 既に取得中ならスキップ（refで管理）
+      if (fetchingTreeSvgsRef.current.has(treeCard.id)) return;
       
       fetchingTreeSvgsRef.current.add(treeCard.id);
       
@@ -252,7 +252,9 @@ export function CardFlip({
         console.error('Failed to get tree card full SVG:', error);
       }
     });
-  }, [ancestors, descendants, treeMergedSvgs]);
+    // treeMergedSvgsを依存配列から除外（setTreeMergedSvgsを呼ぶと無限ループになるため）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ancestors, descendants]);
 
   // SVGにストロークアニメーションを適用
   // 描き足しの場合は差分のみ、通常の場合は全てのストロークにアニメーション
@@ -393,23 +395,8 @@ export function CardFlip({
   // コラボ数（子孫の数）
   const collabCount = descendants.length;
 
-  // 初期ローディング中はローディング表示
-  if (isInitialLoading) {
-    const loadingContent = (
-      <div className={usePortal ? styles.cardFlipContainer : styles.cardFlipContainerInline}>
-        {onClose && (
-          <button onClick={onClose} className={styles.closeButton}>
-            ×
-          </button>
-        )}
-        <div className={styles.loadingContainer}>
-          <Spinner size="lg" />
-          <span>{t('card.loading')}</span>
-        </div>
-      </div>
-    );
-    return usePortal ? createPortal(loadingContent, document.body) : loadingContent;
-  }
+  // isInitialLoadingによる条件分岐を削除
+  // ローディング中はメインコンテンツ内でオーバーレイ表示にする（DOM再構築を防ぎCSSアニメーションのリセットを回避）
 
   const cardContent = (
     <div className={usePortal ? styles.cardFlipContainer : styles.cardFlipContainerInline} onClick={onClose}>
@@ -837,10 +824,16 @@ export function CardFlip({
   );
 
   return usePortal ? createPortal(cardContent, document.body) : cardContent;
-}
+}, (prevProps, nextProps) => {
+  // card.idが同じなら再レンダリングしない
+  return prevProps.card.id === nextProps.card.id &&
+         prevProps.userPubkey === nextProps.userPubkey &&
+         prevProps.usePortal === nextProps.usePortal;
+});
 
 // SVGを安全にレンダリングするためのコンポーネント
-function SvgRenderer({ 
+// memo化してDOM再作成によるアニメーションリセットを防ぐ
+const SvgRenderer = memo(function SvgRenderer({ 
   svg, 
   className,
   forceDirectRender = false 
@@ -879,10 +872,11 @@ function SvgRenderer({
   const encoded = btoa(unescape(encodeURIComponent(responsiveSvg)));
   const dataUri = `data:image/svg+xml;base64,${encoded}`;
   return <img src={dataUri} alt="" className={className} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
-}
+});
 
 // カードコンテンツ表示（レイアウト対応）
-function CardContent({ 
+// memo化してアニメーションリセットを防ぐ
+const CardContent = memo(function CardContent({ 
   card, 
   animatedSvg, 
   isLoadingParent 
@@ -939,4 +933,4 @@ function CardContent({
       )}
     </div>
   );
-}
+});

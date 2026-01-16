@@ -296,6 +296,23 @@
   background: var(--bg-secondary, #1a1a2e);
   border-radius: 16px;
   color: var(--text-secondary, #888);
+}
+
+/* 全画面ローディングオーバーレイ（DOM構造を維持しつつローディング表示） */
+.fullLoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.9);
+  color: var(--text-secondary, #888);
+  z-index: 100;
   font-size: 1rem;
 }
 
