@@ -69,8 +69,11 @@ function App() {
   const {
     cards: recentCards,
     isLoading: recentLoading,
+    isLoadingMore: recentLoadingMore,
+    hasMore: recentHasMore,
     error: recentError,
     refresh: refreshRecent,
+    loadMore: loadMoreRecent,
   } = usePublicGalleryCards();
 
   const {
@@ -90,8 +93,11 @@ function App() {
   const {
     cards: followCards,
     isLoading: followCardsLoading,
+    isLoadingMore: followCardsLoadingMore,
+    hasMore: followCardsHasMore,
     error: followCardsError,
     refresh: refreshFollowCards,
+    loadMore: loadMoreFollowCards,
   } = useFollowCards(followeePubkeys);
 
   const {
@@ -644,10 +650,16 @@ function App() {
             globalCards={recentCards}
             isLoadingFollow={followCardsLoading}
             isLoadingGlobal={recentLoading}
+            isLoadingMoreFollow={followCardsLoadingMore}
+            isLoadingMoreGlobal={recentLoadingMore}
+            hasMoreFollow={followCardsHasMore}
+            hasMoreGlobal={recentHasMore}
             errorFollow={followCardsError}
             errorGlobal={recentError}
             onRefreshFollow={refreshFollowCards}
             onRefreshGlobal={refreshRecent}
+            onLoadMoreFollow={loadMoreFollowCards}
+            onLoadMoreGlobal={loadMoreRecent}
             userPubkey={authState.pubkey}
             signEvent={authState.isNip07 ? signEvent : undefined}
             onUserClick={goToUser}

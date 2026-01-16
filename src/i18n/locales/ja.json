@@ -159,12 +159,16 @@
     "unknownUser": "不明なユーザー",
     "sortOrder": "並び順",
     "sortDesc": "新しい順",
-    "sortAsc": "古い順"
+    "sortAsc": "古い順",
+    "loadingMore": "読み込み中...",
+    "noMoreResults": "これ以上の投稿はありません"
   },
   "timeline": {
     "follow": "フォロー",
     "global": "グローバル",
     "loading": "読み込み中...",
+    "loadingMore": "読み込み中...",
+    "noMorePosts": "これ以上の投稿はありません",
     "loginToSeeFollow": "フォロー中のユーザーの投稿を見るにはログインしてください",
     "noFollowPosts": "フォロー中のユーザーの投稿がありません",
     "noPosts": "投稿がありません",

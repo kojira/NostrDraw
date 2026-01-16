@@ -8,6 +8,8 @@ import {
   sendCard, 
   subscribeToPublicGalleryCards,
   subscribeToCardsByAuthors,
+  fetchMorePublicGalleryCards,
+  fetchMoreCardsByAuthors,
   type SendCardParams,
   type NostrDrawPostWithReactions,
 } from '../services/card';
@@ -91,6 +93,8 @@ export function useSentCards(pubkey: string | null) {
 export function usePublicGalleryCards() {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -105,6 +109,7 @@ export function usePublicGalleryCards() {
     setIsLoading(true);
     setError(null);
     setCards([]);
+    setHasMore(true);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
 
@@ -137,6 +142,46 @@ export function usePublicGalleryCards() {
     }
   }, []);
 
+  // 無限スクロール：追加読み込み
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore || allCardsRef.current.length === 0) return;
+    
+    setIsLoadingMore(true);
+    
+    try {
+      // 最も古いカードのcreatedAtを取得
+      const oldestCard = allCardsRef.current.reduce((oldest, card) => 
+        card.createdAt < oldest.createdAt ? card : oldest
+      );
+      
+      const moreCards = await fetchMorePublicGalleryCards(
+        oldestCard.createdAt,
+        20,
+        seenIdsRef.current
+      );
+      
+      if (moreCards.length === 0) {
+        setHasMore(false);
+      } else {
+        // 追加されたカードをrefに追加
+        for (const card of moreCards) {
+          seenIdsRef.current.add(card.id);
+          allCardsRef.current.push(card);
+        }
+        
+        // ソートして表示更新
+        const sortedCards = [...allCardsRef.current]
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .map(c => ({ ...c, reactionCount: 0 }));
+        setCards(sortedCards);
+      }
+    } catch (err) {
+      console.error('追加読み込みエラー:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore]);
+
   useEffect(() => {
     loadCards();
     
@@ -151,8 +196,11 @@ export function usePublicGalleryCards() {
     cards,
     count: cards.length,
     isLoading,
+    isLoadingMore,
+    hasMore,
     error,
     refresh: loadCards,
+    loadMore,
   };
 }
 
@@ -257,10 +305,18 @@ export function usePopularCards(days: number = 3) {
 export function useFollowCards(followees: string[]) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const followeesRef = useRef<string[]>(followees);
+
+  // followeesの変更を追跡
+  useEffect(() => {
+    followeesRef.current = followees;
+  }, [followees]);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -278,6 +334,7 @@ export function useFollowCards(followees: string[]) {
     setIsLoading(true);
     setError(null);
     setCards([]);
+    setHasMore(true);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
 
@@ -307,6 +364,47 @@ export function useFollowCards(followees: string[]) {
     }
   }, [followees]);
 
+  // 無限スクロール：追加読み込み
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore || allCardsRef.current.length === 0 || followeesRef.current.length === 0) return;
+    
+    setIsLoadingMore(true);
+    
+    try {
+      // 最も古いカードのcreatedAtを取得
+      const oldestCard = allCardsRef.current.reduce((oldest, card) => 
+        card.createdAt < oldest.createdAt ? card : oldest
+      );
+      
+      const moreCards = await fetchMoreCardsByAuthors(
+        followeesRef.current,
+        oldestCard.createdAt,
+        20,
+        seenIdsRef.current
+      );
+      
+      if (moreCards.length === 0) {
+        setHasMore(false);
+      } else {
+        // 追加されたカードをrefに追加
+        for (const card of moreCards) {
+          seenIdsRef.current.add(card.id);
+          allCardsRef.current.push(card);
+        }
+        
+        // ソートして表示更新
+        const sortedCards = [...allCardsRef.current]
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .map(c => ({ ...c, reactionCount: 0 }));
+        setCards(sortedCards);
+      }
+    } catch (err) {
+      console.error('追加読み込みエラー:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore]);
+
   useEffect(() => {
     loadCards();
     
@@ -321,8 +419,11 @@ export function useFollowCards(followees: string[]) {
     cards,
     count: cards.length,
     isLoading,
+    isLoadingMore,
+    hasMore,
     error,
     refresh: loadCards,
+    loadMore,
   };
 }
 

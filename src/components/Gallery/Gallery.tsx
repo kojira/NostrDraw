@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
-import { sendReaction, hasUserReacted, fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor } from '../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
@@ -79,6 +79,8 @@ export function Gallery({
   const [authorFilter, setAuthorFilter] = useState<string>(initialAuthor || '');
   const [cards, setCards] = useState<(NostrDrawPost | NostrDrawPostWithReactions)[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
@@ -99,10 +101,20 @@ export function Gallery({
   // 重複チェック用のSet（refで保持）
   const seenIdsRef = useRef<Set<string>>(new Set());
   
+  // 無限スクロール用のref
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // 著者フィルタのpubkeyを保持
+  const authorPubkeyRef = useRef<string>('');
+  
   // リアクション状態を管理
   const [userReactions, setUserReactions] = useState<Set<string>>(new Set());
   const [reactionCounts, setReactionCounts] = useState<Map<string, number>>(new Map());
   const [reactingCards, setReactingCards] = useState<Set<string>>(new Set());
+  
+  // 差分保存されたカードの合成済みSVGを管理
+  const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
+  const fetchingDiffRef = useRef<Set<string>>(new Set());
 
   // 期間をdays数に変換
   const periodToDays = useCallback((p: PeriodType): number => {
@@ -125,6 +137,7 @@ export function Gallery({
     setError(null);
     setCards([]);
     setDisplayLimit(20); // フィルタ変更時は表示数をリセット
+    setHasMore(true); // 追加読み込み可能にリセット
     displayLimitRef.current = 20;
     allReceivedCardsRef.current = [];
     reactionCountsRef.current = new Map();
@@ -142,6 +155,7 @@ export function Gallery({
         authorPubkey = converted;
       }
     }
+    authorPubkeyRef.current = authorPubkey;
     
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
@@ -243,6 +257,26 @@ export function Gallery({
     });
   }, [cards]);
 
+  // 差分保存されたカードの完全なSVGを取得
+  useEffect(() => {
+    cards.forEach(async (card) => {
+      // isDiffでない、または親がない場合はスキップ
+      if (!card.isDiff || !card.parentEventId) return;
+      // 既に取得中または取得済みならスキップ
+      if (fetchingDiffRef.current.has(card.id) || mergedSvgs.has(card.id)) return;
+      
+      fetchingDiffRef.current.add(card.id);
+      
+      try {
+        // カードの完全なSVG（差分チェーン全体をマージ済み）を取得
+        const fullSvg = await getCardFullSvg(card);
+        setMergedSvgs(prev => new Map(prev).set(card.id, fullSvg));
+      } catch (error) {
+        console.error('Failed to get full SVG:', error);
+      }
+    });
+  }, [cards, mergedSvgs]);
+
   // リアクション状態を取得
   useEffect(() => {
     const loadReactionStates = async () => {
@@ -311,29 +345,135 @@ export function Gallery({
     setSelectedCard(card);
   }, []);
 
-  const handleLoadMore = useCallback(() => {
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    
     const newLimit = displayLimit + 20;
     setDisplayLimit(newLimit);
     
-    // 既に取得済みのカードから追加表示（再購読しない）
-    if (activeTab === 'popular') {
-      const reactions = reactionCountsRef.current;
-      const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
-        const aCount = reactions.get(a.id) || 0;
-        const bCount = reactions.get(b.id) || 0;
-        if (aCount !== bCount) {
-          return bCount - aCount;
-        }
-        return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-      }).slice(0, newLimit);
-      setCards(sortedCards);
-    } else {
-      const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
-        sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-      ).slice(0, newLimit);
-      setCards(sortedCards);
+    // 既に取得済みのカードで足りる場合はそれを表示
+    if (allReceivedCardsRef.current.length >= newLimit) {
+      if (activeTab === 'popular') {
+        const reactions = reactionCountsRef.current;
+        const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
+          const aCount = reactions.get(a.id) || 0;
+          const bCount = reactions.get(b.id) || 0;
+          if (aCount !== bCount) {
+            return bCount - aCount;
+          }
+          return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+        }).slice(0, newLimit);
+        setCards(sortedCards);
+      } else {
+        const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
+          sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+        ).slice(0, newLimit);
+        setCards(sortedCards);
+      }
+      return;
     }
-  }, [displayLimit, activeTab, sortOrder]);
+    
+    // 足りない場合はリレーから追加取得
+    setIsLoadingMore(true);
+    
+    try {
+      // 最も古いカードのcreatedAtを取得
+      const oldestCard = allReceivedCardsRef.current.reduce((oldest, card) => 
+        card.createdAt < oldest.createdAt ? card : oldest
+      , allReceivedCardsRef.current[0]);
+      
+      if (!oldestCard) {
+        setHasMore(false);
+        return;
+      }
+      
+      let moreCards: NostrDrawPost[];
+      if (authorPubkeyRef.current) {
+        moreCards = await fetchMoreCardsByAuthors(
+          [authorPubkeyRef.current],
+          oldestCard.createdAt,
+          30,
+          seenIdsRef.current
+        );
+      } else {
+        moreCards = await fetchMorePublicGalleryCards(
+          oldestCard.createdAt,
+          30,
+          seenIdsRef.current
+        );
+      }
+      
+      if (moreCards.length === 0) {
+        setHasMore(false);
+      } else {
+        // 公開カードのみフィルタ
+        const publicCards = moreCards.filter(card => !card.recipientPubkey);
+        
+        // 追加されたカードをrefに追加
+        for (const card of publicCards) {
+          seenIdsRef.current.add(card.id);
+          allReceivedCardsRef.current.push(card);
+        }
+        
+        // ソートして表示更新
+        if (activeTab === 'popular') {
+          // 人気タブの場合は新しいカードのリアクション数も取得
+          const newCardIds = publicCards.map(c => c.id);
+          if (newCardIds.length > 0) {
+            const newReactions = await fetchReactionCounts(newCardIds);
+            newReactions.forEach((count, id) => {
+              reactionCountsRef.current.set(id, count);
+            });
+          }
+          
+          const reactions = reactionCountsRef.current;
+          const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
+            const aCount = reactions.get(a.id) || 0;
+            const bCount = reactions.get(b.id) || 0;
+            if (aCount !== bCount) {
+              return bCount - aCount;
+            }
+            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+          }).slice(0, newLimit);
+          setCards(sortedCards);
+        } else {
+          const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
+            sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+          ).slice(0, newLimit);
+          setCards(sortedCards);
+        }
+      }
+    } catch (err) {
+      console.error('追加読み込みエラー:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [displayLimit, activeTab, sortOrder, isLoadingMore, hasMore]);
+
+  // 無限スクロール用のIntersection Observer
+  useEffect(() => {
+    if (!hasMore || isLoadingMore || isLoading) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+    
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, isLoadingMore, isLoading, handleLoadMore]);
 
   // 一覧からリアクションを送信
   const handleReaction = useCallback(async (e: React.MouseEvent, card: NostrDrawPost) => {
@@ -493,11 +633,23 @@ export function Gallery({
                       className={styles.thumbnail}
                       onClick={() => handleSelectCard(card)}
                     >
-                      {card.svg ? (
-                        <SvgRenderer svg={card.svg} className={styles.thumbnailImage} />
-                      ) : (
-                        <span className={styles.placeholderEmoji}>🎨</span>
-                      )}
+                      {(() => {
+                        // isDiffの場合は合成完了まで待機
+                        if (card.isDiff && card.parentEventId) {
+                          const mergedSvg = mergedSvgs.get(card.id);
+                          if (mergedSvg) {
+                            return <SvgRenderer svg={mergedSvg} className={styles.thumbnailImage} />;
+                          }
+                          // 合成完了まではローディング表示
+                          return <Spinner size="sm" />;
+                        }
+                        // 通常のカード
+                        return card.svg ? (
+                          <SvgRenderer svg={card.svg} className={styles.thumbnailImage} />
+                        ) : (
+                          <span className={styles.placeholderEmoji}>🎨</span>
+                        );
+                      })()}
                     </div>
                     <div className={styles.info}>
                       <div 
@@ -529,18 +681,22 @@ export function Gallery({
               })}
             </div>
 
-            {!isLoading && cards.length >= displayLimit && allReceivedCardsRef.current.length > displayLimit && (
-              <div className={styles.loadMoreContainer}>
-                <button onClick={handleLoadMore} className={styles.loadMoreButton}>
-                  {t('gallery.loadMore')}
-                </button>
+            {/* 無限スクロール: ローディングとトリガー */}
+            {cards.length > 0 && hasMore && (
+              <div ref={loadMoreRef} className={styles.loadMoreContainer}>
+                {isLoadingMore && (
+                  <div className={styles.loadingMore}>
+                    <Spinner size="sm" />
+                    <span>{t('gallery.loadingMore')}</span>
+                  </div>
+                )}
               </div>
             )}
-
-            {isLoading && cards.length > 0 && (
-              <div className={styles.loadingMore}>
-                <Spinner size="sm" />
-                <span>{t('card.loading')}</span>
+            
+            {/* これ以上投稿がない場合 */}
+            {cards.length > 0 && !hasMore && (
+              <div className={styles.noMore}>
+                {t('gallery.noMoreResults')}
               </div>
             )}
           </>

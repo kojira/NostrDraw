@@ -159,12 +159,16 @@
     "unknownUser": "Unknown User",
     "sortOrder": "Sort",
     "sortDesc": "Newest first",
-    "sortAsc": "Oldest first"
+    "sortAsc": "Oldest first",
+    "loadingMore": "Loading more...",
+    "noMoreResults": "No more posts"
   },
   "timeline": {
     "follow": "Following",
     "global": "Global",
     "loading": "Loading...",
+    "loadingMore": "Loading more...",
+    "noMorePosts": "No more posts",
     "loginToSeeFollow": "Login to see posts from users you follow",
     "noFollowPosts": "No posts from users you follow",
     "noPosts": "No posts yet",

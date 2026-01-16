@@ -573,6 +573,71 @@ export function subscribeToCardsByAuthors(
   );
 }
 
+// 無限スクロール用：古いカードを追加取得（公開ギャラリー用）
+export async function fetchMorePublicGalleryCards(
+  until: number,
+  limit: number = 20,
+  excludeIds: Set<string> = new Set()
+): Promise<NostrDrawPost[]> {
+  const events = await fetchEvents({
+    kinds: [NOSTRDRAW_KIND],
+    until,
+    limit: limit * 2, // 宛先ありのものも含まれるので余裕を持って取得
+  });
+
+  // キャッシュに追加
+  cacheEvents(events);
+
+  const cards: NostrDrawPost[] = [];
+  for (const event of events) {
+    // 既に取得済みならスキップ
+    if (excludeIds.has(event.id)) continue;
+    
+    const card = parseNostrDrawPost(event);
+    // 宛先なし（公開）のカードのみ
+    if (card && !card.recipientPubkey) {
+      cards.push(card);
+    }
+  }
+
+  // 新しい順にソート
+  return cards.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+// 無限スクロール用：古いカードを追加取得（フォロータイムライン用）
+export async function fetchMoreCardsByAuthors(
+  pubkeys: string[],
+  until: number,
+  limit: number = 20,
+  excludeIds: Set<string> = new Set()
+): Promise<NostrDrawPost[]> {
+  if (pubkeys.length === 0) return [];
+
+  const events = await fetchEvents({
+    kinds: [NOSTRDRAW_KIND],
+    authors: pubkeys,
+    until,
+    limit,
+  });
+
+  // キャッシュに追加
+  cacheEvents(events);
+
+  const cards: NostrDrawPost[] = [];
+  for (const event of events) {
+    // 既に取得済みならスキップ
+    if (excludeIds.has(event.id)) continue;
+    
+    const card = parseNostrDrawPost(event);
+    if (card) {
+      cards.push(card);
+    }
+  }
+
+  // 新しい順にソート
+  return cards.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 // リアクション数付きのカード型
 export interface NostrDrawPostWithReactions extends NostrDrawPost {
   reactionCount: number;

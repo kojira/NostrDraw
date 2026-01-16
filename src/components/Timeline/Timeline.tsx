@@ -27,10 +27,16 @@ interface TimelineProps {
   globalCards: (NostrDrawPost | NostrDrawPostWithReactions)[];
   isLoadingFollow: boolean;
   isLoadingGlobal: boolean;
+  isLoadingMoreFollow?: boolean;
+  isLoadingMoreGlobal?: boolean;
+  hasMoreFollow?: boolean;
+  hasMoreGlobal?: boolean;
   errorFollow: string | null;
   errorGlobal: string | null;
   onRefreshFollow: () => void;
   onRefreshGlobal: () => void;
+  onLoadMoreFollow?: () => void;
+  onLoadMoreGlobal?: () => void;
   userPubkey?: string | null;
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onUserClick?: (npub: string) => void;
@@ -46,10 +52,16 @@ export function Timeline({
   globalCards,
   isLoadingFollow,
   isLoadingGlobal,
+  isLoadingMoreFollow = false,
+  isLoadingMoreGlobal = false,
+  hasMoreFollow = true,
+  hasMoreGlobal = true,
   errorFollow,
   errorGlobal,
   onRefreshFollow,
   onRefreshGlobal,
+  onLoadMoreFollow,
+  onLoadMoreGlobal,
   userPubkey,
   signEvent,
   onUserClick,
@@ -75,10 +87,40 @@ export function Timeline({
 
   const cards = activeTab === 'follow' ? followCards : globalCards;
   const isLoading = activeTab === 'follow' ? isLoadingFollow : isLoadingGlobal;
+  const isLoadingMore = activeTab === 'follow' ? isLoadingMoreFollow : isLoadingMoreGlobal;
+  const hasMore = activeTab === 'follow' ? hasMoreFollow : hasMoreGlobal;
+  const onLoadMore = activeTab === 'follow' ? onLoadMoreFollow : onLoadMoreGlobal;
   const error = activeTab === 'follow' ? errorFollow : errorGlobal;
   // 更新関数は将来のプルトゥリフレッシュ実装時に使用
   void onRefreshFollow;
   void onRefreshGlobal;
+
+  // 無限スクロール用のIntersection Observer
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!onLoadMore || !hasMore || isLoadingMore) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+    
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [onLoadMore, hasMore, isLoadingMore]);
 
   // プロフィールを取得
   useEffect(() => {
@@ -347,6 +389,25 @@ export function Timeline({
                 </div>
               );
             })
+          )}
+          
+          {/* 無限スクロール: ローディングとトリガー */}
+          {cards.length > 0 && hasMore && (
+            <div ref={loadMoreRef} className={styles.loadMore}>
+              {isLoadingMore && (
+                <div className={styles.loadMoreSpinner}>
+                  <Spinner size="sm" />
+                  <span>{t('timeline.loadingMore')}</span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* これ以上投稿がない場合 */}
+          {cards.length > 0 && !hasMore && (
+            <div className={styles.noMore}>
+              {t('timeline.noMorePosts')}
+            </div>
           )}
         </div>
       )}

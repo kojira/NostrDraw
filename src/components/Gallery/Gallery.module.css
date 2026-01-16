@@ -338,11 +338,13 @@
   color: var(--color-text-tertiary);
 }
 
-/* もっと見るボタン */
+/* 無限スクロールエリア */
 .loadMoreContainer {
   display: flex;
   justify-content: center;
   margin-top: var(--space-8);
+  padding: var(--space-4);
+  min-height: 60px;
 }
 
 .loadMoreButton {
@@ -358,6 +360,15 @@
     background-color var(--duration-fast) var(--easing-default),
     border-color var(--duration-fast) var(--easing-default),
     color var(--duration-fast) var(--easing-default);
+}
+
+/* これ以上投稿がない場合 */
+.noMore {
+  text-align: center;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin-top: var(--space-4);
 }
 
 .loadMoreButton:hover {
