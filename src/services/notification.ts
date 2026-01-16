@@ -1,8 +1,7 @@
 // 通知サービス
 
 import type { Filter, Event } from 'nostr-tools';
-import { fetchEvents } from './relay';
-import { getEventsFromCache } from './eventCache';
+import { streamEvents } from './relay';
 import { NOSTRDRAW_KIND, type NostrDrawPost } from '../types';
 import { parseNostrDrawPost, fetchCardById } from './card';
 
@@ -75,7 +74,7 @@ function extendToNotification(
   return null;
 }
 
-// 自分が投稿したカードのIDリストを取得（キャッシュ優先）
+// 自分が投稿したカードのIDリストを取得（ストリーミング）
 async function fetchMyCardIds(myPubkey: string): Promise<string[]> {
   const filter = {
     kinds: [NOSTRDRAW_KIND],
@@ -83,24 +82,22 @@ async function fetchMyCardIds(myPubkey: string): Promise<string[]> {
     limit: 200,
   };
   
-  // まずキャッシュから取得
-  const cachedEvents = getEventsFromCache(filter);
-  const cachedIds = new Set(cachedEvents.map(e => e.id));
+  const cardIds = new Set<string>();
   
-  // リレーからも取得（バックグラウンド）
-  try {
-    const events = await fetchEvents(filter);
-    for (const event of events) {
-      cachedIds.add(event.id);
-    }
-  } catch (error) {
-    console.error('自分のカード取得エラー:', error);
-  }
-  
-  return Array.from(cachedIds);
+  return new Promise((resolve) => {
+    streamEvents(
+      filter,
+      (event) => {
+        cardIds.add(event.id);
+      },
+      () => {
+        resolve(Array.from(cardIds));
+      }
+    );
+  });
 }
 
-// 通知を取得（キャッシュ優先、ストリーミング対応）
+// 通知を取得（完全ストリーミング）
 export async function fetchNotifications(
   myPubkey: string,
   since?: number,
@@ -115,6 +112,7 @@ export async function fetchNotifications(
 
   const myCardIdSet = new Set(myCardIds);
   const notificationMap = new Map<string, Notification>();
+  const cardCache = new Map<string, NostrDrawPost | null>();
   
   // フィルタ作成
   const reactionFilter: Filter = {
@@ -132,102 +130,66 @@ export async function fetchNotifications(
     extendFilter.since = since;
   }
   
-  // === Phase 1: キャッシュから即座に取得 ===
-  const cachedReactions = getEventsFromCache(reactionFilter);
-  const cachedExtends = getEventsFromCache(extendFilter);
-  
-  for (const reaction of cachedReactions) {
-    const notification = reactionToNotification(reaction, myPubkey, myCardIdSet);
-    if (notification) {
-      notificationMap.set(notification.id, notification);
+  // 通知を追加してコールバックを呼ぶヘルパー
+  const addNotificationAndUpdate = async (notification: Notification) => {
+    if (notificationMap.has(notification.id)) return;
+    
+    notificationMap.set(notification.id, notification);
+    
+    // 対象カードの情報を取得（キャッシュ活用）
+    if (!cardCache.has(notification.targetCardId)) {
+      try {
+        const card = await fetchCardById(notification.targetCardId);
+        cardCache.set(notification.targetCardId, card);
+      } catch {
+        cardCache.set(notification.targetCardId, null);
+      }
     }
-  }
-  
-  for (const event of cachedExtends) {
-    const notification = extendToNotification(event, myPubkey, myCardIdSet);
-    if (notification) {
-      notificationMap.set(notification.id, notification);
+    
+    // 通知にカード情報を付与
+    notification.targetCard = cardCache.get(notification.targetCardId) || undefined;
+    
+    // コールバック
+    if (onUpdate) {
+      const sorted = Array.from(notificationMap.values())
+        .sort((a, b) => b.createdAt - a.createdAt);
+      onUpdate(sorted);
     }
-  }
+  };
   
-  // キャッシュから取得した通知を即座にコールバック
-  if (notificationMap.size > 0 && onUpdate) {
-    const cachedNotifications = sortAndAttachCards(
-      Array.from(notificationMap.values())
+  // リアクション通知をストリーミング
+  const reactionPromise = new Promise<void>((resolve) => {
+    streamEvents(
+      reactionFilter,
+      async (event) => {
+        const notification = reactionToNotification(event, myPubkey, myCardIdSet);
+        if (notification) {
+          await addNotificationAndUpdate(notification);
+        }
+      },
+      () => resolve()
     );
-    onUpdate(await cachedNotifications);
-  }
+  });
   
-  // === Phase 2: リレーから取得 ===
-  try {
-    const [reactions, extends_] = await Promise.all([
-      fetchEvents(reactionFilter),
-      fetchEvents(extendFilter),
-    ]);
-    
-    let hasNew = false;
-    
-    for (const reaction of reactions) {
-      if (notificationMap.has(reaction.id)) continue;
-      const notification = reactionToNotification(reaction, myPubkey, myCardIdSet);
-      if (notification) {
-        notificationMap.set(notification.id, notification);
-        hasNew = true;
-      }
-    }
-    
-    for (const event of extends_) {
-      if (notificationMap.has(event.id)) continue;
-      const notification = extendToNotification(event, myPubkey, myCardIdSet);
-      if (notification) {
-        notificationMap.set(notification.id, notification);
-        hasNew = true;
-      }
-    }
-    
-    // 新しい通知があればコールバック
-    if (hasNew && onUpdate) {
-      const allNotifications = await sortAndAttachCards(
-        Array.from(notificationMap.values())
-      );
-      onUpdate(allNotifications);
-    }
-  } catch (error) {
-    console.error('通知取得エラー:', error);
-  }
+  // 描き足し通知をストリーミング
+  const extendPromise = new Promise<void>((resolve) => {
+    streamEvents(
+      extendFilter,
+      async (event) => {
+        const notification = extendToNotification(event, myPubkey, myCardIdSet);
+        if (notification) {
+          await addNotificationAndUpdate(notification);
+        }
+      },
+      () => resolve()
+    );
+  });
+  
+  // 両方のストリームが完了するのを待つ
+  await Promise.all([reactionPromise, extendPromise]);
   
   // 最終結果を返す
-  return sortAndAttachCards(Array.from(notificationMap.values()));
+  return Array.from(notificationMap.values())
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
-// 通知をソートしてカード情報を付与
-async function sortAndAttachCards(
-  notifications: Notification[]
-): Promise<Notification[]> {
-  // 日時でソート（新しい順）
-  notifications.sort((a, b) => b.createdAt - a.createdAt);
-  
-  // 対象カードの情報を取得
-  const uniqueCardIds = [...new Set(notifications.map(n => n.targetCardId))];
-  const cardMap = new Map<string, NostrDrawPost>();
-  
-  // 並行して取得
-  await Promise.all(
-    uniqueCardIds.map(async (cardId) => {
-      try {
-        const card = await fetchCardById(cardId);
-        if (card) {
-          cardMap.set(cardId, card);
-        }
-      } catch (error) {
-        console.error('カード取得エラー:', error);
-      }
-    })
-  );
-  
-  // 通知にカード情報を付与
-  return notifications.map(notification => ({
-    ...notification,
-    targetCard: cardMap.get(notification.targetCardId),
-  }));
-}

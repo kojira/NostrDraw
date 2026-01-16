@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
-import { sendReaction, hasUserReacted, fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
+import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
@@ -184,36 +184,35 @@ export function Gallery({
       setCards(sortedCards);
     };
     
-    const handleEose = async () => {
+    const handleEose = () => {
       eoseReceivedRef.current = true; // EOSE完了をマーク
       
       const currentLimit = displayLimitRef.current;
       
-      // EOSE後にリアクション数を取得してソート
+      // EOSE後にリアクション数をストリーミングで取得してソート
       if (activeTab === 'popular' && allReceivedCardsRef.current.length > 0) {
-        try {
-          const cardIds = allReceivedCardsRef.current.map(c => c.id);
-          const reactions = await fetchReactionCounts(cardIds);
-          
-          reactionCountsRef.current = reactions;
-          
-          // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
-          const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
-            const aCount = reactions.get(a.id) || 0;
-            const bCount = reactions.get(b.id) || 0;
-            if (aCount !== bCount) {
-              return bCount - aCount;
-            }
-            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-          }).slice(0, currentLimit);
-          
-          setCards(sortedByReaction);
-          
-          // リアクション数をステートに保存
-          setReactionCounts(reactions);
-        } catch (err) {
-          console.error('Failed to fetch reaction counts:', err);
-        }
+        const cardIds = allReceivedCardsRef.current.map(c => c.id);
+        
+        // ストリーミングでリアクション数を取得（1件ずつUIに反映）
+        streamReactionCounts(
+          cardIds,
+          (reactions) => {
+            reactionCountsRef.current = reactions;
+            
+            // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
+            const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
+              const aCount = reactions.get(a.id) || 0;
+              const bCount = reactions.get(b.id) || 0;
+              if (aCount !== bCount) {
+                return bCount - aCount;
+              }
+              return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+            }).slice(0, currentLimit);
+            
+            setCards(sortedByReaction);
+            setReactionCounts(new Map(reactions));
+          }
+        );
       } else if (activeTab === 'recent' && allReceivedCardsRef.current.length > 0) {
         // 新着タブの場合、日付でソートして表示
         const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
@@ -277,33 +276,33 @@ export function Gallery({
     });
   }, [cards, mergedSvgs]);
 
-  // リアクション状態を取得
+  // リアクション状態を取得（ストリーミング）
   useEffect(() => {
-    const loadReactionStates = async () => {
-      if (cards.length === 0) return;
-      
-      const eventIds = cards.map(card => card.id);
-      
-      // リアクション数を取得（NostrDrawPostWithReactionsでない場合）
-      const counts = await fetchReactionCounts(eventIds);
-      setReactionCounts(counts);
-      
-      // ユーザーがリアクション済みかチェック
-      if (userPubkey) {
-        const reacted = new Set<string>();
-        await Promise.all(
-          eventIds.map(async (eventId) => {
-            const hasReacted = await hasUserReacted(eventId, userPubkey);
-            if (hasReacted) {
-              reacted.add(eventId);
-            }
-          })
-        );
-        setUserReactions(reacted);
-      }
-    };
+    if (cards.length === 0) return;
     
-    loadReactionStates();
+    const eventIds = cards.map(card => card.id);
+    
+    // ストリーミングでリアクション数を取得（1件ずつUIに反映）
+    const unsubscribe = streamReactionCounts(
+      eventIds,
+      (reactions) => {
+        setReactionCounts(new Map(reactions));
+      }
+    );
+    
+    // ユーザーがリアクション済みかチェック（バックグラウンドで）
+    if (userPubkey) {
+      eventIds.forEach(async (eventId) => {
+        const hasReacted = await hasUserReacted(eventId, userPubkey);
+        if (hasReacted) {
+          setUserReactions(prev => new Set(prev).add(eventId));
+        }
+      });
+    }
+    
+    return () => {
+      unsubscribe();
+    };
   }, [cards, userPubkey]);
 
   // 選択されたカードの送信者プロフィールを取得
@@ -417,25 +416,41 @@ export function Gallery({
         
         // ソートして表示更新
         if (activeTab === 'popular') {
-          // 人気タブの場合は新しいカードのリアクション数も取得
+          // 人気タブの場合は新しいカードのリアクション数もストリーミングで取得
           const newCardIds = publicCards.map(c => c.id);
           if (newCardIds.length > 0) {
-            const newReactions = await fetchReactionCounts(newCardIds);
-            newReactions.forEach((count, id) => {
-              reactionCountsRef.current.set(id, count);
-            });
+            streamReactionCounts(
+              newCardIds,
+              (newReactions) => {
+                newReactions.forEach((count, id) => {
+                  reactionCountsRef.current.set(id, count);
+                });
+                
+                const reactions = reactionCountsRef.current;
+                const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
+                  const aCount = reactions.get(a.id) || 0;
+                  const bCount = reactions.get(b.id) || 0;
+                  if (aCount !== bCount) {
+                    return bCount - aCount;
+                  }
+                  return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+                }).slice(0, newLimit);
+                setCards(sortedCards);
+                setReactionCounts(new Map(reactions));
+              }
+            );
+          } else {
+            const reactions = reactionCountsRef.current;
+            const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
+              const aCount = reactions.get(a.id) || 0;
+              const bCount = reactions.get(b.id) || 0;
+              if (aCount !== bCount) {
+                return bCount - aCount;
+              }
+              return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+            }).slice(0, newLimit);
+            setCards(sortedCards);
           }
-          
-          const reactions = reactionCountsRef.current;
-          const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
-            const aCount = reactions.get(a.id) || 0;
-            const bCount = reactions.get(b.id) || 0;
-            if (aCount !== bCount) {
-              return bCount - aCount;
-            }
-            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-          }).slice(0, newLimit);
-          setCards(sortedCards);
         } else {
           const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
             sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt

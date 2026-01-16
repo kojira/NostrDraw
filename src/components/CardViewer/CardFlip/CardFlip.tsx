@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg } from '../../../services/card';
+import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -170,21 +170,26 @@ export const CardFlip = memo(function CardFlip({
     }
   }, [animatedSvg, isInitialLoading]);
 
-  // リアクション状態を取得
+  // リアクション状態を取得（ストリーミング）
   useEffect(() => {
-    const loadReactionState = async () => {
-      // リアクション数を取得
-      const counts = await fetchReactionCounts([card.id]);
-      setReactionCount(counts.get(card.id) || 0);
-      
-      // 自分がリアクション済みかチェック
-      if (userPubkey) {
-        const reacted = await hasUserReacted(card.id, userPubkey);
-        setHasReacted(reacted);
+    // ストリーミングでリアクション数を取得
+    const unsubscribe = streamReactionCounts(
+      [card.id],
+      (counts) => {
+        setReactionCount(counts.get(card.id) || 0);
       }
-    };
+    );
     
-    loadReactionState();
+    // 自分がリアクション済みかチェック
+    if (userPubkey) {
+      hasUserReacted(card.id, userPubkey).then(reacted => {
+        setHasReacted(reacted);
+      });
+    }
+    
+    return () => {
+      unsubscribe();
+    };
   }, [card.id, userPubkey]);
 
   // ツリー全体を取得（すべての祖先と子孫）
@@ -213,24 +218,29 @@ export const CardFlip = memo(function CardFlip({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id]);
 
-  // ツリーカードのプロファイルとリアクション数を取得
+  // ツリーカードのプロファイルとリアクション数を取得（ストリーミング）
   useEffect(() => {
-    const loadTreeDetails = async () => {
-      const allTreeCards = [...ancestors, ...descendants];
-      if (allTreeCards.length === 0) return;
-      
-      // プロファイルを取得
-      const pubkeys = [...new Set(allTreeCards.map(c => c.pubkey))];
-      const profiles = await fetchProfiles(pubkeys);
-      setTreeProfiles(profiles);
-      
-      // リアクション数を取得
-      const eventIds = allTreeCards.map(c => c.id);
-      const reactions = await fetchReactionCounts(eventIds);
-      setTreeReactions(reactions);
-    };
+    const allTreeCards = [...ancestors, ...descendants];
+    if (allTreeCards.length === 0) return;
     
-    loadTreeDetails();
+    // プロファイルを取得
+    const pubkeys = [...new Set(allTreeCards.map(c => c.pubkey))];
+    fetchProfiles(pubkeys).then(profiles => {
+      setTreeProfiles(profiles);
+    });
+    
+    // ストリーミングでリアクション数を取得
+    const eventIds = allTreeCards.map(c => c.id);
+    const unsubscribe = streamReactionCounts(
+      eventIds,
+      (reactions) => {
+        setTreeReactions(new Map(reactions));
+      }
+    );
+    
+    return () => {
+      unsubscribe();
+    };
   }, [ancestors, descendants]);
 
   // ツリーカードの完全なSVGを取得（差分マージ）

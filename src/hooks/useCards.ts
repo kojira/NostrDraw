@@ -324,6 +324,8 @@ export function usePopularCards(days: number = 3) {
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const reactionUnsubscribeRef = useRef<(() => void) | null>(null);
+  const reactionsStartedRef = useRef(false);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -331,14 +333,20 @@ export function usePopularCards(days: number = 3) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
+    if (reactionUnsubscribeRef.current) {
+      reactionUnsubscribeRef.current();
+      reactionUnsubscribeRef.current = null;
+    }
     
     setIsLoading(true);
     setError(null);
     setCards([]);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
+    reactionsStartedRef.current = false;
 
     const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+    let cardBatchTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
@@ -353,35 +361,57 @@ export function usePopularCards(days: number = 3) {
       
       allCardsRef.current.push(card);
       
-      // 日時でソートして表示更新（EOSE前は仮表示）
-      const sortedCards = [...allCardsRef.current]
-        .sort((a, b) => b.createdAt - a.createdAt)
-        .slice(0, 20)
-        .map(c => ({ ...c, reactionCount: 0 }));
-      setCards(sortedCards);
+      // 関数形式でsetCardsを呼び出し、既存のリアクション数を保持する
+      setCards(prevCards => {
+        const reactionMap = new Map(prevCards.map(c => [c.id, c.reactionCount]));
+        const sortedCards = [...allCardsRef.current]
+          .map(c => ({
+            ...c,
+            reactionCount: reactionMap.get(c.id) ?? 0,
+          }))
+          .sort((a, b) => b.reactionCount - a.reactionCount || b.createdAt - a.createdAt)
+          .slice(0, 20);
+        return sortedCards;
+      });
+      
+      // カードが追加されたら、少し待ってからリアクション取得開始
+      if (!reactionsStartedRef.current) {
+        if (cardBatchTimeout) clearTimeout(cardBatchTimeout);
+        cardBatchTimeout = setTimeout(() => {
+          if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
+            reactionsStartedRef.current = true;
+            startReactionStream();
+          }
+        }, 50);
+      }
+    };
+    
+    // リアクション数をストリーミングで取得（人気順にソート）
+    const startReactionStream = () => {
+      import('../services/card').then(({ streamReactionCounts }) => {
+        reactionUnsubscribeRef.current = streamReactionCounts(
+          allCardsRef.current.map(c => c.id),
+          (reactions) => {
+            setCards(() => {
+              const sortedCards = [...allCardsRef.current]
+                .map(c => ({
+                  ...c,
+                  reactionCount: reactions.get(c.id) || 0,
+                }))
+                .sort((a, b) => b.reactionCount - a.reactionCount || b.createdAt - a.createdAt)
+                .slice(0, 20);
+              return sortedCards;
+            });
+          }
+        );
+      });
     };
 
-    const handleEose = async () => {
-      // EOSE後にリアクション数を取得してソート
-      if (allCardsRef.current.length > 0) {
-        try {
-          const { fetchReactionCounts } = await import('../services/card');
-          const cardIds = allCardsRef.current.map(c => c.id);
-          const reactions = await fetchReactionCounts(cardIds);
-          
-          // リアクション数でソート
-          const sortedByReaction = [...allCardsRef.current]
-            .map(card => ({
-              ...card,
-              reactionCount: reactions.get(card.id) || 0,
-            }))
-            .sort((a, b) => b.reactionCount - a.reactionCount)
-            .slice(0, 20);
-          
-          setCards(sortedByReaction);
-        } catch (err) {
-          console.error('Failed to fetch reaction counts:', err);
-        }
+    const handleEose = () => {
+      // EOSE後、まだリアクション取得が開始されていなければ開始
+      if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
+        reactionsStartedRef.current = true;
+        startReactionStream();
       }
       setIsLoading(false);
     };
@@ -400,6 +430,9 @@ export function usePopularCards(days: number = 3) {
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
+      }
+      if (reactionUnsubscribeRef.current) {
+        reactionUnsubscribeRef.current();
       }
     };
   }, [loadCards]);
