@@ -282,12 +282,22 @@ export function Timeline({
                     onClick={() => onCardClick?.(card)}
                   >
                     {(() => {
-                      // isDiffの場合は合成済みSVGを使用、なければ元のSVG
-                      const displaySvg = card.isDiff && mergedSvgs.has(card.id) 
-                        ? mergedSvgs.get(card.id)! 
-                        : card.svg;
-                      return displaySvg ? (
-                        <SvgRenderer svg={displaySvg} className={styles.svg} />
+                      // isDiffの場合は合成完了まで待機
+                      if (card.isDiff && card.parentEventId) {
+                        const mergedSvg = mergedSvgs.get(card.id);
+                        if (mergedSvg) {
+                          return <SvgRenderer svg={mergedSvg} className={styles.svg} />;
+                        }
+                        // 合成完了まではローディング表示
+                        return (
+                          <div className={styles.placeholder}>
+                            <Spinner size="md" />
+                          </div>
+                        );
+                      }
+                      // 通常のカード
+                      return card.svg ? (
+                        <SvgRenderer svg={card.svg} className={styles.svg} />
                       ) : (
                         <div className={styles.placeholder}>🎨</div>
                       );
