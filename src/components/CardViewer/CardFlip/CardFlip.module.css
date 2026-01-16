@@ -19,6 +19,18 @@
   overflow-y: auto;
 }
 
+/* インライン表示用（Portalを使わない場合） */
+.cardFlipContainerInline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  perspective: 1000px;
+  padding: 1rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
 /* メインレイアウト：カードとツリーを配置 */
 .mainLayout {
   display: flex;

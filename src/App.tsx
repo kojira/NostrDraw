@@ -590,14 +590,35 @@ function App() {
         </div>
       </header>
 
-      {/* 共有カード表示（URLパラメータからeventidがある場合） */}
+      {/* 共有カード表示（URLパラメータからeventidがある場合） - モーダル表示 */}
       {(sharedCard || isLoadingSharedCard) && (
-        <section className="section sharedCardSection">
-          <h2 className="sharedCardTitle">{t('viewer.sharedCard')}</h2>
-          {isLoadingSharedCard ? (
-            <p className="loading">{t('card.loading')}</p>
-          ) : sharedCard ? (
-            <>
+        <div className="sharedCardModal">
+          <div className="sharedCardModalHeader">
+            <button
+              onClick={() => {
+                window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+                setSharedCard(null);
+                goHome();
+              }}
+              className="sharedCardHomeButton"
+            >
+              ← {t('nav.home')}
+            </button>
+            <h2 className="sharedCardTitle">{t('viewer.sharedCard')}</h2>
+            <button
+              onClick={() => {
+                window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+                setSharedCard(null);
+              }}
+              className="sharedCardCloseButton"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="sharedCardModalContent">
+            {isLoadingSharedCard ? (
+              <p className="loading">{t('card.loading')}</p>
+            ) : sharedCard ? (
               <div className="sharedCardContainer">
                 <CardFlip 
                   card={sharedCard} 
@@ -605,24 +626,14 @@ function App() {
                   signEvent={authState.isNip07 ? signEvent : undefined}
                   onExtend={handleExtend}
                   onNavigateToCard={setSharedCard}
+                  usePortal={false}
                 />
               </div>
-              <div className="sharedCardActions">
-                <button
-                  onClick={() => {
-                    window.history.replaceState({}, '', window.location.pathname);
-                    setSharedCard(null);
-                  }}
-                  className="closeButton"
-                >
-                  {t('card.close')}
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="error">{t('card.loading')}</p>
-          )}
-        </section>
+            ) : (
+              <p className="error">{t('card.loading')}</p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* カード詳細モーダル（タイムラインからクリック時） */}

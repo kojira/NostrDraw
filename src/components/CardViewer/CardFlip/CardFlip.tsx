@@ -22,6 +22,7 @@ interface CardFlipProps {
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onExtend?: (card: NostrDrawPost) => void; // 描き足しボタンのコールバック
   onNavigateToCard?: (card: NostrDrawPost) => void; // 親子カードへのナビゲーション
+  usePortal?: boolean; // デフォルトtrue: createPortalでbodyに表示、false: 親コンポーネント内に表示
 }
 
 export function CardFlip({
@@ -33,6 +34,7 @@ export function CardFlip({
   signEvent,
   onExtend,
   onNavigateToCard,
+  usePortal = true,
 }: CardFlipProps) {
   const { t } = useTranslation();
   // 宛先がない場合は最初から裏面（絵柄面）を表示
@@ -393,8 +395,8 @@ export function CardFlip({
 
   // 初期ローディング中はローディング表示
   if (isInitialLoading) {
-    return createPortal(
-      <div className={styles.cardFlipContainer}>
+    const loadingContent = (
+      <div className={usePortal ? styles.cardFlipContainer : styles.cardFlipContainerInline}>
         {onClose && (
           <button onClick={onClose} className={styles.closeButton}>
             ×
@@ -404,13 +406,13 @@ export function CardFlip({
           <Spinner size="lg" />
           <span>{t('card.loading')}</span>
         </div>
-      </div>,
-      document.body
+      </div>
     );
+    return usePortal ? createPortal(loadingContent, document.body) : loadingContent;
   }
 
-  return createPortal(
-    <div className={styles.cardFlipContainer} onClick={onClose}>
+  const cardContent = (
+    <div className={usePortal ? styles.cardFlipContainer : styles.cardFlipContainerInline} onClick={onClose}>
       {onClose && (
         <button onClick={onClose} className={styles.closeButton}>
           ×
@@ -831,9 +833,10 @@ export function CardFlip({
           )}
         </div>
       )}
-    </div>,
-    document.body
+    </div>
   );
+
+  return usePortal ? createPortal(cardContent, document.body) : cardContent;
 }
 
 // SVGを安全にレンダリングするためのコンポーネント

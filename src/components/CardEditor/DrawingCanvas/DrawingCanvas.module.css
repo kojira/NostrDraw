@@ -1123,7 +1123,7 @@
 
 /* 投稿成功オーバーレイ */
 .successOverlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -1132,7 +1132,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 10000; /* 最前面に表示 */
   border-radius: 8px;
   animation: fadeIn 0.3s ease;
 }
