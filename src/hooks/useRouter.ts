@@ -74,11 +74,21 @@ export function useRouter() {
   }, []);
 
   const navigate = useCallback((path: string) => {
-    window.location.hash = path;
+    // クエリパラメータをクリアしてハッシュを設定
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   const goHome = useCallback(() => {
-    window.location.hash = '';
+    // クエリパラメータをクリアしてホームに戻る
+    if (window.location.search || window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+      setRoute({ page: 'home', params: {} });
+    }
   }, []);
 
   const goToGallery = useCallback((params?: { tab?: string; period?: string; author?: string }) => {
@@ -91,27 +101,63 @@ export function useRouter() {
       const queryString = searchParams.toString();
       if (queryString) path += `?${queryString}`;
     }
-    window.location.hash = path;
+    // クエリパラメータをクリアしてハッシュを設定
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   const goToUser = useCallback((npub: string) => {
-    window.location.hash = `user/${npub}`;
+    const path = `user/${npub}`;
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   const goToCreate = useCallback(() => {
-    window.location.hash = 'create';
+    const path = 'create';
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   const goToNotifications = useCallback(() => {
-    window.location.hash = 'notifications';
+    const path = 'notifications';
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   const goToSettings = useCallback(() => {
-    window.location.hash = 'settings';
+    const path = 'settings';
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   const goToHelp = useCallback(() => {
-    window.location.hash = 'help';
+    const path = 'help';
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + '#' + path);
+      setRoute(parseHash('#' + path));
+    } else {
+      window.location.hash = path;
+    }
   }, []);
 
   return {

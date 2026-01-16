@@ -394,7 +394,7 @@ export function CardFlip({
           {/* 作者ヘッダー */}
           <div className={styles.authorHeader}>
         <a 
-          href={`${window.location.origin}${window.location.pathname}?npub=${pubkeyToNpub(card.pubkey)}`}
+          href={`${window.location.origin}${window.location.pathname}#user/${pubkeyToNpub(card.pubkey)}`}
           className={styles.authorInfo}
           onClick={(e) => e.stopPropagation()}
         >
