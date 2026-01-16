@@ -10,7 +10,7 @@ import {
   type LayoutType 
 } from '../types';
 import { compressSvg, decompressSvg } from '../utils/compression';
-// import { encodeLayersToBinary, decodeBinaryToLayers, isLayerBinaryFormat } from '../utils/binaryFormat';
+import { decodeBinaryToLayers } from '../utils/binaryFormat';
 import type { Layer } from '../components/CardEditor/DrawingCanvas/types';
 import { BASE_URL } from '../config';
 import { uploadWithNip96 } from './imageUpload';
@@ -99,6 +99,54 @@ async function svgToPngBlob(svgString: string, width: number = 800, height: numb
   });
 }
 
+// レイヤーデータからSVGを生成するヘルパー関数
+function layersToSvg(layers: import('../components/CardEditor/DrawingCanvas/types').Layer[], canvasSize: { width: number; height: number }): string {
+  const { width, height } = canvasSize;
+  
+  const svgParts: string[] = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+  ];
+  
+  // 背景（白）
+  svgParts.push(`<rect width="${width}" height="${height}" fill="white"/>`);
+  
+  // 各レイヤーを処理
+  for (const layer of layers) {
+    if (!layer.visible) continue;
+    
+    const opacity = layer.opacity !== 1 ? ` opacity="${layer.opacity}"` : '';
+    svgParts.push(`<g${opacity}>`);
+    
+    // ストローク
+    for (const stroke of layer.strokes) {
+      if (stroke.points.length < 2) continue;
+      const pathData = stroke.points
+        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+        .join(' ');
+      svgParts.push(`<path d="${pathData}" stroke="${stroke.color}" stroke-width="${stroke.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`);
+    }
+    
+    // スタンプ
+    for (const stamp of layer.placedStamps) {
+      if (stamp.isCustomEmoji && stamp.customEmojiUrl) {
+        const size = 64 * stamp.scale;
+        svgParts.push(`<image href="${stamp.customEmojiUrl}" x="${stamp.x - size/2}" y="${stamp.y - size/2}" width="${size}" height="${size}"/>`);
+      }
+    }
+    
+    // テキストボックス
+    for (const textBox of layer.textBoxes) {
+      if (!textBox.text) continue;
+      svgParts.push(`<text x="${textBox.x}" y="${textBox.y + textBox.fontSize}" font-size="${textBox.fontSize}" fill="${textBox.color}" font-family="${textBox.fontFamily}">${textBox.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`);
+    }
+    
+    svgParts.push('</g>');
+  }
+  
+  svgParts.push('</svg>');
+  return svgParts.join('\n');
+}
+
 // NostrDrawのイベントかどうかをチェック
 export function isNostrDrawEvent(event: Event): boolean {
   // clientタグでNostrDrawのイベントか確認
@@ -150,8 +198,17 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
       const parsed = JSON.parse(event.content);
       message = parsed.message || '';
       
-      // 圧縮されたSVGがあれば解凍、なければ通常のSVG
-      if (parsed.svgCompressed) {
+      // 新バイナリフォーマット（layerData）を優先、なければ従来形式
+      if (parsed.layerData && parsed.compression === 'binary+gzip+base64') {
+        try {
+          const decoded = decodeBinaryToLayers(parsed.layerData);
+          svg = layersToSvg(decoded.layers, decoded.canvasSize);
+        } catch (decodeError) {
+          console.error('Failed to decode layerData:', decodeError);
+          svg = '';
+        }
+      } else if (parsed.svgCompressed) {
+        // 従来の圧縮SVG形式
         try {
           svg = decompressSvg(parsed.svgCompressed);
         } catch (decompressError) {
@@ -159,6 +216,7 @@ export function parseNewYearCard(event: Event): NewYearCard | null {
           svg = '';
         }
       } else {
+        // 生SVG
         svg = parsed.svg || '';
       }
       
