@@ -793,22 +793,33 @@ function SvgRenderer({
   // SVGに外部画像参照が含まれているかチェック
   const hasExternalImage = svg.includes('<image') && svg.includes('href=');
   
+  // SVGにwidth="100%"とheight="100%"を追加して親要素いっぱいに表示
+  const makeResponsive = (svgString: string): string => {
+    // 既存のwidth/heightを削除してviewBoxを保持しつつ100%にする
+    return svgString
+      .replace(/<svg([^>]*)width="[^"]*"/, '<svg$1')
+      .replace(/<svg([^>]*)height="[^"]*"/, '<svg$1')
+      .replace(/<svg/, '<svg width="100%" height="100%" preserveAspectRatio="xMidYMid meet"');
+  };
+  
+  const responsiveSvg = makeResponsive(svg);
+  
   // 直接レンダリングが必要な場合（アニメーション用）または外部画像がある場合
   if (hasExternalImage || forceDirectRender) {
     // 外部画像を含むSVGまたはアニメーション付きSVGは直接HTMLとしてレンダリング
     return (
       <div 
         className={className}
-        dangerouslySetInnerHTML={{ __html: svg }}
+        dangerouslySetInnerHTML={{ __html: responsiveSvg }}
         style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       />
     );
   }
   
   // 外部画像がない場合はdata URI経由で表示（より安全）
-  const encoded = btoa(unescape(encodeURIComponent(svg)));
+  const encoded = btoa(unescape(encodeURIComponent(responsiveSvg)));
   const dataUri = `data:image/svg+xml;base64,${encoded}`;
-  return <img src={dataUri} alt="" className={className} />;
+  return <img src={dataUri} alt="" className={className} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
 }
 
 // カードコンテンツ表示（レイアウト対応）

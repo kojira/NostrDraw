@@ -57,7 +57,14 @@
   .cardSection {
     flex: 1;
     min-width: 0;
-    max-width: calc(100% - 360px);
+    max-width: calc(100% - 320px);
+  }
+}
+
+/* 大画面PCでさらに余裕を持たせる */
+@media (min-width: 1400px) {
+  .cardSection {
+    max-width: calc(100% - 380px);
   }
 }
 
@@ -87,7 +94,7 @@
 }
 
 .card {
-  width: min(90vw, 600px);
+  width: min(95vw, 800px);
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -101,11 +108,25 @@
   }
 }
 
+/* タブレット表示 */
+@media (min-width: 481px) and (max-width: 999px) {
+  .card {
+    width: min(90vw, 700px);
+  }
+}
+
 /* PC横並びレイアウト時はカードを大きくする */
 @media (min-width: 1000px) {
   .card {
-    width: 100%;
+    width: min(60vw, 900px);
     max-width: none;
+  }
+}
+
+/* 大画面PC */
+@media (min-width: 1400px) {
+  .card {
+    width: min(55vw, 1000px);
   }
 }
 
