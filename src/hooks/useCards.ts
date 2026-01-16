@@ -103,7 +103,7 @@ function streamAndUpdateReactions(
   const userReactedSet = new Set<string>();
   let unsubscribe: (() => void) | null = null;
   
-  // ユーザーのリアクション状態を取得（バックグラウンドで）
+  // ユーザーのリアクション状態を取得
   if (userPubkey) {
     import('../services/card').then(({ hasUserReacted }) => {
       Promise.all(
@@ -113,7 +113,16 @@ function streamAndUpdateReactions(
             userReactedSet.add(cardId);
           }
         })
-      );
+      ).then(() => {
+        // ユーザーリアクション状態が取得できたらカードを更新
+        if (userReactedSet.size > 0) {
+          console.log('[streamAndUpdateReactions] userReacted updated, size:', userReactedSet.size);
+          setCards(prevCards => prevCards.map(card => ({
+            ...card,
+            userReacted: userReactedSet.has(card.id) || card.userReacted,
+          })));
+        }
+      });
     });
   }
   
