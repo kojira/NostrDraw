@@ -202,6 +202,52 @@ export function getCachedEvent(eventId: string): Event | null {
 }
 
 /**
+ * キャッシュからイベントを削除
+ * 削除リクエスト後などに使用
+ */
+export function removeEventFromCache(eventId: string): boolean {
+  const event = eventCache.get(eventId);
+  if (!event) return false;
+  
+  // インデックスから削除
+  const indexKey = `kind:${event.kind}`;
+  const kindSet = tagIndex.get(indexKey);
+  if (kindSet) {
+    kindSet.delete(eventId);
+  }
+  
+  const authorKey = `author:${event.pubkey}`;
+  const authorSet = tagIndex.get(authorKey);
+  if (authorSet) {
+    authorSet.delete(eventId);
+  }
+  
+  // タグインデックスから削除
+  for (const tag of event.tags) {
+    if (tag.length >= 2) {
+      const tagKey = `#${tag[0]}:${tag[1]}`;
+      const tagSet = tagIndex.get(tagKey);
+      if (tagSet) {
+        tagSet.delete(eventId);
+      }
+    }
+  }
+  
+  // サイズを減算
+  const eventSize = JSON.stringify(event).length;
+  currentCacheSize -= eventSize;
+  
+  // キャッシュから削除
+  eventCache.delete(eventId);
+  
+  // ストレージに保存
+  scheduleSaveToStorage();
+  
+  console.log(`[EventCache] Removed event: ${eventId}`);
+  return true;
+}
+
+/**
  * フィルタに合致するイベントをキャッシュから取得
  * @returns マッチしたイベント（created_at降順）
  */

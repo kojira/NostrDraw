@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg } from '../../../services/card';
+import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -52,6 +52,9 @@ export const CardFlip = memo(function CardFlip({
   // 親カードがある場合は最初からロード中状態にする（アニメーション前に最終形が見えるのを防ぐ）
   const [isLoadingParent, setIsLoadingParent] = useState(!!card.parentEventId);
   
+  // 祖先の欠落情報（歯抜け対応）
+  const [hasMissingAncestors, setHasMissingAncestors] = useState(false);
+  
   // ツリー構造の状態（すべての祖先と子孫）
   const [ancestors, setAncestors] = useState<NostrDrawPost[]>([]);
   const [descendants, setDescendants] = useState<NostrDrawPost[]>([]);
@@ -78,6 +81,14 @@ export const CardFlip = memo(function CardFlip({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   
+  // 削除機能用の状態
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
+  
+  // 自分の投稿かどうか
+  const isOwner = userPubkey && userPubkey === card.pubkey;
+  
   // メニューの外側クリックで閉じる
   useEffect(() => {
     if (!showMoreMenu) return;
@@ -91,6 +102,27 @@ export const CardFlip = memo(function CardFlip({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMoreMenu]);
+
+  // 投稿を削除
+  const handleDelete = useCallback(async () => {
+    if (!signEvent || !isOwner) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteCard(card.id, '', signEvent);
+      setIsDeleted(true);
+      setShowDeleteConfirm(false);
+      // 削除成功後、少し待ってからモーダルを閉じる
+      setTimeout(() => {
+        onClose?.();
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to delete card:', error);
+      alert('削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [card.id, signEvent, isOwner, onClose]);
 
   // イベントJSONを取得
   const loadEventJson = useCallback(async () => {
@@ -279,13 +311,20 @@ export const CardFlip = memo(function CardFlip({
       // 描き足し投稿の場合
       if (card.parentEventId) {
         setIsLoadingParent(true);
+        setHasMissingAncestors(false);
         
         try {
           const parentCard = await fetchCardById(card.parentEventId);
           
           if (parentCard) {
-            // 親カードの完全なSVG（差分チェーン全体をマージ済み）を取得
-            const parentFullSvg = await getCardFullSvg(parentCard);
+            // 親カードの完全なSVG（差分チェーン全体をマージ済み）を取得（欠落情報付き）
+            const parentResult = await getCardFullSvgWithInfo(parentCard);
+            const parentFullSvg = parentResult.svg;
+            
+            // 親の祖先に欠落がある場合、フラグを設定
+            if (parentResult.hasMissing) {
+              setHasMissingAncestors(true);
+            }
             
             // card.isDiffがtrueの場合、card.svgは差分のみなので親と合成が必要
             let fullSvg: string;
@@ -303,14 +342,16 @@ export const CardFlip = memo(function CardFlip({
             const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
             setAnimatedSvg(finalSvg);
           } else {
-            // 親が見つからない場合は全ストロークにアニメーション
+            // 親が見つからない場合は欠落フラグを設定し、全ストロークにアニメーション
+            setHasMissingAncestors(true);
             const svgWithAnimation = addAnimationToAllStrokes(card.svg);
             const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
             setAnimatedSvg(finalSvg);
           }
         } catch (error) {
           console.error('親イベントの取得に失敗:', error);
-          // エラー時も全ストロークにアニメーション
+          // エラー時は欠落フラグを設定し、全ストロークにアニメーション
+          setHasMissingAncestors(true);
           const svgWithAnimation = addAnimationToAllStrokes(card.svg);
           const finalSvg = injectStrokeAnimationStyles(svgWithAnimation);
           setAnimatedSvg(finalSvg);
@@ -591,6 +632,23 @@ export const CardFlip = memo(function CardFlip({
                 )}
                 <span>JSONを確認</span>
               </button>
+              
+              {/* 削除ボタン（自分の投稿のみ） */}
+              {isOwner && signEvent && (
+                <button
+                  className={`${styles.menuItem} ${styles.deleteMenuItem}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMoreMenu(false);
+                    setShowDeleteConfirm(true);
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                  </svg>
+                  <span>削除する</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -779,6 +837,16 @@ export const CardFlip = memo(function CardFlip({
         </div>
       )}
 
+      {/* 祖先欠落警告 */}
+      {hasMissingAncestors && (
+        <div className={styles.missingAncestorsWarning}>
+          <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+            <path d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm302-40q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm-40-120h80v-200h-80v200Zm40-100Z"/>
+          </svg>
+          <span>一部の描き足し元が削除されているため、完全な表示ではありません</span>
+        </div>
+      )}
+
       {/* イベントJSONモーダル */}
       {showEventJson && (
         <div className={styles.eventJsonModal} onClick={(e) => e.stopPropagation()}>
@@ -830,6 +898,49 @@ export const CardFlip = memo(function CardFlip({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 削除確認モーダル */}
+      {showDeleteConfirm && (
+        <div className={styles.deleteConfirmModal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.deleteConfirmContent}>
+            <h3>投稿を削除しますか？</h3>
+            <p>この操作は取り消せません。削除リクエストがリレーに送信されます。</p>
+            {card.allowExtend && (
+              <p className={styles.deleteWarning}>
+                ⚠️ この投稿に描き足しがある場合、それらの表示に影響が出る可能性があります。
+              </p>
+            )}
+            <div className={styles.deleteConfirmButtons}>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+              >
+                キャンセル
+              </button>
+              <button
+                className={styles.deleteButton}
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Spinner size="sm" /> : '削除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 削除完了メッセージ */}
+      {isDeleted && (
+        <div className={styles.deletedOverlay}>
+          <div className={styles.deletedMessage}>
+            <svg width="48" height="48" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
+            </svg>
+            <span>削除リクエストを送信しました</span>
+          </div>
         </div>
       )}
     </div>

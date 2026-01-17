@@ -982,6 +982,33 @@ export function signEventWithPrivateKey(
   return finalizeEvent(eventTemplate, privateKey);
 }
 
+// 投稿を削除（NIP-09 Event Deletion）
+export async function deleteCard(
+  eventId: string,
+  reason: string = '',
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<Event> {
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  const eventTemplate: EventTemplate = {
+    kind: 5, // 削除リクエスト
+    created_at: timestamp,
+    tags: [
+      ['e', eventId],
+    ],
+    content: reason, // 削除理由（任意）
+  };
+
+  const signedEvent = await signEvent(eventTemplate);
+  await publishEvent(signedEvent);
+  
+  // ローカルキャッシュからも削除
+  const { removeEventFromCache } = await import('./eventCache');
+  removeEventFromCache(eventId);
+  
+  return signedEvent;
+}
+
 // リアクションを送信（NIP-25）
 export async function sendReaction(
   targetEventId: string,
@@ -1025,19 +1052,41 @@ export interface CardTreeNode {
   isCurrent: boolean;
 }
 
-// すべての祖先を取得（ルートまで遡る）
-export async function fetchAncestors(card: NostrDrawPost): Promise<NostrDrawPost[]> {
+// 祖先取得の結果（欠落情報を含む）
+export interface AncestorsResult {
+  ancestors: NostrDrawPost[];
+  missingIds: string[]; // 取得できなかった祖先のID
+  hasMissing: boolean;
+}
+
+// すべての祖先を取得（ルートまで遡る）- 欠落情報を含む
+export async function fetchAncestorsWithMissing(card: NostrDrawPost): Promise<AncestorsResult> {
   const ancestors: NostrDrawPost[] = [];
+  const missingIds: string[] = [];
   let currentCard = card;
   
   while (currentCard.parentEventId) {
     const parent = await fetchCardById(currentCard.parentEventId);
-    if (!parent) break;
+    if (!parent) {
+      // 親が見つからない（削除された可能性）
+      missingIds.push(currentCard.parentEventId);
+      break; // 親がないとさらに上の祖先は辿れない
+    }
     ancestors.unshift(parent); // 先頭に追加（古い順）
     currentCard = parent;
   }
   
-  return ancestors;
+  return {
+    ancestors,
+    missingIds,
+    hasMissing: missingIds.length > 0,
+  };
+}
+
+// すべての祖先を取得（ルートまで遡る）- 後方互換性用
+export async function fetchAncestors(card: NostrDrawPost): Promise<NostrDrawPost[]> {
+  const result = await fetchAncestorsWithMissing(card);
+  return result.ancestors;
 }
 
 // すべての子孫を取得（再帰的）
@@ -1053,27 +1102,42 @@ export async function fetchDescendants(cardId: string): Promise<NostrDrawPost[]>
   return allDescendants;
 }
 
-// カードの完全なSVGを取得（差分チェーン全体をマージ）
-export async function getCardFullSvg(card: NostrDrawPost): Promise<string> {
+// カードのフルSVG取得結果（欠落情報を含む）
+export interface CardFullSvgResult {
+  svg: string;
+  hasMissing: boolean;
+  missingIds: string[];
+}
+
+// カードの完全なSVGを取得（差分チェーン全体をマージ）- 欠落情報を含む
+export async function getCardFullSvgWithInfo(card: NostrDrawPost): Promise<CardFullSvgResult> {
   // 差分保存でない、または親がない場合はそのまま返す
   if (!card.isDiff || !card.parentEventId) {
-    return card.svg;
+    return {
+      svg: card.svg,
+      hasMissing: false,
+      missingIds: [],
+    };
   }
   
-  // 祖先チェーンを取得（古い順：[root, ..., parent]）
-  const ancestors = await fetchAncestors(card);
+  // 祖先チェーンを取得（古い順：[root, ..., parent]）- 欠落情報を含む
+  const ancestorsResult = await fetchAncestorsWithMissing(card);
   
-  if (ancestors.length === 0) {
+  if (ancestorsResult.ancestors.length === 0) {
     // 親が見つからない場合は差分のみ返す
-    return card.svg;
+    return {
+      svg: card.svg,
+      hasMissing: ancestorsResult.hasMissing,
+      missingIds: ancestorsResult.missingIds,
+    };
   }
   
   // 最も古い祖先（ルート）から順にマージ
-  let fullSvg = ancestors[0].svg;
+  let fullSvg = ancestorsResult.ancestors[0].svg;
   
   // 祖先チェーンをマージ
-  for (let i = 1; i < ancestors.length; i++) {
-    const ancestor = ancestors[i];
+  for (let i = 1; i < ancestorsResult.ancestors.length; i++) {
+    const ancestor = ancestorsResult.ancestors[i];
     if (ancestor.isDiff) {
       // 差分保存の場合はマージ
       fullSvg = mergeSvgWithDiff(fullSvg, ancestor.svg);
@@ -1086,7 +1150,17 @@ export async function getCardFullSvg(card: NostrDrawPost): Promise<string> {
   // 最後に現在のカードの差分をマージ
   fullSvg = mergeSvgWithDiff(fullSvg, card.svg);
   
-  return fullSvg;
+  return {
+    svg: fullSvg,
+    hasMissing: ancestorsResult.hasMissing,
+    missingIds: ancestorsResult.missingIds,
+  };
+}
+
+// カードの完全なSVGを取得（差分チェーン全体をマージ）- 後方互換性用
+export async function getCardFullSvg(card: NostrDrawPost): Promise<string> {
+  const result = await getCardFullSvgWithInfo(card);
+  return result.svg;
 }
 
 // カードを取得し、完全なSVG（差分マージ済み）を含めて返す

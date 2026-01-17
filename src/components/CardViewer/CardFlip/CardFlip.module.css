@@ -1307,6 +1307,196 @@
   opacity: 0.8;
 }
 
+/* 削除メニューアイテム */
+.deleteMenuItem {
+  color: #ff6b6b;
+}
+
+.deleteMenuItem:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.15);
+}
+
+.deleteMenuItem svg {
+  fill: #ff6b6b;
+}
+
+/* 削除確認モーダル */
+.deleteConfirmModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20, 20, 30, 0.98);
+  border: 2px solid rgba(255, 100, 100, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100001;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 90%;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.deleteConfirmContent h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.125rem;
+  color: #fff;
+}
+
+.deleteConfirmContent p {
+  margin: 0 0 8px 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+.deleteWarning {
+  color: #ffd93d !important;
+  background: rgba(255, 217, 61, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 12px !important;
+}
+
+.deleteConfirmButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: #ff6b6b;
+  border: none;
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: #ff5252;
+}
+
+.deleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 削除完了オーバーレイ */
+.deletedOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100002;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.deletedMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #4ade80;
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.deletedMessage svg {
+  fill: #4ade80;
+}
+
+.deletedMessage span {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* 祖先欠落警告 */
+.missingAncestorsWarning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  color: #fbbf24;
+  font-size: 0.8125rem;
+  margin: 8px 16px;
+}
+
+.missingAncestorsWarning svg {
+  flex-shrink: 0;
+  fill: #fbbf24;
+}
+
+:global(.light-theme) .missingAncestorsWarning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #b45309;
+}
+
+:global(.light-theme) .missingAncestorsWarning svg {
+  fill: #b45309;
+}
+
 /* イベントJSONモーダル */
 .eventJsonModal {
   position: fixed;
@@ -1486,4 +1676,57 @@
 
 :global(.light-theme) .menuItem:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.05);
+}
+
+:global(.light-theme) .deleteMenuItem {
+  color: #dc2626;
+}
+
+:global(.light-theme) .deleteMenuItem:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+:global(.light-theme) .deleteMenuItem svg {
+  fill: #dc2626;
+}
+
+:global(.light-theme) .deleteConfirmModal {
+  background: rgba(255, 255, 255, 0.98);
+  border: 2px solid rgba(220, 38, 38, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+:global(.light-theme) .deleteConfirmContent h3 {
+  color: #1a1a2e;
+}
+
+:global(.light-theme) .deleteConfirmContent p {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+:global(.light-theme) .deleteWarning {
+  background: rgba(255, 193, 7, 0.15);
+  color: #b45309 !important;
+}
+
+:global(.light-theme) .cancelButton {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+:global(.light-theme) .cancelButton:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+:global(.light-theme) .deletedOverlay {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+:global(.light-theme) .deletedMessage {
+  color: #16a34a;
+}
+
+:global(.light-theme) .deletedMessage svg {
+  fill: #16a34a;
 }
