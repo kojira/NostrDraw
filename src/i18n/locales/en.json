@@ -2,7 +2,7 @@
   "app": {
     "title": "NostrDraw",
     "subtitle": "Draw and share on Nostr",
-    "campaign": "New Year Campaign!",
+    "campaign": "",
     "footer": "Powered by Nostr | kind: 31898"
   },
   "nav": {
