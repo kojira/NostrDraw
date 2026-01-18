@@ -1,9 +1,18 @@
 // 認証状態管理フック
 
-import { useState, useCallback, useEffect } from 'react';
-import { type Event, type EventTemplate } from 'nostr-tools';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { type Event, type EventTemplate, finalizeEvent } from 'nostr-tools';
 import type { AuthState, RelayConfig } from '../types';
 import { npubToPubkey, pubkeyToNpub } from '../services/profile';
+import { deriveNsec, derivePublicKeyFromNsec, nsecToSecretKey, type DeriveProgressCallback } from '../services/keyDerivation';
+import {
+  saveEncryptedNsec,
+  loadDecryptedNsec,
+  hasStoredAccount,
+  getStoredNpub,
+  clearStoredNsec,
+  isStoredEntranceKey,
+} from '../services/keyStorage';
 
 declare global {
   interface Window {
@@ -23,11 +32,16 @@ export function useAuth() {
     pubkey: null,
     npub: null,
     isNip07: false,
+    isNsecLogin: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNip07Available, setIsNip07Available] = useState(false);
   const [nip07Checked, setNip07Checked] = useState(false);
+  const [deriveProgress, setDeriveProgress] = useState(0);
+
+  // nsecをメモリに保持（セキュリティのためstateではなくrefを使用）
+  const nsecRef = useRef<string | null>(null);
 
   // NIP-07拡張機能の検出（遅延ロード対応）
   useEffect(() => {
@@ -91,6 +105,7 @@ export function useAuth() {
               pubkey,
               npub,
               isNip07: true,
+              isNsecLogin: false,
             };
             setAuthState(newState);
             // ストレージも更新して確実にisNip07: trueを保持
@@ -103,6 +118,7 @@ export function useAuth() {
                 pubkey: parsed.pubkey,
                 npub: parsed.npub,
                 isNip07: false,
+                isNsecLogin: false,
               });
             }
           });
@@ -116,6 +132,8 @@ export function useAuth() {
             pubkey: parsed.pubkey,
             npub: parsed.npub,
             isNip07: false,
+            isNsecLogin: parsed.isNsecLogin || false,
+            isEntranceKey: parsed.isEntranceKey,
           });
         }
       } catch {
@@ -143,6 +161,7 @@ export function useAuth() {
         pubkey,
         npub,
         isNip07: true,
+        isNsecLogin: false,
       };
       
       setAuthState(newState);
@@ -157,7 +176,7 @@ export function useAuth() {
     }
   }, []);
 
-  // npubでログイン
+  // npubでログイン（閲覧のみ）
   const loginWithNpub = useCallback((npubInput: string) => {
     setError(null);
     
@@ -175,6 +194,7 @@ export function useAuth() {
       pubkey,
       npub: trimmed,
       isNip07: false,
+      isNsecLogin: false,
     };
     
     setAuthState(newState);
@@ -183,25 +203,147 @@ export function useAuth() {
     return true;
   }, []);
 
+  // アカウント作成（決定論的nsec生成）
+  const createAccount = useCallback(async (
+    accountName: string,
+    password: string,
+    extraSecret: string,
+    onProgress?: DeriveProgressCallback
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    setDeriveProgress(0);
+
+    try {
+      // 進捗コールバックをラップ
+      const progressCallback = (progress: number) => {
+        setDeriveProgress(progress);
+        onProgress?.(progress);
+      };
+
+      // nsecを生成
+      const nsec = await deriveNsec(accountName, password, extraSecret, progressCallback);
+      
+      // 公開鍵を導出
+      const { pubkey, npub } = derivePublicKeyFromNsec(nsec);
+
+      // nsecを暗号化して保存
+      await saveEncryptedNsec(nsec, password, npub, true);
+
+      // メモリにnsecを保持
+      nsecRef.current = nsec;
+
+      // 認証状態を更新
+      const newState: AuthState = {
+        isLoggedIn: true,
+        pubkey,
+        npub,
+        isNip07: false,
+        isNsecLogin: true,
+        isEntranceKey: true,
+      };
+
+      setAuthState(newState);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newState));
+
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'アカウント作成に失敗しました');
+      return false;
+    } finally {
+      setIsLoading(false);
+      setDeriveProgress(0);
+    }
+  }, []);
+
+  // パスワードでログイン（保存されたnsecを復号）
+  const loginWithPassword = useCallback(async (password: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 保存されたnsecを復号
+      const result = await loadDecryptedNsec(password);
+      
+      if (!result) {
+        setError('パスワードが間違っているか、保存されたアカウントがありません');
+        return false;
+      }
+
+      const { nsec, npub, isEntranceKey } = result;
+
+      // 公開鍵を確認
+      const { pubkey } = derivePublicKeyFromNsec(nsec);
+
+      // メモリにnsecを保持
+      nsecRef.current = nsec;
+
+      // 認証状態を更新
+      const newState: AuthState = {
+        isLoggedIn: true,
+        pubkey,
+        npub,
+        isNip07: false,
+        isNsecLogin: true,
+        isEntranceKey,
+      };
+
+      setAuthState(newState);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newState));
+
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'ログインに失敗しました');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // ログアウト
   const logout = useCallback(() => {
+    // メモリからnsecをクリア
+    nsecRef.current = null;
+
     setAuthState({
       isLoggedIn: false,
       pubkey: null,
       npub: null,
       isNip07: false,
+      isNsecLogin: false,
     });
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
-  // NIP-07でイベントに署名
+  // アカウント削除（nsecも削除）
+  const deleteAccount = useCallback(() => {
+    nsecRef.current = null;
+    clearStoredNsec();
+    setAuthState({
+      isLoggedIn: false,
+      pubkey: null,
+      npub: null,
+      isNip07: false,
+      isNsecLogin: false,
+    });
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }, []);
+
+  // イベントに署名
   const signEvent = useCallback(async (eventTemplate: EventTemplate): Promise<Event> => {
-    if (!authState.isNip07 || !window.nostr) {
-      throw new Error('NIP-07ログインが必要です');
+    // NIP-07の場合
+    if (authState.isNip07 && window.nostr) {
+      return await window.nostr.signEvent(eventTemplate);
     }
     
-    return await window.nostr.signEvent(eventTemplate);
-  }, [authState.isNip07]);
+    // nsecの場合
+    if (authState.isNsecLogin && nsecRef.current) {
+      const secretKey = nsecToSecretKey(nsecRef.current);
+      return finalizeEvent(eventTemplate, secretKey);
+    }
+
+    throw new Error('署名するには NIP-07 またはパスワードログインが必要です');
+  }, [authState.isNip07, authState.isNsecLogin]);
 
   // NIP-07からリレー設定を取得
   const getRelaysFromNip07 = useCallback(async (): Promise<RelayConfig[] | null> => {
@@ -221,16 +363,27 @@ export function useAuth() {
     }
   }, []);
 
+  // 署名可能かどうか
+  const canSign = authState.isLoggedIn && (authState.isNip07 || authState.isNsecLogin);
+
   return {
     authState,
     isLoading,
     error,
     isNip07Available,
+    deriveProgress,
+    canSign,
     loginWithNip07,
     loginWithNpub,
+    createAccount,
+    loginWithPassword,
     logout,
+    deleteAccount,
     signEvent,
     getRelaysFromNip07,
+    // ユーティリティ
+    hasStoredAccount,
+    getStoredNpub,
+    isStoredEntranceKey,
   };
 }
-

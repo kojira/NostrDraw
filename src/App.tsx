@@ -56,10 +56,16 @@ function App() {
     isLoading: authLoading,
     error: authError,
     isNip07Available,
+    deriveProgress,
     loginWithNip07,
     loginWithNpub,
+    loginWithPassword,
+    createAccount,
     logout,
+    deleteAccount,
     signEvent,
+    hasStoredAccount,
+    getStoredNpub,
   } = useAuth();
 
   const {
@@ -232,9 +238,15 @@ function App() {
                   isNip07Available={isNip07Available}
                   isLoading={authLoading}
                   error={authError}
+                  deriveProgress={deriveProgress}
+                  hasStoredAccount={hasStoredAccount}
+                  getStoredNpub={getStoredNpub}
                   onLoginWithNip07={loginWithNip07}
                   onLoginWithNpub={loginWithNpub}
+                  onLoginWithPassword={loginWithPassword}
+                  onCreateAccount={createAccount}
                   onLogout={logout}
+                  onDeleteAccount={deleteAccount}
                 />
               </section>
             ) : (
@@ -337,9 +349,15 @@ function App() {
                     isNip07Available={isNip07Available}
                     isLoading={authLoading}
                     error={authError}
+                    deriveProgress={deriveProgress}
+                    hasStoredAccount={hasStoredAccount}
+                    getStoredNpub={getStoredNpub}
                     onLoginWithNip07={loginWithNip07}
                     onLoginWithNpub={loginWithNpub}
+                    onLoginWithPassword={loginWithPassword}
+                    onCreateAccount={createAccount}
                     onLogout={logout}
+                    onDeleteAccount={deleteAccount}
                   />
                   <LanguageSwitch />
                 </div>
@@ -353,9 +371,15 @@ function App() {
                   isNip07Available={isNip07Available}
                   isLoading={authLoading}
                   error={authError}
+                  deriveProgress={deriveProgress}
+                  hasStoredAccount={hasStoredAccount}
+                  getStoredNpub={getStoredNpub}
                   onLoginWithNip07={loginWithNip07}
                   onLoginWithNpub={loginWithNpub}
+                  onLoginWithPassword={loginWithPassword}
+                  onCreateAccount={createAccount}
                   onLogout={logout}
+                  onDeleteAccount={deleteAccount}
                 />
               </div>
             </main>
@@ -401,9 +425,15 @@ function App() {
                   isNip07Available={isNip07Available}
                   isLoading={authLoading}
                   error={authError}
+                  deriveProgress={deriveProgress}
+                  hasStoredAccount={hasStoredAccount}
+                  getStoredNpub={getStoredNpub}
                   onLoginWithNip07={loginWithNip07}
                   onLoginWithNpub={loginWithNpub}
+                  onLoginWithPassword={loginWithPassword}
+                  onCreateAccount={createAccount}
                   onLogout={logout}
+                  onDeleteAccount={deleteAccount}
                 />
                 <LanguageSwitch />
               </div>

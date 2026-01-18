@@ -76,6 +76,8 @@ export interface AuthState {
   pubkey: string | null;
   npub: string | null;
   isNip07: boolean;
+  isNsecLogin: boolean;  // nsecログインかどうか（パスワードログイン）
+  isEntranceKey?: boolean; // 入口用アカウントかどうか（将来の移行用）
 }
 
 export interface ImageUploadConfig {
