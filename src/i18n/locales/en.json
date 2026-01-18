@@ -53,7 +53,16 @@
     "savedAccount": "Saved Account",
     "savedAccountHint": "Login with saved account",
     "forgotPassword": "Forgot password?",
-    "deleteAccountConfirm": "Delete saved account information? This cannot be undone. You can login again with the same account name, password, and extra secret."
+    "deleteAccountConfirm": "Delete saved account information? This cannot be undone. You can login again with the same account name, password, and extra secret.",
+    "reauthRequired": "Re-authentication Required",
+    "reauthHint": "Your session has expired. Please enter your password to re-authenticate."
+  },
+  "profile": {
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Unfollow",
+    "loading": "Loading...",
+    "updating": "Updating..."
   },
   "editor": {
     "draw": "Draw",

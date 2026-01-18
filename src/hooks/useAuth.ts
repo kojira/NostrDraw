@@ -40,8 +40,8 @@ export function useAuth() {
   const [nip07Checked, setNip07Checked] = useState(false);
   const [deriveProgress, setDeriveProgress] = useState(0);
 
-  // nsecをメモリに保持（セキュリティのためstateではなくrefを使用）
-  const nsecRef = useRef<string | null>(null);
+  // パスワードをセッション中のみメモリに保持（nsecは署名時にのみ復号）
+  const passwordRef = useRef<string | null>(null);
 
   // NIP-07拡張機能の検出（遅延ロード対応）
   useEffect(() => {
@@ -127,6 +127,8 @@ export function useAuth() {
           // （このケースはisNip07Availableがtrueになった時に再実行される）
           return;
         } else if (parsed.pubkey && parsed.npub) {
+          // nsecログインの場合、再認証が必要（nsecRefがnullなので署名できない）
+          const needsReauth = parsed.isNsecLogin || false;
           setAuthState({
             isLoggedIn: true,
             pubkey: parsed.pubkey,
@@ -134,6 +136,7 @@ export function useAuth() {
             isNip07: false,
             isNsecLogin: parsed.isNsecLogin || false,
             isEntranceKey: parsed.isEntranceKey,
+            needsReauth,
           });
         }
       } catch {
@@ -230,8 +233,8 @@ export function useAuth() {
       // nsecを暗号化して保存
       await saveEncryptedNsec(nsec, password, npub, true);
 
-      // メモリにnsecを保持
-      nsecRef.current = nsec;
+      // パスワードをセッション中のみメモリに保持（nsecは署名時にのみ復号）
+      passwordRef.current = password;
 
       // 認証状態を更新
       const newState: AuthState = {
@@ -241,6 +244,7 @@ export function useAuth() {
         isNip07: false,
         isNsecLogin: true,
         isEntranceKey: true,
+        needsReauth: false, // 新規作成時は再認証不要
       };
 
       setAuthState(newState);
@@ -275,10 +279,10 @@ export function useAuth() {
       // 公開鍵を確認
       const { pubkey } = derivePublicKeyFromNsec(nsec);
 
-      // メモリにnsecを保持
-      nsecRef.current = nsec;
+      // パスワードをセッション中のみメモリに保持（nsecは署名時にのみ復号）
+      passwordRef.current = password;
 
-      // 認証状態を更新
+      // 認証状態を更新（再認証完了）
       const newState: AuthState = {
         isLoggedIn: true,
         pubkey,
@@ -286,6 +290,7 @@ export function useAuth() {
         isNip07: false,
         isNsecLogin: true,
         isEntranceKey,
+        needsReauth: false, // 再認証完了
       };
 
       setAuthState(newState);
@@ -302,8 +307,8 @@ export function useAuth() {
 
   // ログアウト
   const logout = useCallback(() => {
-    // メモリからnsecをクリア
-    nsecRef.current = null;
+    // メモリからパスワードをクリア
+    passwordRef.current = null;
 
     setAuthState({
       isLoggedIn: false,
@@ -317,7 +322,7 @@ export function useAuth() {
 
   // アカウント削除（nsecも削除）
   const deleteAccount = useCallback(() => {
-    nsecRef.current = null;
+    passwordRef.current = null;
     clearStoredNsec();
     setAuthState({
       isLoggedIn: false,
@@ -336,9 +341,14 @@ export function useAuth() {
       return await window.nostr.signEvent(eventTemplate);
     }
     
-    // nsecの場合
-    if (authState.isNsecLogin && nsecRef.current) {
-      const secretKey = nsecToSecretKey(nsecRef.current);
+    // パスワードログインの場合：署名時にのみnsecを復号
+    if (authState.isNsecLogin && passwordRef.current) {
+      const result = await loadDecryptedNsec(passwordRef.current);
+      if (!result) {
+        throw new Error('nsecの復号に失敗しました');
+      }
+      // nsecを使って署名し、スコープを抜けると自動的に破棄される
+      const secretKey = nsecToSecretKey(result.nsec);
       return finalizeEvent(eventTemplate, secretKey);
     }
 
@@ -363,8 +373,8 @@ export function useAuth() {
     }
   }, []);
 
-  // 署名可能かどうか
-  const canSign = authState.isLoggedIn && (authState.isNip07 || authState.isNsecLogin);
+  // 署名可能かどうか（再認証が必要な場合は署名不可）
+  const canSign = authState.isLoggedIn && (authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth));
 
   return {
     authState,

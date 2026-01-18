@@ -89,6 +89,25 @@ export function Auth({
     return success;
   };
 
+  // ログイン済みだが再認証が必要な場合
+  if (authState.isLoggedIn && authState.needsReauth) {
+    return (
+      <PasswordLogin
+        storedNpub={authState.npub}
+        isLoading={isLoading}
+        error={error}
+        onLogin={handlePasswordLogin}
+        onCancel={onLogout}
+        onForgotPassword={onDeleteAccount ? () => {
+          if (confirm(t('auth.deleteAccountConfirm'))) {
+            onDeleteAccount();
+          }
+        } : undefined}
+        isReauth={true}
+      />
+    );
+  }
+
   // ログイン済み
   if (authState.isLoggedIn) {
     return (

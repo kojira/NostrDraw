@@ -1,12 +1,12 @@
 // プロフィール取得サービス（kind 0）
 // キャッシュ機構付き - 利用側はキャッシュを意識せずに使える
-// TTL無制限、プロフィールページで明示的にrefreshProfileを呼ぶ
 
-import { nip19 } from 'nostr-tools';
-import { fetchEvents } from './relay';
+import { nip19, type Event, type EventTemplate } from 'nostr-tools';
+import { fetchEvents, publishEvent } from './relay';
 import type { NostrProfile } from '../types';
 
 // キャッシュ設定
+const CACHE_TTL = 5 * 60 * 1000; // 5分
 const STORAGE_KEY = 'nostrdraw-profile-cache';
 const MAX_CACHE_SIZE = 500; // 最大キャッシュ数
 
@@ -21,14 +21,23 @@ const memoryCache = new Map<string, CacheEntry>();
 // 進行中のリクエストを追跡（重複防止）
 const pendingRequests = new Map<string, Promise<NostrProfile | null>>();
 
+// キャッシュの有効性チェック
+function isCacheValid(entry: CacheEntry): boolean {
+  return Date.now() - entry.timestamp < CACHE_TTL;
+}
+
 // ローカルストレージからキャッシュを読み込み
 function loadCacheFromStorage(): void {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as Record<string, CacheEntry>;
+      const now = Date.now();
       for (const [pubkey, entry] of Object.entries(parsed)) {
-        memoryCache.set(pubkey, entry);
+        // 有効期限内のエントリのみ復元
+        if (now - entry.timestamp < CACHE_TTL) {
+          memoryCache.set(pubkey, entry);
+        }
       }
     }
   } catch {
@@ -40,11 +49,12 @@ function loadCacheFromStorage(): void {
 function saveCacheToStorage(): void {
   try {
     const entries: Record<string, CacheEntry> = {};
+    const now = Date.now();
     
-    // 最大数制限
+    // 有効なエントリのみ保存（最大数制限）
     let count = 0;
     for (const [pubkey, entry] of memoryCache) {
-      if (count < MAX_CACHE_SIZE) {
+      if (now - entry.timestamp < CACHE_TTL && count < MAX_CACHE_SIZE) {
         entries[pubkey] = entry;
         count++;
       }
@@ -79,9 +89,9 @@ export function npubToPubkey(npub: string): string | null {
 
 // 単一プロフィール取得（キャッシュ優先）
 export async function fetchProfile(pubkey: string): Promise<NostrProfile | null> {
-  // 1. メモリキャッシュをチェック（TTL無制限）
+  // 1. メモリキャッシュをチェック
   const cached = memoryCache.get(pubkey);
-  if (cached) {
+  if (cached && isCacheValid(cached)) {
     return cached.profile;
   }
 
@@ -140,10 +150,10 @@ export async function fetchProfiles(pubkeys: string[]): Promise<Map<string, Nost
   const results = new Map<string, NostrProfile>();
   const uncachedPubkeys: string[] = [];
 
-  // 1. キャッシュから取得（TTL無制限）
+  // 1. キャッシュから取得
   for (const pubkey of pubkeys) {
     const cached = memoryCache.get(pubkey);
-    if (cached) {
+    if (cached && isCacheValid(cached)) {
       results.set(pubkey, cached.profile);
     } else {
       uncachedPubkeys.push(pubkey);
@@ -232,11 +242,123 @@ export function clearProfileCache(): void {
 // キャッシュ済みプロフィールを取得（非同期なし、nullなら未キャッシュ）
 export function getCachedProfile(pubkey: string): NostrProfile | null {
   const cached = memoryCache.get(pubkey);
-  return cached?.profile || null;
+  if (cached && isCacheValid(cached)) {
+    return cached.profile;
+  }
+  return null;
 }
 
-// キャッシュを強制的に更新（プロフィールページで使用）
+// キャッシュを強制的に更新
 export async function refreshProfile(pubkey: string): Promise<NostrProfile | null> {
+  // キャッシュを削除して再取得
   memoryCache.delete(pubkey);
   return fetchProfile(pubkey);
+}
+
+// フォローリストを取得（kind 3の生イベント）
+export async function fetchFollowListEvent(pubkey: string): Promise<Event | null> {
+  const events = await fetchEvents({
+    kinds: [3],
+    authors: [pubkey],
+    limit: 1,
+  });
+
+  if (events.length === 0) {
+    return null;
+  }
+
+  // 最新のkind:3イベントを返す
+  return events.sort((a, b) => b.created_at - a.created_at)[0];
+}
+
+// ユーザーをフォローする
+export async function followUser(
+  targetPubkey: string,
+  myPubkey: string,
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<boolean> {
+  try {
+    // 現在のフォローリストを取得
+    const currentEvent = await fetchFollowListEvent(myPubkey);
+    
+    // 現在のpタグを取得（重複を防ぐためSetを使用）
+    const currentTags = currentEvent?.tags || [];
+    const pTags = new Map<string, string[]>();
+    
+    for (const tag of currentTags) {
+      if (tag[0] === 'p' && tag[1]) {
+        pTags.set(tag[1], tag);
+      }
+    }
+    
+    // 既にフォローしている場合は何もしない
+    if (pTags.has(targetPubkey)) {
+      return true;
+    }
+    
+    // 新しいpタグを追加
+    pTags.set(targetPubkey, ['p', targetPubkey]);
+    
+    // 新しいイベントを作成
+    const eventTemplate: EventTemplate = {
+      kind: 3,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: Array.from(pTags.values()),
+      content: currentEvent?.content || '', // リレー情報を保持
+    };
+    
+    // 署名して公開
+    const signedEvent = await signEvent(eventTemplate);
+    await publishEvent(signedEvent);
+    
+    return true;
+  } catch (error) {
+    console.error('フォローに失敗:', error);
+    return false;
+  }
+}
+
+// ユーザーのフォローを解除する
+export async function unfollowUser(
+  targetPubkey: string,
+  myPubkey: string,
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<boolean> {
+  try {
+    // 現在のフォローリストを取得
+    const currentEvent = await fetchFollowListEvent(myPubkey);
+    
+    if (!currentEvent) {
+      // フォローリストがない場合は何もしない
+      return true;
+    }
+    
+    // 対象ユーザーを除外したpタグを作成
+    const newTags = currentEvent.tags.filter(
+      tag => !(tag[0] === 'p' && tag[1] === targetPubkey)
+    );
+    
+    // 新しいイベントを作成
+    const eventTemplate: EventTemplate = {
+      kind: 3,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: newTags,
+      content: currentEvent.content || '',
+    };
+    
+    // 署名して公開
+    const signedEvent = await signEvent(eventTemplate);
+    await publishEvent(signedEvent);
+    
+    return true;
+  } catch (error) {
+    console.error('フォロー解除に失敗:', error);
+    return false;
+  }
+}
+
+// 特定のユーザーをフォローしているかチェック
+export async function isFollowing(myPubkey: string, targetPubkey: string): Promise<boolean> {
+  const followees = await fetchFollowees(myPubkey);
+  return followees.includes(targetPubkey);
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import { refreshProfile, npubToPubkey, pubkeyToNpub } from '../../services/profile';
+import { refreshProfile, npubToPubkey, pubkeyToNpub, isFollowing, followUser, unfollowUser } from '../../services/profile';
 import { Gallery } from '../Gallery/Gallery';
 import styles from './UserGallery.module.css';
 
@@ -14,6 +14,7 @@ interface UserGalleryProps {
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onExtend?: (card: NostrDrawPost) => void;
   onBack: () => void;
+  onFollowChange?: () => void; // フォロー状態変更時のコールバック
 }
 
 // npubコピー状態
@@ -25,9 +26,12 @@ export function UserGallery({
   signEvent,
   onExtend,
   onBack,
+  onFollowChange,
 }: UserGalleryProps) {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<NostrProfile | null>(null);
+  const [following, setFollowing] = useState<boolean | null>(null); // null = 読み込み中
+  const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
 
   // npubからpubkeyを取得（無効なnpubの場合はnullになる）
   const pubkey = npub.startsWith('npub') ? npubToPubkey(npub) : npub;
@@ -68,6 +72,45 @@ export function UserGallery({
       });
     }
   }, [pubkey]);
+
+  // フォロー状態を取得
+  useEffect(() => {
+    if (userPubkey && pubkey && userPubkey !== pubkey) {
+      setFollowing(null); // 読み込み中
+      isFollowing(userPubkey, pubkey).then(setFollowing);
+    } else {
+      setFollowing(null);
+    }
+  }, [userPubkey, pubkey]);
+
+  // フォロー/アンフォロー処理
+  const handleFollowToggle = useCallback(async () => {
+    if (!userPubkey || !pubkey || !signEvent || isUpdatingFollow) return;
+
+    setIsUpdatingFollow(true);
+    try {
+      if (following) {
+        const success = await unfollowUser(pubkey, userPubkey, signEvent);
+        if (success) {
+          setFollowing(false);
+          onFollowChange?.();
+        }
+      } else {
+        const success = await followUser(pubkey, userPubkey, signEvent);
+        if (success) {
+          setFollowing(true);
+          onFollowChange?.();
+        }
+      }
+    } catch (error) {
+      console.error('フォロー状態の変更に失敗:', error);
+    } finally {
+      setIsUpdatingFollow(false);
+    }
+  }, [userPubkey, pubkey, signEvent, following, isUpdatingFollow, onFollowChange]);
+
+  // 自分自身かどうか
+  const isSelf = userPubkey === pubkey;
 
   // 表示名（プロファイルがない場合はnpubを省略表示、それも無効なら「不明なユーザー」）
   const displayName = profile?.display_name || profile?.name || (fullNpub ? fullNpub.slice(0, 12) + '...' : t('gallery.unknownUser'));
@@ -111,6 +154,25 @@ export function UserGallery({
           </div>
           {profile?.about && (
             <p className={styles.userAbout}>{profile.about}</p>
+          )}
+          
+          {/* フォローボタン */}
+          {!isSelf && userPubkey && signEvent && (
+            <button
+              className={`${styles.followButton} ${following ? styles.following : ''}`}
+              onClick={handleFollowToggle}
+              disabled={following === null || isUpdatingFollow}
+            >
+              {isUpdatingFollow ? (
+                t('profile.updating')
+              ) : following === null ? (
+                t('profile.loading')
+              ) : following ? (
+                t('profile.following')
+              ) : (
+                t('profile.follow')
+              )}
+            </button>
           )}
         </div>
       </div>

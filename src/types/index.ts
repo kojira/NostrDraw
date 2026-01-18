@@ -78,6 +78,7 @@ export interface AuthState {
   isNip07: boolean;
   isNsecLogin: boolean;  // nsecログインかどうか（パスワードログイン）
   isEntranceKey?: boolean; // 入口用アカウントかどうか（将来の移行用）
+  needsReauth?: boolean; // 再認証が必要かどうか（nsecログインでページリロード後）
 }
 
 export interface ImageUploadConfig {

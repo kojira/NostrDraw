@@ -14,6 +14,7 @@ interface PasswordLoginProps {
   onLogin: (password: string) => Promise<boolean>;
   onCancel: () => void;
   onForgotPassword?: () => void;
+  isReauth?: boolean; // ページリロード後の再認証かどうか
 }
 
 export function PasswordLogin({
@@ -23,6 +24,7 @@ export function PasswordLogin({
   onLogin,
   onCancel,
   onForgotPassword,
+  isReauth = false,
 }: PasswordLoginProps) {
   const { t } = useTranslation();
   const [password, setPassword] = useState('');
@@ -52,7 +54,12 @@ export function PasswordLogin({
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>{t('auth.loginWithPassword')}</h2>
+      <h2 className={styles.title}>
+        {isReauth ? t('auth.reauthRequired') : t('auth.loginWithPassword')}
+      </h2>
+      {isReauth && (
+        <p className={styles.reauthHint}>{t('auth.reauthHint')}</p>
+      )}
       
       {/* 保存されているアカウント情報 */}
       {storedNpub && (
@@ -104,7 +111,7 @@ export function PasswordLogin({
             className={styles.cancelButton}
             disabled={isLoading}
           >
-            {t('auth.cancel')}
+            {isReauth ? t('auth.logout') : t('auth.cancel')}
           </button>
           <button
             type="submit"

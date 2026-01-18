@@ -398,7 +398,7 @@ function App() {
         <div className="mainContent fullWidth">
           <Notifications
             userPubkey={authState.pubkey}
-            signEvent={authState.isNip07 ? signEvent : undefined}
+            signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
             onNavigateToUser={(npub) => goToUser(npub)}
           />
         </div>
@@ -511,7 +511,7 @@ function App() {
           initialPeriod={route.params.period}
           initialAuthor={route.params.author}
           userPubkey={authState.pubkey}
-          signEvent={authState.isNip07 ? signEvent : undefined}
+          signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
           onExtend={handleExtend}
           onBack={goHome}
           onUserClick={goToUser}
@@ -562,7 +562,7 @@ function App() {
         <UserGallery
           npub={route.params.npub}
           userPubkey={authState.pubkey}
-          signEvent={authState.isNip07 ? signEvent : undefined}
+          signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
           onExtend={handleExtend}
           onBack={goHome}
         />
@@ -625,7 +625,7 @@ function App() {
           <CardFlip
             card={selectedCard}
             userPubkey={authState.pubkey}
-            signEvent={authState.isNip07 ? signEvent : undefined}
+            signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
             onExtend={handleExtend}
             onClose={() => {
               // URLパラメータをクリア
@@ -663,7 +663,7 @@ function App() {
             onLoadMoreFollow={loadMoreFollowCards}
             onLoadMoreGlobal={loadMoreRecent}
             userPubkey={authState.pubkey}
-            signEvent={authState.isNip07 ? signEvent : undefined}
+            signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
             onUserClick={goToUser}
             onCreatePost={handleCreatePost}
             onExtend={handleExtend}
@@ -681,7 +681,7 @@ function App() {
             onRefresh={refreshPopular}
             onViewAll={() => goToGallery({ tab: 'popular' })}
             userPubkey={authState.pubkey}
-            signEvent={authState.isNip07 ? signEvent : undefined}
+            signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
             onExtend={handleExtend}
           />
         </aside>
