@@ -315,17 +315,17 @@
 
 .emojiCategories {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
   margin-bottom: var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: var(--border-thin) solid var(--color-border);
-  overflow-x: auto;
 }
 
 .categoryButton {
-  width: 36px;
-  height: 36px;
-  font-size: var(--text-lg);
+  width: 32px;
+  height: 32px;
+  font-size: var(--text-base);
   background: transparent;
   border: var(--border-thin) solid transparent;
   border-radius: var(--radius-md);
@@ -335,7 +335,6 @@
     opacity var(--duration-fast) var(--easing-default),
     background-color var(--duration-fast) var(--easing-default),
     border-color var(--duration-fast) var(--easing-default);
-  flex-shrink: 0;
 }
 
 .categoryButton:hover {
@@ -351,10 +350,11 @@
 
 .emojiGrid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   gap: var(--space-1);
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .emojiButton {
@@ -404,6 +404,6 @@
   }
   
   .emojiGrid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
   }
 }

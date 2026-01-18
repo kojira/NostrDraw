@@ -24,6 +24,7 @@
     "npubPlaceholder": "npub1...",
     "npubHint": "※npubログインでは送信機能が使えません",
     "nip07Required": "NIP-07拡張機能でのログインが必要です",
+    "loginRequired": "投稿するにはログインが必要です",
     "createAccount": "アカウントを作成",
     "createAccountHint": "メールアドレスなしでアカウントが作成できます",
     "createAccountWarning": "⚠️ この情報は安全に保管してください。パスワードを忘れると復元できません。同じ入力で何度でも同じアカウントを復元できます。",

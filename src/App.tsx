@@ -218,6 +218,35 @@ function App() {
     }
   }, [goHome, goToGallery, goToUser, goToNotifications, goToSettings, goToHelp, authState.pubkey]);
 
+  // プロフィール設定画面（新規アカウント作成後）- 最優先でチェック
+  if (authState.isLoggedIn && authState.needsProfileSetup && authState.npub && authState.pubkey) {
+    const handleSaveProfile = async (profile: { name: string; about: string; picture: string }) => {
+      const success = await updateProfile(profile, authState.pubkey!, signEvent);
+      if (success) {
+        completeProfileSetup();
+      }
+      return success;
+    };
+
+    return (
+      <div className="app profileSetupPage">
+        <header className="header">
+          <div className="headerTop">
+            <h1 className="logo">🎨 {t('app.title')}</h1>
+          </div>
+        </header>
+        <main className="profileSetupMain">
+          <ProfileSetup
+            npub={authState.npub}
+            isLoading={authLoading}
+            onSave={handleSaveProfile}
+            onSkip={completeProfileSetup}
+          />
+        </main>
+      </div>
+    );
+  }
+
   // 投稿画面
   if (route.page === 'create') {
     return (
@@ -280,8 +309,9 @@ function App() {
                       goHome();
                     }}
                     onPost={async (data) => {
-                      if (!authState.isNip07) {
-                        alert(t('auth.nip07Required'));
+                      // NIP-07またはパスワードログインで署名可能
+                      if (!authState.isNip07 && !authState.isNsecLogin) {
+                        alert(t('auth.loginRequired'));
                         return;
                       }
                       try {
@@ -623,35 +653,6 @@ function App() {
           onExtend={handleExtend}
           onBack={goHome}
         />
-      </div>
-    );
-  }
-
-  // プロフィール設定画面（新規アカウント作成後）
-  if (authState.isLoggedIn && authState.needsProfileSetup && authState.npub && authState.pubkey) {
-    const handleSaveProfile = async (profile: { name: string; about: string; picture: string }) => {
-      const success = await updateProfile(profile, authState.pubkey!, signEvent);
-      if (success) {
-        completeProfileSetup();
-      }
-      return success;
-    };
-
-    return (
-      <div className="app profileSetupPage">
-        <header className="header">
-          <div className="headerTop">
-            <h1 className="logo">🎨 {t('app.title')}</h1>
-          </div>
-        </header>
-        <main className="profileSetupMain">
-          <ProfileSetup
-            npub={authState.npub}
-            isLoading={authLoading}
-            onSave={handleSaveProfile}
-            onSkip={completeProfileSetup}
-          />
-        </main>
       </div>
     );
   }

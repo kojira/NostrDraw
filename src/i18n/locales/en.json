@@ -24,6 +24,7 @@
     "npubPlaceholder": "npub1...",
     "npubHint": "※ Sending is not available with npub login",
     "nip07Required": "NIP-07 extension login is required",
+    "loginRequired": "Login is required to post",
     "createAccount": "Create Account",
     "createAccountHint": "Create an account without an email address",
     "createAccountWarning": "⚠️ Keep this information safe. If you forget your password, you cannot recover it. You can restore the same account with the same inputs anytime.",
