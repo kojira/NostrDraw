@@ -150,7 +150,7 @@ export function AccountCreate({
               className={styles.togglePassword}
               tabIndex={-1}
             >
-              {showPassword ? '🙈' : '👁️'}
+              <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
             </button>
           </div>
           <p className={styles.hint}>{t('auth.passwordHint')}</p>

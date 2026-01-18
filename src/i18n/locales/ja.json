@@ -50,6 +50,8 @@
     "cancel": "キャンセル",
     "passwordLogin": "パスワード",
     "entranceKey": "入口用",
+    "entranceKeyHint": "初心者向けアカウント（より安全な鍵への移行を推奨）",
+    "beginner": "初心者",
     "savedAccount": "保存済みアカウント",
     "savedAccountHint": "保存済みのアカウントでログイン",
     "forgotPassword": "パスワードを忘れた場合",

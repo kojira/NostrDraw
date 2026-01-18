@@ -50,6 +50,8 @@
     "cancel": "Cancel",
     "passwordLogin": "Password",
     "entranceKey": "Entrance",
+    "entranceKeyHint": "Beginner account (migration to a more secure key recommended)",
+    "beginner": "Beginner",
     "savedAccount": "Saved Account",
     "savedAccountHint": "Login with saved account",
     "forgotPassword": "Forgot password?",

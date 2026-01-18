@@ -120,11 +120,13 @@ export function Auth({
           {authState.isNip07 && (
             <span className={styles.badge}>NIP-07</span>
           )}
-          {authState.isNsecLogin && (
+          {authState.isNsecLogin && !authState.isEntranceKey && (
             <span className={styles.badge}>{t('auth.passwordLogin')}</span>
           )}
           {authState.isEntranceKey && (
-            <span className={styles.entranceBadge}>{t('auth.entranceKey')}</span>
+            <span className={styles.entranceBadge} title={t('auth.entranceKeyHint')}>
+              <span className="material-symbols-outlined">eco</span>
+            </span>
           )}
         </div>
         <button onClick={onLogout} className={styles.logoutButton}>

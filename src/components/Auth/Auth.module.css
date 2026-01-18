@@ -181,11 +181,14 @@
 }
 
 .entranceBadge {
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--color-warning);
-  background: var(--color-warning-muted);
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  color: #4ade80;
+  cursor: help;
+}
+
+.entranceBadge .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .createAccountButton {

@@ -93,7 +93,7 @@ export function PasswordLogin({
               className={styles.togglePassword}
               tabIndex={-1}
             >
-              {showPassword ? '🙈' : '👁️'}
+              <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
             </button>
           </div>
         </div>

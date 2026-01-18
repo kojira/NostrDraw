@@ -25,6 +25,40 @@ declare global {
 }
 
 const AUTH_STORAGE_KEY = 'nostr-nenga-auth';
+const SESSION_PASSWORD_KEY = 'nostr-nenga-session-pw';
+const SESSION_EXPIRY_DAYS = 3; // パスワード保持期間（日）
+
+// 有効期限付きでパスワードを取得
+function getStoredPassword(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  const stored = localStorage.getItem(SESSION_PASSWORD_KEY);
+  if (!stored) return null;
+  
+  try {
+    const { password, expiry } = JSON.parse(stored);
+    if (Date.now() > expiry) {
+      // 有効期限切れ
+      localStorage.removeItem(SESSION_PASSWORD_KEY);
+      return null;
+    }
+    return password;
+  } catch {
+    localStorage.removeItem(SESSION_PASSWORD_KEY);
+    return null;
+  }
+}
+
+// 有効期限付きでパスワードを保存
+function storePassword(password: string): void {
+  const expiry = Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  localStorage.setItem(SESSION_PASSWORD_KEY, JSON.stringify({ password, expiry }));
+}
+
+// パスワードを削除
+function clearStoredPassword(): void {
+  localStorage.removeItem(SESSION_PASSWORD_KEY);
+}
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -40,8 +74,8 @@ export function useAuth() {
   const [nip07Checked, setNip07Checked] = useState(false);
   const [deriveProgress, setDeriveProgress] = useState(0);
 
-  // パスワードをセッション中のみメモリに保持（nsecは署名時にのみ復号）
-  const passwordRef = useRef<string | null>(null);
+  // パスワードをメモリに保持（localStorageから復元）
+  const passwordRef = useRef<string | null>(getStoredPassword());
 
   // NIP-07拡張機能の検出（遅延ロード対応）
   useEffect(() => {
@@ -127,8 +161,9 @@ export function useAuth() {
           // （このケースはisNip07Availableがtrueになった時に再実行される）
           return;
         } else if (parsed.pubkey && parsed.npub) {
-          // nsecログインの場合、再認証が必要（nsecRefがnullなので署名できない）
-          const needsReauth = parsed.isNsecLogin || false;
+          // nsecログインの場合、セッションストレージにパスワードがあれば再認証不要
+          const hasSessionPassword = passwordRef.current !== null;
+          const needsReauth = (parsed.isNsecLogin || false) && !hasSessionPassword;
           setAuthState({
             isLoggedIn: true,
             pubkey: parsed.pubkey,
@@ -233,8 +268,9 @@ export function useAuth() {
       // nsecを暗号化して保存
       await saveEncryptedNsec(nsec, password, npub, true);
 
-      // パスワードをセッション中のみメモリに保持（nsecは署名時にのみ復号）
+      // パスワードを保持（3日間有効）
       passwordRef.current = password;
+      storePassword(password);
 
       // 認証状態を更新
       const newState: AuthState = {
@@ -279,8 +315,9 @@ export function useAuth() {
       // 公開鍵を確認
       const { pubkey } = derivePublicKeyFromNsec(nsec);
 
-      // パスワードをセッション中のみメモリに保持（nsecは署名時にのみ復号）
+      // パスワードを保持（3日間有効）
       passwordRef.current = password;
+      storePassword(password);
 
       // 認証状態を更新（再認証完了）
       const newState: AuthState = {
@@ -307,8 +344,9 @@ export function useAuth() {
 
   // ログアウト
   const logout = useCallback(() => {
-    // メモリからパスワードをクリア
+    // パスワードをクリア
     passwordRef.current = null;
+    clearStoredPassword();
 
     setAuthState({
       isLoggedIn: false,
@@ -323,6 +361,7 @@ export function useAuth() {
   // アカウント削除（nsecも削除）
   const deleteAccount = useCallback(() => {
     passwordRef.current = null;
+    clearStoredPassword();
     clearStoredNsec();
     setAuthState({
       isLoggedIn: false,
