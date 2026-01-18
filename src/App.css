@@ -942,17 +942,8 @@ body.light-theme {
   border-color: #bbb;
 }
 
-.light-theme .mainContent {
-  background: #fff;
-}
-
 .light-theme .sidebar {
   background: #fafafa;
-  border-color: #e0e0e0;
-}
-
-.light-theme .section {
-  background: #fff;
   border-color: #e0e0e0;
 }
 

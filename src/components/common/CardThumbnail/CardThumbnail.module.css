@@ -1,0 +1,261 @@
+/**
+ * 共通カードサムネイルコンポーネントのスタイル
+ * デザイントークンを使用して一貫性を保つ
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-raised);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-border);
+  cursor: pointer;
+  transition: 
+    transform var(--duration-normal) var(--easing-default),
+    box-shadow var(--duration-normal) var(--easing-default);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* サイズバリエーション */
+
+/* Small: サイドバー用 */
+.small {
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.small .thumbnail {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+}
+
+.small .avatar,
+.small .avatarPlaceholder {
+  width: 16px;
+  height: 16px;
+}
+
+.small .avatarPlaceholder .material-symbols-outlined {
+  font-size: 12px;
+}
+
+.small .authorName {
+  font-size: var(--text-xs);
+}
+
+.small .reactions {
+  font-size: var(--text-xs);
+}
+
+.small .reactions .material-symbols-outlined {
+  font-size: 12px;
+}
+
+.small .date {
+  display: none;
+}
+
+/* Medium: タイムライン用 */
+.medium {
+  gap: 0;
+}
+
+.medium .thumbnail {
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+}
+
+.medium .info {
+  padding: var(--space-3);
+}
+
+.medium .avatar,
+.medium .avatarPlaceholder {
+  width: var(--size-avatar-md);
+  height: var(--size-avatar-md);
+}
+
+.medium .avatarPlaceholder .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.medium .authorName {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+}
+
+.medium .reactions {
+  font-size: var(--text-sm);
+}
+
+.medium .reactions .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.medium .date {
+  font-size: var(--text-xs);
+}
+
+/* Large: フルサイズ表示用 */
+.large {
+  gap: 0;
+}
+
+.large .thumbnail {
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+}
+
+.large .info {
+  padding: var(--space-4);
+}
+
+.large .avatar,
+.large .avatarPlaceholder {
+  width: var(--size-avatar-lg);
+  height: var(--size-avatar-lg);
+}
+
+.large .avatarPlaceholder .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.large .authorName {
+  font-size: var(--text-md);
+  font-weight: var(--font-medium);
+}
+
+.large .reactions {
+  font-size: var(--text-base);
+}
+
+.large .reactions .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* サムネイル */
+.thumbnail {
+  width: 100%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbnailImage svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.placeholder {
+  font-size: 2rem;
+  opacity: 0.3;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+}
+
+.loading .material-symbols-outlined {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 情報エリア */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* 著者情報 */
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: opacity var(--duration-fast) var(--easing-default);
+}
+
+.author[role="button"]:hover {
+  opacity: 0.8;
+}
+
+.avatar {
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+}
+
+.authorName {
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* メタ情報 */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.reactions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent);
+}
+
+.date {
+  color: var(--color-text-tertiary);
+}
+
+/* ライトテーマ */
+:global(.light-theme) .card {
+  background: #fff;
+  border-color: #e0e0e0;
+}
+
+:global(.light-theme) .card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+:global(.light-theme) .thumbnail {
+  border-bottom: 1px solid #eee;
+}
+
+:global(.light-theme) .small .thumbnail {
+  border: 1px solid #eee;
+  border-radius: var(--radius-md);
+}

@@ -353,7 +353,7 @@ export function Timeline({
                         disabled={!signEvent || !userPubkey || getUserReacted(card) || reactingIds.has(card.id)}
                         title={getUserReacted(card) ? t('viewer.reacted') : t('viewer.reaction')}
                       >
-                        {reactingIds.has(card.id) ? '💓' : getUserReacted(card) ? '❤️' : '🤍'} {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: (reactingIds.has(card.id) || getUserReacted(card)) ? "'FILL' 1" : "'FILL' 0", color: '#e94560' }}>favorite</span> {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
                       </button>
                       <button
                         className={`${styles.shareButton} ${copiedIds.has(card.id) ? styles.copied : ''}`}

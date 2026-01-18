@@ -683,7 +683,7 @@ export function Gallery({
                           disabled={!signEvent || !userPubkey || userReactions.has(card.id) || reactingCards.has(card.id)}
                           title={userReactions.has(card.id) ? t('reaction.liked') : t('reaction.like')}
                         >
-                          <span>{userReactions.has(card.id) ? '❤️' : '🤍'}</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px', fontVariationSettings: userReactions.has(card.id) ? "'FILL' 1" : "'FILL' 0", color: '#e94560' }}>favorite</span>
                           <span>{reactionCount}</span>
                         </button>
                         <span className={styles.date}>

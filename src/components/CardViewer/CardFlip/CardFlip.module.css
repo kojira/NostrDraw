@@ -606,6 +606,7 @@
 .heartIcon {
   font-size: 1.5rem;
   transition: transform 0.3s ease;
+  color: #e94560;
 }
 
 .reactionButton:hover:not(:disabled) .heartIcon {
@@ -1101,8 +1102,12 @@
 }
 
 :global(.light-theme) .reactionButton {
-  background: rgba(0, 0, 0, 0.05);
-  border: 2px solid #e0e0e0;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+:global(.light-theme) .reactionButton .heartIcon {
+  color: #e94560;
 }
 
 :global(.light-theme) .reactionButton:hover:not(:disabled) {

@@ -182,7 +182,9 @@ export function Notifications({
                 </div>
                 <div className={styles.notificationMeta}>
                   <span className={styles.notificationType}>
-                    {notification.type === 'reaction' ? '❤️' : '🎨'}
+                    {notification.type === 'reaction' ? (
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px', fontVariationSettings: "'FILL' 1", color: '#e94560' }}>favorite</span>
+                    ) : '🎨'}
                   </span>
                   <span className={styles.notificationDate}>
                     {formatDate(notification.createdAt)}

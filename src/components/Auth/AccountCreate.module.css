@@ -225,27 +225,33 @@
   gap: var(--space-2);
 }
 
-.extraSecretDisplay {
+.extraSecretInput {
   flex: 1;
   min-height: 44px;
   padding: var(--space-3) var(--space-4);
+  font-size: var(--text-lg);
+  font-family: var(--font-family-base);
+  color: var(--color-text-primary);
   background: var(--color-bg-subtle);
   border: var(--border-thin) solid var(--color-border);
   border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  overflow-x: auto;
-  white-space: nowrap;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--easing-default);
+  box-sizing: border-box;
 }
 
-.extraSecretText {
-  font-size: var(--text-xl);
-  letter-spacing: 0.1em;
+.extraSecretInput:focus {
+  border-color: var(--color-accent);
 }
 
-.extraSecretPlaceholder {
+.extraSecretInput::placeholder {
   color: var(--color-text-tertiary);
   font-size: var(--text-base);
+}
+
+.extraSecretInput:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .emojiPickerButton {

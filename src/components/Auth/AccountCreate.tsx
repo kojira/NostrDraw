@@ -69,11 +69,6 @@ export function AccountCreate({
     setExtraSecret(prev => prev + emoji);
   };
 
-  // 追加シークレットをクリア
-  const handleClearExtraSecret = () => {
-    setExtraSecret('');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setInputError(null);
@@ -179,33 +174,25 @@ export function AccountCreate({
             {t('auth.extraSecret')}
           </label>
           <div className={styles.extraSecretWrapper}>
-            <div className={styles.extraSecretDisplay}>
-              {extraSecret ? (
-                <span className={styles.extraSecretText}>{extraSecret}</span>
-              ) : (
-                <span className={styles.extraSecretPlaceholder}>
-                  {t('auth.extraSecretPlaceholder')}
-                </span>
-              )}
-            </div>
+            <input
+              id="extraSecret"
+              type="text"
+              value={extraSecret}
+              onChange={(e) => setExtraSecret(e.target.value)}
+              placeholder={t('auth.extraSecretPlaceholder')}
+              className={styles.extraSecretInput}
+              disabled={isLoading}
+              autoComplete="off"
+            />
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className={styles.emojiPickerButton}
               disabled={isLoading}
+              title="絵文字を選択"
             >
               😀
             </button>
-            {extraSecret && (
-              <button
-                type="button"
-                onClick={handleClearExtraSecret}
-                className={styles.clearButton}
-                disabled={isLoading}
-              >
-                ✕
-              </button>
-            )}
           </div>
           <p className={styles.hint}>{t('auth.extraSecretHint')}</p>
           

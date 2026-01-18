@@ -8,26 +8,8 @@ import type { NostrDrawPostWithReactions } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
+import { CardThumbnail } from '../common/CardThumbnail';
 import styles from './SidebarGallery.module.css';
-
-// SVGを安全にレンダリングするためのコンポーネント
-function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
-  const hasExternalImage = svg.includes('<image') && svg.includes('href=');
-  
-  if (hasExternalImage) {
-    return (
-      <div 
-        className={className}
-        dangerouslySetInnerHTML={{ __html: svg }}
-        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-      />
-    );
-  }
-  
-  const encoded = btoa(unescape(encodeURIComponent(svg)));
-  const dataUri = `data:image/svg+xml;base64,${encoded}`;
-  return <img src={dataUri} alt="" className={className} />;
-}
 
 interface SidebarGalleryProps {
   type: 'popular' | 'recent';
@@ -170,30 +152,15 @@ export function SidebarGallery({
               const reactionCount = getReactionCount(card);
 
               return (
-                <div
+                <CardThumbnail
                   key={card.id}
-                  className={styles.item}
+                  size="small"
+                  card={card}
+                  authorName={name}
+                  authorAvatar={picture}
+                  reactionCount={reactionCount}
                   onClick={() => handleSelectCard(card)}
-                >
-                  <div className={styles.thumbnail}>
-                    {card.svg ? (
-                      <SvgRenderer svg={card.svg} className={styles.thumbnailImage} />
-                    ) : (
-                      <span className={styles.placeholderEmoji}>🎨</span>
-                    )}
-                  </div>
-                  <div className={styles.info}>
-                    <div className={styles.author}>
-                      {picture && (
-                        <img src={picture} alt="" className={styles.avatar} />
-                      )}
-                      <span className={styles.name}>{name}</span>
-                    </div>
-                    {reactionCount !== undefined && reactionCount > 0 && (
-                      <span className={styles.reactions}>❤️ {reactionCount}</span>
-                    )}
-                  </div>
-                </div>
+                />
               );
             })}
           </div>
@@ -220,4 +187,3 @@ export function SidebarGallery({
     </div>
   );
 }
-

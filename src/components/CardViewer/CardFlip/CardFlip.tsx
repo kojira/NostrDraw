@@ -436,13 +436,7 @@ export const CardFlip = memo(function CardFlip({
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const seconds = date.getSeconds().toString().padStart(2, '0');
-    const dateStr = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-    const timeStr = date.toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    return `${dateStr} ${timeStr}`;
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
   };
 
   // コラボ数（子孫の数）
@@ -544,8 +538,8 @@ export const CardFlip = memo(function CardFlip({
           disabled={!signEvent || !userPubkey || hasReacted || isReacting}
           title={hasReacted ? t('reaction.liked') : t('reaction.like')}
         >
-          <span className={styles.heartIcon}>
-            {hasReacted ? '❤️' : '🤍'}
+          <span className={`${styles.heartIcon} material-symbols-outlined`} style={{ fontVariationSettings: hasReacted ? "'FILL' 1" : "'FILL' 0" }}>
+            favorite
           </span>
           <span className={styles.reactionCount}>{reactionCount}</span>
         </button>
@@ -657,8 +651,8 @@ export const CardFlip = memo(function CardFlip({
         {showReactionAnimation && (
           <div className={styles.heartParticles}>
             {[...Array(8)].map((_, i) => (
-              <span key={i} className={styles.particle} style={{ '--i': i } as React.CSSProperties}>
-                ❤️
+              <span key={i} className={`${styles.particle} material-symbols-outlined`} style={{ '--i': i, fontVariationSettings: "'FILL' 1" } as React.CSSProperties}>
+                favorite
               </span>
             ))}
           </div>
@@ -722,7 +716,7 @@ export const CardFlip = memo(function CardFlip({
                     </div>
                     <div className={styles.cardMeta}>
                       <span className={styles.cardDate}>{formatDate(ancestor.createdAt)}</span>
-                      <span className={styles.cardReactions}>❤️ {reactions}</span>
+                      <span className={styles.cardReactions}><span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>favorite</span> {reactions}</span>
                     </div>
                   </div>
                 </button>
@@ -765,7 +759,7 @@ export const CardFlip = memo(function CardFlip({
                 </div>
                 <div className={styles.cardMeta}>
                   <span className={styles.cardDate}>{formatDate(card.createdAt)}</span>
-                  <span className={styles.cardReactions}>❤️ {reactionCount}</span>
+                  <span className={styles.cardReactions}><span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>favorite</span> {reactionCount}</span>
                 </div>
               </div>
             </div>
@@ -817,7 +811,7 @@ export const CardFlip = memo(function CardFlip({
                     </div>
                     <div className={styles.cardMeta}>
                       <span className={styles.cardDate}>{formatDate(descendant.createdAt)}</span>
-                      <span className={styles.cardReactions}>❤️ {reactions}</span>
+                      <span className={styles.cardReactions}><span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>favorite</span> {reactions}</span>
                     </div>
                   </div>
                 </button>
