@@ -483,19 +483,22 @@ function App() {
             <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
             <div className="headerActions">
               {!authState.isLoggedIn ? (
-                <button 
-                  className="headerLoginButton"
-                  onClick={() => {
-                    if (isNip07Available) {
-                      loginWithNip07();
-                    } else {
-                      const npub = prompt('npub1...');
-                      if (npub) loginWithNpub(npub);
-                    }
-                  }}
-                >
-                  {t('auth.login')}
-                </button>
+                <>
+                  <button 
+                    className="headerLoginButton"
+                    onClick={goHome}
+                  >
+                    {t('auth.login')}
+                  </button>
+                  {isNip07Available && (
+                    <button 
+                      className="headerLoginButton headerNip07Button"
+                      onClick={loginWithNip07}
+                    >
+                      NIP-07
+                    </button>
+                  )}
+                </>
               ) : (
                 <button 
                   className="headerLogoutButton"
@@ -536,19 +539,22 @@ function App() {
             <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
             <div className="headerActions">
               {!authState.isLoggedIn ? (
-                <button 
-                  className="headerLoginButton"
-                  onClick={() => {
-                    if (isNip07Available) {
-                      loginWithNip07();
-                    } else {
-                      const npub = prompt('npub1...');
-                      if (npub) loginWithNpub(npub);
-                    }
-                  }}
-                >
-                  {t('auth.login')}
-                </button>
+                <>
+                  <button 
+                    className="headerLoginButton"
+                    onClick={goHome}
+                  >
+                    {t('auth.login')}
+                  </button>
+                  {isNip07Available && (
+                    <button 
+                      className="headerLoginButton headerNip07Button"
+                      onClick={loginWithNip07}
+                    >
+                      NIP-07
+                    </button>
+                  )}
+                </>
               ) : (
                 <button 
                   className="headerLogoutButton"
@@ -623,19 +629,22 @@ function App() {
           <h1 className="logo" onClick={goHome} style={{ cursor: 'pointer' }}>🎨 {t('app.title')}</h1>
           <div className="headerActions">
             {!authState.isLoggedIn ? (
-              <button 
-                className="headerLoginButton"
-                onClick={() => {
-                  if (isNip07Available) {
-                    loginWithNip07();
-                  } else {
-                    const npub = prompt('npub1...');
-                    if (npub) loginWithNpub(npub);
-                  }
-                }}
-              >
-                {t('auth.login')}
-              </button>
+              <>
+                <button 
+                  className="headerLoginButton"
+                  onClick={goHome}
+                >
+                  {t('auth.login')}
+                </button>
+                {isNip07Available && (
+                  <button 
+                    className="headerLoginButton headerNip07Button"
+                    onClick={loginWithNip07}
+                  >
+                    NIP-07
+                  </button>
+                )}
+              </>
             ) : (
               <button 
                 className="headerLogoutButton"

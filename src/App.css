@@ -93,6 +93,18 @@ body.light-theme {
   box-shadow: 0 2px 8px rgba(233, 69, 96, 0.4);
 }
 
+.headerNip07Button {
+  background: transparent;
+  color: #e94560;
+  border: 1px solid #e94560;
+  margin-left: 0.5rem;
+}
+
+.headerNip07Button:hover {
+  background: rgba(233, 69, 96, 0.1);
+  box-shadow: 0 2px 8px rgba(233, 69, 96, 0.2);
+}
+
 .headerLogoutButton {
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
