@@ -1,0 +1,462 @@
+/**
+ * ProfileEditModal Styles
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400; /* --z-modal */
+  padding: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+.modal {
+  background: var(--color-bg-overlay, #21262d);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 16px; /* --radius-xl */
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); /* --shadow-lg */
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border, #30363d);
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-overlay, #21262d);
+  z-index: 1;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.closeButton:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.closeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.required {
+  color: #ef4444;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text-color);
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.input:disabled,
+.textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* 現在の画像 */
+.currentImage {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.currentImagePreview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.keepHint {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* モード切り替え */
+.modeSwitch {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.modeButton {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.modeButton .material-symbols-outlined {
+  font-size: 1.125rem;
+}
+
+.modeButton:hover {
+  border-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+.modeButton.active {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: white;
+}
+
+/* アップロードエリア */
+.uploadArea {
+  margin-top: 0.5rem;
+}
+
+.dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropzone:hover {
+  border-color: var(--primary-color);
+  background: var(--hover-bg);
+}
+
+.dropzone .material-symbols-outlined {
+  font-size: 2.5rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.dropzone p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.fileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* クロップ */
+.cropContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cropHint {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+/* ReactCropのコンテナが画像を引き伸ばさないように */
+.cropContainer :global(.ReactCrop) {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.cropImage {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+}
+
+.cropActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+/* プレビュー */
+.previewContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.previewImage {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--border-color);
+}
+
+.changeButton {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.changeButton:hover {
+  border-color: var(--primary-color);
+}
+
+.changeButton .material-symbols-outlined {
+  font-size: 1.125rem;
+}
+
+/* エラー */
+.error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin: 0;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
+/* アクションボタン */
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.cancelButton,
+.saveButton,
+.confirmButton {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.saveButton,
+.confirmButton {
+  background: var(--primary-color);
+  border: none;
+  color: white;
+}
+
+.saveButton:hover:not(:disabled),
+.confirmButton:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.saveButton:disabled,
+.confirmButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ライトテーマ */
+:global(.light-theme) .overlay {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+:global(.light-theme) .modal {
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+:global(.light-theme) .header {
+  background: #ffffff;
+  border-bottom-color: #d0d7de;
+}
+
+:global(.light-theme) .input,
+:global(.light-theme) .textarea {
+  background: #f6f8fa;
+  border-color: #d0d7de;
+  color: #1f2328;
+}
+
+:global(.light-theme) .input:focus,
+:global(.light-theme) .textarea:focus {
+  border-color: #0969da;
+}
+
+:global(.light-theme) .currentImage {
+  background: #f6f8fa;
+}
+
+:global(.light-theme) .modeButton {
+  background: #ffffff;
+  border-color: #d0d7de;
+  color: #57606a;
+}
+
+:global(.light-theme) .modeButton:hover {
+  border-color: #0969da;
+  color: #1f2328;
+}
+
+:global(.light-theme) .modeButton.active {
+  background: #0969da;
+  border-color: #0969da;
+  color: #ffffff;
+}
+
+:global(.light-theme) .dropzone {
+  border-color: #d0d7de;
+  background: #f6f8fa;
+}
+
+:global(.light-theme) .dropzone:hover {
+  border-color: #0969da;
+  background: #f0f6fc;
+}
+
+:global(.light-theme) .cancelButton {
+  background: #ffffff;
+  border-color: #d0d7de;
+  color: #1f2328;
+}
+
+:global(.light-theme) .cancelButton:hover:not(:disabled) {
+  background: #f6f8fa;
+}
+
+:global(.light-theme) .saveButton,
+:global(.light-theme) .confirmButton {
+  background: #0969da;
+}
+
+:global(.light-theme) .error {
+  background: rgba(248, 81, 73, 0.1);
+}
+
+/* モバイル対応 */
+@media (max-width: 480px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .modeSwitch {
+    flex-direction: column;
+  }
+
+  .modeButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

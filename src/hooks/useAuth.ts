@@ -281,6 +281,7 @@ export function useAuth() {
         isNsecLogin: true,
         isEntranceKey: true,
         needsReauth: false, // 新規作成時は再認証不要
+        needsProfileSetup: true, // プロフィール設定が必要
       };
 
       setAuthState(newState);
@@ -415,6 +416,16 @@ export function useAuth() {
   // 署名可能かどうか（再認証が必要な場合は署名不可）
   const canSign = authState.isLoggedIn && (authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth));
 
+  // プロフィール設定完了
+  const completeProfileSetup = useCallback(() => {
+    const newState: AuthState = {
+      ...authState,
+      needsProfileSetup: false,
+    };
+    setAuthState(newState);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newState));
+  }, [authState]);
+
   return {
     authState,
     isLoading,
@@ -430,6 +441,7 @@ export function useAuth() {
     deleteAccount,
     signEvent,
     getRelaysFromNip07,
+    completeProfileSetup,
     // ユーティリティ
     hasStoredAccount,
     getStoredNpub,

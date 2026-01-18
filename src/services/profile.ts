@@ -362,3 +362,69 @@ export async function isFollowing(myPubkey: string, targetPubkey: string): Promi
   const followees = await fetchFollowees(myPubkey);
   return followees.includes(targetPubkey);
 }
+
+// プロフィールを更新（kind 0イベントを発行）
+export async function updateProfile(
+  profile: { name: string; about?: string; picture?: string },
+  myPubkey: string,
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<boolean> {
+  try {
+    // 現在のプロフィールを取得（既存の情報を保持するため）
+    const currentProfile = await fetchProfile(myPubkey);
+    
+    // 新しいプロフィール内容を作成
+    const content: Record<string, string> = {};
+    
+    // 既存のプロフィール情報を引き継ぎ
+    if (currentProfile) {
+      if (currentProfile.name) content.name = currentProfile.name;
+      if (currentProfile.display_name) content.display_name = currentProfile.display_name;
+      if (currentProfile.picture) content.picture = currentProfile.picture;
+      if (currentProfile.about) content.about = currentProfile.about;
+      if (currentProfile.nip05) content.nip05 = currentProfile.nip05;
+    }
+    
+    // 新しい情報で上書き
+    content.name = profile.name;
+    content.display_name = profile.name; // display_nameも同じにする
+    if (profile.about !== undefined) content.about = profile.about;
+    if (profile.picture !== undefined && profile.picture !== '') {
+      content.picture = profile.picture;
+    }
+    
+    // kind 0イベントを作成
+    const eventTemplate: EventTemplate = {
+      kind: 0,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [],
+      content: JSON.stringify(content),
+    };
+    
+    // 署名して公開
+    const signedEvent = await signEvent(eventTemplate);
+    await publishEvent(signedEvent);
+    
+    // キャッシュを更新
+    const updatedProfile: NostrProfile = {
+      pubkey: myPubkey,
+      npub: nip19.npubEncode(myPubkey),
+      name: content.name,
+      display_name: content.display_name,
+      picture: content.picture,
+      about: content.about,
+      nip05: content.nip05,
+    };
+    
+    memoryCache.set(myPubkey, {
+      profile: updatedProfile,
+      timestamp: Date.now(),
+    });
+    saveCacheToStorage();
+    
+    return true;
+  } catch (error) {
+    console.error('プロフィール更新に失敗:', error);
+    return false;
+  }
+}

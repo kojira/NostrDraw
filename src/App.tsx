@@ -14,7 +14,8 @@ import { Gallery } from './components/Gallery';
 import { UserGallery } from './components/UserGallery';
 import { Timeline } from './components/Timeline';
 import { CardEditor } from './components/CardEditor';
-import { Auth } from './components/Auth';
+import { Auth, ProfileSetup } from './components/Auth';
+import { updateProfile } from './services/profile';
 import { SidebarGallery } from './components/SidebarGallery';
 import { SideNav } from './components/SideNav';
 import { Notifications } from './components/Notifications';
@@ -66,6 +67,7 @@ function App() {
     signEvent,
     hasStoredAccount,
     getStoredNpub,
+    completeProfileSetup,
   } = useAuth();
 
   const {
@@ -566,6 +568,35 @@ function App() {
           onExtend={handleExtend}
           onBack={goHome}
         />
+      </div>
+    );
+  }
+
+  // プロフィール設定画面（新規アカウント作成後）
+  if (authState.isLoggedIn && authState.needsProfileSetup && authState.npub && authState.pubkey) {
+    const handleSaveProfile = async (profile: { name: string; about: string; picture: string }) => {
+      const success = await updateProfile(profile, authState.pubkey!, signEvent);
+      if (success) {
+        completeProfileSetup();
+      }
+      return success;
+    };
+
+    return (
+      <div className="app profileSetupPage">
+        <header className="header">
+          <div className="headerTop">
+            <h1 className="logo">🎨 {t('app.title')}</h1>
+          </div>
+        </header>
+        <main className="profileSetupMain">
+          <ProfileSetup
+            npub={authState.npub}
+            isLoading={authLoading}
+            onSave={handleSaveProfile}
+            onSkip={completeProfileSetup}
+          />
+        </main>
       </div>
     );
   }

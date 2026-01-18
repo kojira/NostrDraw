@@ -32,6 +32,18 @@ body.light-theme {
   margin-left: 60px; /* サイドナビの幅（アイコンのみ） */
 }
 
+.app.profileSetupPage {
+  margin-left: 0;
+}
+
+.profileSetupMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
 @media (max-width: 1024px) {
   .app {
     margin-left: 0; /* モバイルではサイドナビなし */

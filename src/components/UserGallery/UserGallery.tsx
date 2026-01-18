@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import { refreshProfile, npubToPubkey, pubkeyToNpub, isFollowing, followUser, unfollowUser } from '../../services/profile';
+import { refreshProfile, npubToPubkey, pubkeyToNpub, isFollowing, followUser, unfollowUser, updateProfile } from '../../services/profile';
 import { Gallery } from '../Gallery/Gallery';
+import { ProfileEditModal } from './ProfileEditModal';
 import styles from './UserGallery.module.css';
 
 interface UserGalleryProps {
@@ -32,6 +33,8 @@ export function UserGallery({
   const [profile, setProfile] = useState<NostrProfile | null>(null);
   const [following, setFollowing] = useState<boolean | null>(null); // null = 読み込み中
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   // npubからpubkeyを取得（無効なnpubの場合はnullになる）
   const pubkey = npub.startsWith('npub') ? npubToPubkey(npub) : npub;
@@ -112,6 +115,27 @@ export function UserGallery({
   // 自分自身かどうか
   const isSelf = userPubkey === pubkey;
 
+  // プロフィール保存
+  const handleSaveProfile = useCallback(async (newProfile: { name: string; about: string; picture: string }) => {
+    if (!pubkey || !signEvent) return false;
+    
+    setIsUpdatingProfile(true);
+    try {
+      const success = await updateProfile(newProfile, pubkey, signEvent);
+      if (success) {
+        // プロフィールを再取得
+        const updated = await refreshProfile(pubkey);
+        if (updated) setProfile(updated);
+      }
+      return success;
+    } catch (error) {
+      console.error('プロフィール更新エラー:', error);
+      return false;
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  }, [pubkey, signEvent]);
+
   // 表示名（プロファイルがない場合はnpubを省略表示、それも無効なら「不明なユーザー」）
   const displayName = profile?.display_name || profile?.name || (fullNpub ? fullNpub.slice(0, 12) + '...' : t('gallery.unknownUser'));
 
@@ -156,7 +180,7 @@ export function UserGallery({
             <p className={styles.userAbout}>{profile.about}</p>
           )}
           
-          {/* フォローボタン */}
+          {/* フォローボタン（他人のプロフィール） */}
           {!isSelf && userPubkey && signEvent && (
             <button
               className={`${styles.followButton} ${following ? styles.following : ''}`}
@@ -174,8 +198,30 @@ export function UserGallery({
               )}
             </button>
           )}
+
+          {/* 編集ボタン（自分のプロフィール） */}
+          {isSelf && signEvent && (
+            <button
+              className={styles.editButton}
+              onClick={() => setShowEditModal(true)}
+            >
+              <span className="material-symbols-outlined">edit</span>
+              {t('profile.editProfile')}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* プロフィール編集モーダル */}
+      {showEditModal && signEvent && (
+        <ProfileEditModal
+          profile={profile}
+          isLoading={isUpdatingProfile}
+          onSave={handleSaveProfile}
+          onClose={() => setShowEditModal(false)}
+          signEvent={signEvent}
+        />
+      )}
 
       {/* Galleryコンポーネントを再利用 */}
       {pubkey && (
