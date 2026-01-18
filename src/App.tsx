@@ -239,6 +239,7 @@ function App() {
           <ProfileSetup
             npub={authState.npub}
             isLoading={authLoading}
+            signEvent={signEvent}
             onSave={handleSaveProfile}
             onSkip={completeProfileSetup}
           />

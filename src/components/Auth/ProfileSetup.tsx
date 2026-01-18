@@ -7,11 +7,13 @@ import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import type { EventTemplate, Event } from 'nostr-tools';
 import styles from './ProfileSetup.module.css';
 
 interface ProfileSetupProps {
   npub: string;
   isLoading: boolean;
+  signEvent?: (event: EventTemplate) => Promise<Event>;
   onSave: (profile: { name: string; about: string; picture: string }) => Promise<boolean>;
   onSkip: () => void;
 }
@@ -94,6 +96,7 @@ function centerAspectCrop(
 export function ProfileSetup({
   npub,
   isLoading,
+  signEvent,
   onSave,
   onSkip,
 }: ProfileSetupProps) {
@@ -188,18 +191,27 @@ export function ProfileSetup({
       finalPictureUrl = pictureUrl.trim();
     } else if (pictureMode === 'upload' && croppedBlob) {
       // 画像をアップロード
+      if (!signEvent) {
+        console.error('[ProfileSetup] signEvent is not available');
+        setError(t('profile.uploadError') + ' (署名機能が利用できません)');
+        return;
+      }
+      console.log('[ProfileSetup] Starting upload, blob size:', croppedBlob.size, 'type:', croppedBlob.type);
       setIsProcessing(true);
       try {
-        const { uploadImage } = await import('../../services/imageUpload');
-        const result = await uploadImage(croppedBlob, { type: 'nostr.build' });
+        const { uploadWithNip96 } = await import('../../services/imageUpload');
+        const result = await uploadWithNip96(croppedBlob, signEvent);
+        console.log('[ProfileSetup] Upload result:', result);
         if (!result.success || !result.url) {
-          setError(t('profile.uploadError'));
+          console.error('[ProfileSetup] Upload failed:', result.error);
+          setError(t('profile.uploadError') + (result.error ? `: ${result.error}` : ''));
           setIsProcessing(false);
           return;
         }
         finalPictureUrl = result.url;
       } catch (err) {
-        setError(t('profile.uploadError'));
+        console.error('[ProfileSetup] Upload error:', err);
+        setError(t('profile.uploadError') + `: ${err instanceof Error ? err.message : 'Unknown error'}`);
         setIsProcessing(false);
         return;
       }
@@ -320,20 +332,22 @@ export function ProfileSetup({
               {imageSrc && !croppedPreview && (
                 <div className={styles.cropContainer}>
                   <p className={styles.cropHint}>{t('profile.cropHint')}</p>
-                  <ReactCrop
-                    crop={crop}
-                    onChange={(c) => setCrop(c)}
-                    aspect={1}
-                    circularCrop
-                  >
-                    <img
-                      ref={imgRef}
-                      src={imageSrc}
-                      alt="Crop"
-                      onLoad={onImageLoad}
-                      className={styles.cropImage}
-                    />
-                  </ReactCrop>
+                  <div className={styles.cropWrapper}>
+                    <ReactCrop
+                      crop={crop}
+                      onChange={(c) => setCrop(c)}
+                      aspect={1}
+                      circularCrop
+                    >
+                      <img
+                        ref={imgRef}
+                        src={imageSrc}
+                        alt="Crop"
+                        onLoad={onImageLoad}
+                        className={styles.cropImage}
+                      />
+                    </ReactCrop>
+                  </div>
                   <div className={styles.cropActions}>
                     <button
                       type="button"
