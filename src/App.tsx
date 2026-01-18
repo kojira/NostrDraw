@@ -36,6 +36,9 @@ function App() {
   // Welcome modal
   const { shouldShow: showWelcome, hideModal: hideWelcome } = useWelcomeModal();
   
+  // Auth modal (ログイン方法選択)
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
   // テーマ管理
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
@@ -486,7 +489,7 @@ function App() {
                 <>
                   <button 
                     className="headerLoginButton"
-                    onClick={goHome}
+                    onClick={() => setShowAuthModal(true)}
                   >
                     {t('auth.login')}
                   </button>
@@ -511,6 +514,29 @@ function App() {
             </div>
           </div>
         </header>
+        {/* Auth Modal (ログイン方法選択) */}
+        {showAuthModal && (
+          <div className="authModalOverlay" onClick={() => setShowAuthModal(false)}>
+            <div className="authModalContent" onClick={(e) => e.stopPropagation()}>
+              <button className="authModalClose" onClick={() => setShowAuthModal(false)}>×</button>
+              <Auth
+                authState={authState}
+                isNip07Available={isNip07Available}
+                isLoading={authLoading}
+                error={authError}
+                deriveProgress={deriveProgress}
+                hasStoredAccount={hasStoredAccount}
+                getStoredNpub={getStoredNpub}
+                onLoginWithNip07={async () => { const result = await loginWithNip07(); setShowAuthModal(false); return result; }}
+                onLoginWithNpub={(npub) => { const result = loginWithNpub(npub); setShowAuthModal(false); return result; }}
+                onLoginWithPassword={async (password) => { const result = await loginWithPassword(password); setShowAuthModal(false); return result; }}
+                onCreateAccount={async (name, password, extra) => { const result = await createAccount(name, password, extra); setShowAuthModal(false); return result; }}
+                onLogout={logout}
+                onDeleteAccount={deleteAccount}
+              />
+            </div>
+          </div>
+        )}
         <Gallery
           initialTab={route.params.tab}
           initialPeriod={route.params.period}
@@ -542,7 +568,7 @@ function App() {
                 <>
                   <button 
                     className="headerLoginButton"
-                    onClick={goHome}
+                    onClick={() => setShowAuthModal(true)}
                   >
                     {t('auth.login')}
                   </button>
@@ -567,6 +593,29 @@ function App() {
             </div>
           </div>
         </header>
+        {/* Auth Modal (ログイン方法選択) */}
+        {showAuthModal && (
+          <div className="authModalOverlay" onClick={() => setShowAuthModal(false)}>
+            <div className="authModalContent" onClick={(e) => e.stopPropagation()}>
+              <button className="authModalClose" onClick={() => setShowAuthModal(false)}>×</button>
+              <Auth
+                authState={authState}
+                isNip07Available={isNip07Available}
+                isLoading={authLoading}
+                error={authError}
+                deriveProgress={deriveProgress}
+                hasStoredAccount={hasStoredAccount}
+                getStoredNpub={getStoredNpub}
+                onLoginWithNip07={async () => { const result = await loginWithNip07(); setShowAuthModal(false); return result; }}
+                onLoginWithNpub={(npub) => { const result = loginWithNpub(npub); setShowAuthModal(false); return result; }}
+                onLoginWithPassword={async (password) => { const result = await loginWithPassword(password); setShowAuthModal(false); return result; }}
+                onCreateAccount={async (name, password, extra) => { const result = await createAccount(name, password, extra); setShowAuthModal(false); return result; }}
+                onLogout={logout}
+                onDeleteAccount={deleteAccount}
+              />
+            </div>
+          </div>
+        )}
         <UserGallery
           npub={route.params.npub}
           userPubkey={authState.pubkey}
@@ -617,6 +666,30 @@ function App() {
         />
       )}
       
+      {/* Auth Modal (ログイン方法選択) */}
+      {showAuthModal && (
+        <div className="authModalOverlay" onClick={() => setShowAuthModal(false)}>
+          <div className="authModalContent" onClick={(e) => e.stopPropagation()}>
+            <button className="authModalClose" onClick={() => setShowAuthModal(false)}>×</button>
+            <Auth
+              authState={authState}
+              isNip07Available={isNip07Available}
+              isLoading={authLoading}
+              error={authError}
+              deriveProgress={deriveProgress}
+              hasStoredAccount={hasStoredAccount}
+              getStoredNpub={getStoredNpub}
+              onLoginWithNip07={async () => { const result = await loginWithNip07(); setShowAuthModal(false); return result; }}
+              onLoginWithNpub={(npub) => { const result = loginWithNpub(npub); setShowAuthModal(false); return result; }}
+              onLoginWithPassword={async (password) => { const result = await loginWithPassword(password); setShowAuthModal(false); return result; }}
+              onCreateAccount={async (name, password, extra) => { const result = await createAccount(name, password, extra); setShowAuthModal(false); return result; }}
+              onLogout={logout}
+              onDeleteAccount={deleteAccount}
+            />
+          </div>
+        </div>
+      )}
+      
       {/* 左サイドナビゲーション */}
       <SideNav
         currentPage="home"
@@ -632,7 +705,7 @@ function App() {
               <>
                 <button 
                   className="headerLoginButton"
-                  onClick={goHome}
+                  onClick={() => setShowAuthModal(true)}
                 >
                   {t('auth.login')}
                 </button>
