@@ -657,6 +657,7 @@
   height: 100%;
   border-radius: 4px;
   touch-action: none;
+  z-index: 2; /* キャンバス（z-index: 1）より上に配置 */
 }
 
 /* メッセージボックス */

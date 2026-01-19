@@ -16,6 +16,7 @@ import { decodeBinaryToLayers } from '../utils/binaryFormat';
 import type { Layer } from '../components/CardEditor/DrawingCanvas/types';
 import { BASE_URL } from '../config';
 import { uploadWithNip96 } from './imageUpload';
+import { STAMPS } from '../data/templates';
 
 /**
  * 親SVGと差分SVGを合成する
@@ -43,12 +44,64 @@ export function mergeSvgWithDiff(parentSvg: string, diffSvg: string): string {
 </svg>`;
 }
 
+// 外部画像URLをbase64データURLに変換
+async function imageUrlToBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('[imageUrlToBase64] Error:', error);
+    return null;
+  }
+}
+
+// SVG内の外部画像参照をbase64データURLに置換
+async function embedExternalImages(svgString: string): Promise<string> {
+  // <image href="..."> または <image xlink:href="..."> を検索
+  const imageRegex = /<image\s+[^>]*(?:href|xlink:href)="([^"]+)"[^>]*>/g;
+  const matches = [...svgString.matchAll(imageRegex)];
+  
+  if (matches.length === 0) return svgString;
+  
+  let result = svgString;
+  
+  for (const match of matches) {
+    const originalTag = match[0];
+    const imageUrl = match[1];
+    
+    // data: URLはスキップ
+    if (imageUrl.startsWith('data:')) continue;
+    
+    // 外部URLをbase64に変換
+    const base64 = await imageUrlToBase64(imageUrl);
+    if (base64) {
+      // hrefをbase64に置換
+      const newTag = originalTag
+        .replace(`href="${imageUrl}"`, `href="${base64}"`)
+        .replace(`xlink:href="${imageUrl}"`, `href="${base64}"`);
+      result = result.replace(originalTag, newTag);
+    }
+  }
+  
+  return result;
+}
+
 // SVG文字列をPNG Blobに変換するヘルパー関数
 async function svgToPngBlob(svgString: string, width: number = 800, height: number = 600): Promise<Blob | null> {
+  // まず外部画像をbase64に埋め込み
+  const embeddedSvg = await embedExternalImages(svgString);
+  
   return new Promise((resolve) => {
     try {
       // SVG文字列をData URLに変換
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgBlob = new Blob([embeddedSvg], { type: 'image/svg+xml;charset=utf-8' });
       const svgUrl = URL.createObjectURL(svgBlob);
       
       const img = new Image();
@@ -129,10 +182,21 @@ function layersToSvg(layers: import('../components/CardEditor/DrawingCanvas/type
     }
     
     // スタンプ
-    for (const stamp of layer.placedStamps) {
-      if (stamp.isCustomEmoji && stamp.customEmojiUrl) {
-        const size = 64 * stamp.scale;
-        svgParts.push(`<image href="${stamp.customEmojiUrl}" x="${stamp.x - size/2}" y="${stamp.y - size/2}" width="${size}" height="${size}"/>`);
+    for (const placed of layer.placedStamps) {
+      if (placed.isCustomEmoji && placed.customEmojiUrl) {
+        // カスタム絵文字
+        const size = 64 * placed.scale;
+        svgParts.push(`<image href="${placed.customEmojiUrl}" x="${placed.x - size/2}" y="${placed.y - size/2}" width="${size}" height="${size}"/>`);
+      } else {
+        // ビルトインスタンプ
+        const stamp = STAMPS.find(s => s.id === placed.stampId);
+        if (stamp) {
+          const w = stamp.width * placed.scale;
+          const h = stamp.height * placed.scale;
+          const x = placed.x - w/2;
+          const y = placed.y - h/2;
+          svgParts.push(`<g transform="translate(${x.toFixed(2)}, ${y.toFixed(2)}) scale(${placed.scale})">${stamp.svg}</g>`);
+        }
       }
     }
     

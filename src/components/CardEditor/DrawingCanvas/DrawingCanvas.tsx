@@ -298,10 +298,11 @@ export function DrawingCanvas({
             width={width}
             height={height}
             className={`${styles.canvas} ${tool === 'stamp' && (selectedStamp || selectedCustomEmoji) ? styles.stampCursor : ''} ${tool === 'text' ? styles.textMode : ''}`}
-            onPointerDown={tool !== 'text' ? handlePointerDown : undefined}
-            onPointerMove={tool !== 'text' ? handlePointerMove : undefined}
-            onPointerUp={tool !== 'text' ? handlePointerUp : undefined}
-            onPointerLeave={tool !== 'text' ? handlePointerUp : undefined}
+            style={{ pointerEvents: (tool === 'stamp' || tool === 'text') ? 'none' : 'auto' }}
+            onPointerDown={tool !== 'text' && tool !== 'stamp' ? handlePointerDown : undefined}
+            onPointerMove={tool !== 'text' && tool !== 'stamp' ? handlePointerMove : undefined}
+            onPointerUp={tool !== 'text' && tool !== 'stamp' ? handlePointerUp : undefined}
+            onPointerLeave={tool !== 'text' && tool !== 'stamp' ? handlePointerUp : undefined}
           />
           
           {/* スタンプオーバーレイ（ドラッグ可能） */}

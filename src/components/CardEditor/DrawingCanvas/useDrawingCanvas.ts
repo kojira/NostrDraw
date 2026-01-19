@@ -224,6 +224,14 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // Undo/Redo用の履歴（レイヤー全体のスナップショット）
   const [history, setHistory] = useState<Layer[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const historyIndexRef = useRef(-1);
+  const isUndoRedoRef = useRef(false); // Undo/Redo操作中かどうか
+  const isInitializedRef = useRef(false); // 初期化完了フラグ
+  
+  // historyIndexが変更されたらrefも更新
+  useEffect(() => {
+    historyIndexRef.current = historyIndex;
+  }, [historyIndex]);
   
   // レイヤーの深いコピーを作成
   const deepCopyLayers = useCallback((layersToClone: Layer[]): Layer[] => {
@@ -235,42 +243,66 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     }));
   }, []);
   
-  // 履歴に現在の状態を保存
-  const saveToHistory = useCallback((currentLayers: Layer[]) => {
-    const snapshot = deepCopyLayers(currentLayers);
+  // 履歴に状態を追加（内部用）
+  const addToHistory = useCallback((newLayers: Layer[]) => {
+    const snapshot = deepCopyLayers(newLayers);
+    const currentIndex = historyIndexRef.current;
+    
+    console.log('[addToHistory] called, currentIndex:', currentIndex);
+    
     setHistory(prev => {
       // 現在位置より後の履歴を削除して新しい状態を追加
-      const newHistory = [...prev.slice(0, historyIndex + 1), snapshot];
+      const newHistory = [...prev.slice(0, currentIndex + 1), snapshot];
       // 最大サイズを超えたら古い履歴を削除
       if (newHistory.length > MAX_HISTORY_SIZE) {
         return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
       }
       return newHistory;
     });
-    setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY_SIZE - 1));
-  }, [deepCopyLayers, historyIndex]);
+    
+    const newIndex = Math.min(currentIndex + 1, MAX_HISTORY_SIZE - 1);
+    setHistoryIndex(newIndex);
+    historyIndexRef.current = newIndex;
+    console.log('[addToHistory] newIndex:', newIndex);
+  }, [deepCopyLayers]);
+  
+  // layersが変更されたら自動的に履歴に追加（Undo/Redo以外の変更のみ）
+  useEffect(() => {
+    // Undo/Redo操作中は履歴に追加しない
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    
+    // 初回は初期状態を保存
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      addToHistory(layers);
+      return;
+    }
+    
+    // 通常の変更は履歴に追加
+    addToHistory(layers);
+  }, [layers, addToHistory]);
+  
   
   // レイヤー操作関数
   const addLayer = useCallback(() => {
     if (layers.length >= MAX_LAYERS) return;
-    // 履歴に保存
-    saveToHistory(layers);
     const newId = `layer-${Date.now()}`;
     const newLayer = createDefaultLayer(newId, `レイヤー ${layers.length + 1}`);
     setLayers(prev => [...prev, newLayer]);
     setActiveLayerId(newId);
-  }, [layers, saveToHistory]);
+  }, [layers]);
 
   const removeLayer = useCallback((layerId: string) => {
     if (layers.length <= 1) return; // 最低1レイヤーは必要
-    // 履歴に保存
-    saveToHistory(layers);
     setLayers(prev => prev.filter(l => l.id !== layerId));
     if (activeLayerId === layerId) {
       const remaining = layers.filter(l => l.id !== layerId);
       setActiveLayerId(remaining[0]?.id || '');
     }
-  }, [layers, activeLayerId, saveToHistory]);
+  }, [layers, activeLayerId]);
 
   const selectLayer = useCallback((layerId: string) => {
     setActiveLayerId(layerId);
@@ -295,15 +327,13 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   }, []);
 
   const reorderLayers = useCallback((fromIndex: number, toIndex: number) => {
-    // 履歴に保存
-    saveToHistory(layers);
     setLayers(prev => {
       const result = [...prev];
       const [removed] = result.splice(fromIndex, 1);
       result.splice(toIndex, 0, removed);
       return result;
     });
-  }, [layers, saveToHistory]);
+  }, []);
 
   const renameLayer = useCallback((layerId: string, newName: string) => {
     setLayers(prev => prev.map(layer =>
@@ -546,10 +576,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
         color: tool === 'eraser' ? '#ffffff' : color,
         lineWidth,
       };
-      // ストローク追加前に履歴を保存
-      saveToHistory(layers);
       setStrokes(prev => [...prev, newStroke]);
-      // 注: ストローク追加時は再描画しない（既に描画済み）
     }
     setIsDrawing(false);
     lastPointRef.current = null;
@@ -557,13 +584,10 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     if (ctx) {
       ctx.beginPath();
     }
-  }, [isDrawing, color, lineWidth, tool, layers, saveToHistory, activeLayerId, activeLayer]);
+  }, [isDrawing, color, lineWidth, tool]);
 
   // キャンバスクリア
   const clearCanvas = useCallback(() => {
-    // クリア前に履歴を保存
-    saveToHistory(layers);
-    
     // すべてのレイヤーをクリア
     setLayers(prev => prev.map(layer => ({
       ...layer,
@@ -573,44 +597,53 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     })));
     // ローカルストレージもクリア
     clearCanvasState();
-    // 再描画はlayersのuseEffectでトリガーされる
-  }, [layers, saveToHistory]);
+  }, []);
 
   // Undo - 履歴から前の状態を復元
   const undo = useCallback(() => {
-    if (historyIndex < 0) return;
+    const currentIndex = historyIndexRef.current;
+    console.log('[undo] called, currentIndex:', currentIndex, 'history.length:', history.length);
     
-    // 最初のundoの場合、現在の状態を保存してから1つ前に戻る
-    if (historyIndex === history.length - 1) {
-      // 現在の状態がまだ保存されていない場合は保存
-      const currentSnapshot = deepCopyLayers(layers);
-      setHistory(prev => {
-        if (prev.length === 0 || JSON.stringify(prev[prev.length - 1]) !== JSON.stringify(currentSnapshot)) {
-          return [...prev, currentSnapshot];
-        }
-        return prev;
-      });
+    // 戻れる履歴がない場合は何もしない
+    if (currentIndex <= 0 || history.length === 0) {
+      console.log('[undo] early return - no history to undo');
+      return;
     }
     
-    const newIndex = historyIndex - 1;
-    if (newIndex >= 0) {
-      const previousState = deepCopyLayers(history[newIndex]);
-      setLayers(previousState);
-      setHistoryIndex(newIndex);
-    }
+    // Undo操作中フラグを立てる（useEffectで履歴に追加されないように）
+    isUndoRedoRef.current = true;
+    
+    // 1つ前の状態に戻る
+    const newIndex = currentIndex - 1;
+    const previousState = deepCopyLayers(history[newIndex]);
+    setLayers(previousState);
+    setHistoryIndex(newIndex);
+    historyIndexRef.current = newIndex;
+    console.log('[undo] restored to history[', newIndex, ']');
     // 再描画はlayersのuseEffectでトリガーされる
-  }, [historyIndex, history, layers, deepCopyLayers]);
+  }, [history, deepCopyLayers]);
 
   // Redo - 履歴から次の状態を復元
   const redo = useCallback(() => {
-    if (historyIndex >= history.length - 1) return;
+    const currentIndex = historyIndexRef.current;
+    const nextIndex = currentIndex + 1;
+    console.log('[redo] called, currentIndex:', currentIndex, 'nextIndex:', nextIndex, 'history.length:', history.length);
     
-    const newIndex = historyIndex + 1;
-    const nextState = deepCopyLayers(history[newIndex]);
+    if (nextIndex >= history.length) {
+      console.log('[redo] early return - no history to redo');
+      return;
+    }
+    
+    // Redo操作中フラグを立てる（useEffectで履歴に追加されないように）
+    isUndoRedoRef.current = true;
+    
+    const nextState = deepCopyLayers(history[nextIndex]);
     setLayers(nextState);
-    setHistoryIndex(newIndex);
+    setHistoryIndex(nextIndex);
+    historyIndexRef.current = nextIndex;
+    console.log('[redo] restored to history[', nextIndex, ']');
     // 再描画はlayersのuseEffectでトリガーされる
-  }, [historyIndex, history, deepCopyLayers]);
+  }, [history, deepCopyLayers]);
 
   // キーボードショートカット
   useEffect(() => {
@@ -630,6 +663,15 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
+
+  // デバッグ用: 履歴をwindowに公開
+  useEffect(() => {
+    (window as unknown as { __undoHistory: { history: Layer[][], historyIndex: number, historyIndexRef: number } }).__undoHistory = {
+      history,
+      historyIndex,
+      historyIndexRef: historyIndexRef.current,
+    };
+  }, [history, historyIndex]);
 
   // 状態が変わったらローカルストレージに保存
   useEffect(() => {
@@ -670,8 +712,6 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // テキストボックスの追加
   const addTextBox = useCallback(() => {
-    // 履歴に保存
-    saveToHistory(layers);
     // キャンバス内に収まるようにy座標を計算
     const baseY = 20 + textBoxes.length * 60;
     const maxY = height - 50; // テキストボックスの高さ分を引く
@@ -680,12 +720,10 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     });
     setTextBoxes(prev => [...prev, newBox]);
     setSelectedTextBoxId(newBox.id);
-  }, [createTextBox, textBoxes.length, height, layers, saveToHistory]);
+  }, [createTextBox, textBoxes.length, height]);
 
   // テキストボックスの削除
   const removeTextBox = useCallback((id: string) => {
-    // 履歴に保存
-    saveToHistory(layers);
     setTextBoxes(prev => {
       const filtered = prev.filter(tb => tb.id !== id);
       // 最低1つは残す
@@ -695,7 +733,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     if (selectedTextBoxId === id) {
       setSelectedTextBoxId(textBoxes.find(tb => tb.id !== id)?.id || null);
     }
-  }, [selectedTextBoxId, textBoxes, layers, saveToHistory]);
+  }, [selectedTextBoxId, textBoxes]);
 
   // テキストボックスの選択
   const selectTextBox = useCallback((id: string | null) => {
@@ -714,19 +752,17 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // スタンプの削除
   const removePlacedStamp = useCallback((id: string) => {
-    // 履歴に保存
-    saveToHistory(layers);
     setPlacedStamps(prev => prev.filter(s => s.id !== id));
     if (selectedPlacedStampId === id) {
       setSelectedPlacedStampId(null);
     }
-    // 再描画はlayersのuseEffectでトリガーされる
-  }, [selectedPlacedStampId, setPlacedStamps, layers, saveToHistory]);
+  }, [selectedPlacedStampId, setPlacedStamps]);
 
   // スタンプのドラッグ開始
   const handleStampPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: 'move' | 'resize' = 'move') => {
     e.stopPropagation();
     e.preventDefault();
+    
     setSelectedPlacedStampId(id);
     setSelectedStamp(null);
     setSelectedCustomEmoji(null);
@@ -801,8 +837,6 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     const y = (clientY - rect.top) * scaleY;
     
     if (selectedStamp) {
-      // 履歴に保存
-      saveToHistory(layers);
       const newStamp: PlacedStamp = {
         id: `stamp-${Date.now()}`,
         stampId: selectedStamp.id,
@@ -812,8 +846,6 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       };
       setPlacedStamps(prev => [...prev, newStamp]);
     } else if (selectedCustomEmoji) {
-      // 履歴に保存
-      saveToHistory(layers);
       const newStamp: PlacedStamp = {
         id: `emoji-${Date.now()}`,
         stampId: selectedCustomEmoji.shortcode,
@@ -825,8 +857,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       };
       setPlacedStamps(prev => [...prev, newStamp]);
     }
-    // スタンプはオーバーレイ表示なのでキャンバス再描画は不要
-  }, [width, height, selectedStamp, selectedCustomEmoji, stampScale, setPlacedStamps, layers, saveToHistory]);
+  }, [width, height, selectedStamp, selectedCustomEmoji, stampScale, setPlacedStamps]);
 
   // ストロークをSVGのpath文字列に変換
   const pointsToPath = useCallback((points: Point[]): string => {
