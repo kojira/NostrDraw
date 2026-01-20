@@ -1,0 +1,1 @@
+export { PaletteGallery } from './PaletteGallery';

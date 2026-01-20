@@ -261,6 +261,319 @@
   position: relative;
 }
 
+/* カスタムカラーセクション */
+.customColorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.customColorToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.customColorToggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.customColorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  max-width: 200px;
+}
+
+.paletteHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.paletteMenuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.paletteMenuButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.paletteMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  max-width: 200px;
+}
+
+.paletteMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.paletteSelectButton {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.paletteSelectButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.paletteSelectButton.active {
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.paletteDeleteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  color: #666;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.paletteDeleteButton:hover {
+  color: #ff4757;
+}
+
+.newPaletteForm,
+.saveNameForm {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.newPaletteInput {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.newPaletteInput::placeholder {
+  color: #666;
+}
+
+.newPaletteInput:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.newPaletteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #4d96ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.newPaletteButton:hover:not(:disabled) {
+  background: #3d7acc;
+}
+
+.newPaletteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.emptyPalette {
+  padding: 0.5rem;
+  font-size: 0.7rem;
+  color: #666;
+  text-align: center;
+}
+
+.paletteActionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  color: #666;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.paletteActionButton:hover {
+  color: #4d96ff;
+}
+
+.paletteEditForm {
+  display: flex;
+  flex: 1;
+  gap: 0.25rem;
+}
+
+.cloudSaveButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cloudSaveButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.cloudSaveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.galleryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.galleryButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* パレットギャラリーモーダル */
+.paletteGalleryModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.paletteGalleryContent {
+  background: var(--color-bg-base, #1a1a2e);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.paletteGalleryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.paletteGalleryHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text-primary, #fff);
+}
+
+.paletteGalleryClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-secondary, #888);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.paletteGalleryClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--color-text-primary, #fff);
+}
+
+.paletteGalleryContent > div:last-child {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
 .colorButton.colorPickerButton {
   background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 25%, #6bcb77 50%, #4d96ff 75%, #9b5de5 100%);
   display: flex;

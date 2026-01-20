@@ -90,6 +90,13 @@ export interface PostData {
   isExtend: boolean;     // 描き足しかどうか
 }
 
+// パレット型
+export interface ColorPalette {
+  id: string;
+  name: string;
+  colors: string[];
+}
+
 export interface DrawingCanvasProps {
   onSave: (svg: string, message: string) => void;
   onPost?: (data: PostData) => Promise<void>; // 投稿処理
@@ -104,6 +111,9 @@ export interface DrawingCanvasProps {
   isLoadingEmojis?: boolean;
   etoImages?: EtoImage[];
   baseImageSvg?: string; // 描き足し元のSVG（背景として表示）
+  // パレットNostr保存用
+  signEvent?: (event: import('nostr-tools').EventTemplate) => Promise<import('nostr-tools').Event>;
+  userPubkey?: string | null;
 }
 
 // 定数
@@ -113,7 +123,7 @@ export const COLORS = ['#e94560', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#
 export const CUSTOM_COLORS_STORAGE_KEY = 'nostrdraw-custom-colors';
 
 // カスタムカラーパレットの最大保存数
-export const MAX_CUSTOM_COLORS = 12;
+export const MAX_CUSTOM_COLORS = 64;
 
 // Re-export types for convenience
 export type { Template, Stamp, FontOption, CustomEmoji, EtoImage };

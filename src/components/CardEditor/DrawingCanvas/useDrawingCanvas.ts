@@ -17,6 +17,7 @@ import type {
   Layer,
 } from './types';
 import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer } from './types';
+import { savePaletteToNostr, fetchPalettesFromNostr, type ColorPalette as NostrPalette } from '../../../services/palette';
 
 // ローカルストレージのキー
 const STORAGE_KEY = 'nostrdraw-canvas-state';
@@ -115,9 +116,11 @@ interface UseDrawingCanvasOptions {
   width: number;
   height: number;
   initialMessage: string;
+  signEvent?: (event: import('nostr-tools').EventTemplate) => Promise<import('nostr-tools').Event>;
+  userPubkey?: string | null;
 }
 
-export function useDrawingCanvas({ width, height, initialMessage: _initialMessage }: UseDrawingCanvasOptions) {
+export function useDrawingCanvas({ width, height, initialMessage: _initialMessage, signEvent, userPubkey }: UseDrawingCanvasOptions) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -356,43 +359,259 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
   const [stampDragStart, setStampDragStart] = useState<Point | null>(null);
 
-  // カスタムカラーパレット
-  const [customColors, setCustomColors] = useState<string[]>(() => {
+  // パレット管理用のローカルストレージキー
+  const PALETTES_STORAGE_KEY = 'nostrdraw-palettes';
+  const ACTIVE_PALETTE_KEY = 'nostrdraw-active-palette';
+
+  // パレット型
+  interface LocalPalette {
+    id: string;
+    name: string;
+    colors: string[];
+  }
+
+  // デフォルトパレット
+  const defaultPalette: LocalPalette = { id: 'default', name: 'デフォルト', colors: [] };
+
+  // パレット一覧
+  const [palettes, setPalettes] = useState<LocalPalette[]>(() => {
     try {
-      const saved = localStorage.getItem(CUSTOM_COLORS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem(PALETTES_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 古いフォーマットからの移行
+        if (!Array.isArray(parsed)) {
+          return [defaultPalette];
+        }
+        // デフォルトパレットがなければ追加
+        if (!parsed.find((p: LocalPalette) => p.id === 'default')) {
+          return [defaultPalette, ...parsed];
+        }
+        return parsed;
+      }
+      // 古いカスタムカラーからの移行
+      const oldColors = localStorage.getItem(CUSTOM_COLORS_STORAGE_KEY);
+      if (oldColors) {
+        const colors = JSON.parse(oldColors);
+        return [{ ...defaultPalette, colors }];
+      }
+      return [defaultPalette];
     } catch {
-      return [];
+      return [defaultPalette];
     }
   });
 
-  // カスタムカラーを保存
-  const addCustomColor = useCallback((newColor: string) => {
-    setCustomColors(prev => {
-      // 既に存在する場合は先頭に移動
-      const filtered = prev.filter(c => c.toLowerCase() !== newColor.toLowerCase());
-      const updated = [newColor, ...filtered].slice(0, MAX_CUSTOM_COLORS);
-      try {
-        localStorage.setItem(CUSTOM_COLORS_STORAGE_KEY, JSON.stringify(updated));
-      } catch {
-        // ストレージエラーを無視
-      }
+  // アクティブパレットID
+  const [activePaletteId, setActivePaletteId] = useState<string>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_PALETTE_KEY) || 'default';
+    } catch {
+      return 'default';
+    }
+  });
+
+  // アクティブパレットの色
+  const customColors = useMemo(() => {
+    const palette = palettes.find(p => p.id === activePaletteId);
+    return palette?.colors || [];
+  }, [palettes, activePaletteId]);
+
+  // アクティブパレット
+  const activePalette = useMemo(() => {
+    return palettes.find(p => p.id === activePaletteId) || defaultPalette;
+  }, [palettes, activePaletteId]);
+
+  // パレットを保存
+  const savePalettes = useCallback((newPalettes: LocalPalette[]) => {
+    try {
+      localStorage.setItem(PALETTES_STORAGE_KEY, JSON.stringify(newPalettes));
+    } catch {
+      // エラーを無視
+    }
+  }, []);
+
+  // パレットを切り替え
+  const switchPalette = useCallback((paletteId: string) => {
+    setActivePaletteId(paletteId);
+    try {
+      localStorage.setItem(ACTIVE_PALETTE_KEY, paletteId);
+    } catch {
+      // エラーを無視
+    }
+  }, []);
+
+  // 新しいパレットを作成
+  const createPalette = useCallback((name: string) => {
+    const newPalette: LocalPalette = {
+      id: `palette-${Date.now()}`,
+      name,
+      colors: [],
+    };
+    const updated = [...palettes, newPalette];
+    setPalettes(updated);
+    savePalettes(updated);
+    switchPalette(newPalette.id);
+  }, [palettes, savePalettes, switchPalette]);
+
+  // パレットを削除
+  const deletePalette = useCallback((paletteId: string) => {
+    if (paletteId === 'default') return;
+    const updated = palettes.filter(p => p.id !== paletteId);
+    setPalettes(updated);
+    savePalettes(updated);
+    if (activePaletteId === paletteId) {
+      switchPalette('default');
+    }
+  }, [palettes, activePaletteId, savePalettes, switchPalette]);
+
+  // パレット名を変更（デフォルトパレットも変更可能）
+  const renamePalette = useCallback((paletteId: string, newName: string) => {
+    setPalettes(prev => {
+      const updated = prev.map(p => 
+        p.id === paletteId ? { ...p, name: newName } : p
+      );
+      savePalettes(updated);
       return updated;
     });
-  }, []);
+  }, [savePalettes]);
+
+  // Nostr保存中フラグ
+  const [isSavingPaletteToNostr, setIsSavingPaletteToNostr] = useState(false);
+
+  // パレットをNostrに保存（デフォルトパレットは新しいIDで保存）
+  // overrideName: デフォルトパレットに名前を付けて保存する際に使用
+  const savePaletteToCloud = useCallback(async (paletteId?: string, overrideName?: string) => {
+    if (!signEvent) return false;
+    
+    const targetId = paletteId || activePaletteId;
+    const palette = palettes.find(p => p.id === targetId);
+    if (!palette) return false;
+    
+    // 保存する名前（overrideNameがあればそれを使用）
+    const saveName = overrideName || palette.name;
+    
+    setIsSavingPaletteToNostr(true);
+    try {
+      // デフォルトパレットの場合は新しいIDを生成
+      const saveId = palette.id === 'default' ? `palette-${Date.now()}` : palette.id;
+      
+      const nostrPalette: NostrPalette = {
+        id: saveId,
+        name: saveName,
+        colors: palette.colors,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      const success = await savePaletteToNostr(nostrPalette, signEvent);
+      
+      // デフォルトパレットを新しいIDに昇格
+      if (success && palette.id === 'default') {
+        setPalettes(prev => {
+          const updated = prev.map(p => 
+            p.id === 'default' ? { ...p, id: saveId, name: saveName } : p
+          );
+          // 新しいデフォルトパレットを追加
+          updated.unshift(defaultPalette);
+          savePalettes(updated);
+          return updated;
+        });
+        // アクティブパレットを新しいIDに切り替え
+        switchPalette(saveId);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Failed to save palette to Nostr:', error);
+      return false;
+    } finally {
+      setIsSavingPaletteToNostr(false);
+    }
+  }, [activePaletteId, palettes, signEvent, savePalettes, switchPalette]);
+
+  // Nostrからパレットを同期（ローカルパレットを保持しつつマージ）
+  const syncPalettesFromCloud = useCallback(async () => {
+    if (!userPubkey) return;
+    
+    try {
+      const cloudPalettes = await fetchPalettesFromNostr(userPubkey);
+      if (cloudPalettes.length > 0) {
+        setPalettes(prev => {
+          // ローカルの全パレットをコピー
+          const merged: LocalPalette[] = [...prev];
+          
+          // クラウドのパレットをマージ（同じIDがあれば更新、なければ追加）
+          for (const cloud of cloudPalettes) {
+            const existingIndex = merged.findIndex(p => p.id === cloud.id);
+            const cloudPalette: LocalPalette = {
+              id: cloud.id,
+              name: cloud.name,
+              colors: cloud.colors,
+            };
+            if (existingIndex >= 0) {
+              // クラウドのパレットでローカルを更新
+              merged[existingIndex] = cloudPalette;
+            } else {
+              // 新しいパレットを追加
+              merged.push(cloudPalette);
+            }
+          }
+          savePalettes(merged);
+          return merged;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to sync palettes from Nostr:', error);
+    }
+  }, [userPubkey, savePalettes]);
+
+  // ログイン時にNostrから同期
+  useEffect(() => {
+    if (userPubkey) {
+      syncPalettesFromCloud();
+    }
+  }, [userPubkey, syncPalettesFromCloud]);
+
+  // パレットをインポート
+  const importPalette = useCallback((palette: NostrPalette) => {
+    const newPalette: LocalPalette = {
+      id: `imported-${Date.now()}`,
+      name: palette.name,
+      colors: palette.colors,
+    };
+    const updated = [...palettes, newPalette];
+    setPalettes(updated);
+    savePalettes(updated);
+    switchPalette(newPalette.id);
+  }, [palettes, savePalettes, switchPalette]);
+
+  // カスタムカラーを保存（アクティブパレットに追加）
+  const addCustomColor = useCallback((newColor: string) => {
+    setPalettes(prev => {
+      const updated = prev.map(p => {
+        if (p.id === activePaletteId) {
+          const filtered = p.colors.filter(c => c.toLowerCase() !== newColor.toLowerCase());
+          return { ...p, colors: [newColor, ...filtered].slice(0, MAX_CUSTOM_COLORS) };
+        }
+        return p;
+      });
+      savePalettes(updated);
+      return updated;
+    });
+  }, [activePaletteId, savePalettes]);
 
   // カスタムカラーを削除
   const removeCustomColor = useCallback((colorToRemove: string) => {
-    setCustomColors(prev => {
-      const updated = prev.filter(c => c.toLowerCase() !== colorToRemove.toLowerCase());
-      try {
-        localStorage.setItem(CUSTOM_COLORS_STORAGE_KEY, JSON.stringify(updated));
-      } catch {
-        // ストレージエラーを無視
-      }
+    setPalettes(prev => {
+      const updated = prev.map(p => {
+        if (p.id === activePaletteId) {
+          return { ...p, colors: p.colors.filter(c => c.toLowerCase() !== colorToRemove.toLowerCase()) };
+        }
+        return p;
+      });
+      savePalettes(updated);
       return updated;
     });
-  }, []);
+  }, [activePaletteId, savePalettes]);
   const [stampDragOriginal, setStampDragOriginal] = useState<PlacedStamp | null>(null);
   const [stampDragMode, setStampDragMode] = useState<'move' | 'resize' | null>(null);
 
@@ -1171,6 +1390,19 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     customColors,
     addCustomColor,
     removeCustomColor,
+    // パレット管理
+    palettes,
+    activePalette,
+    activePaletteId,
+    switchPalette,
+    createPalette,
+    deletePalette,
+    renamePalette,
+    savePaletteToCloud,
+    syncPalettesFromCloud,
+    importPalette,
+    isSavingPaletteToNostr,
+    canSaveToNostr: !!signEvent,
     
     // テキストボックス（複数対応）
     textBoxes,

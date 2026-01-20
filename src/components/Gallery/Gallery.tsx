@@ -7,6 +7,7 @@ import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
 import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
+import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
 import styles from './Gallery.module.css';
@@ -44,7 +45,7 @@ interface GalleryProps {
   showAuthorFilter?: boolean;
 }
 
-type TabType = 'popular' | 'recent';
+type TabType = 'popular' | 'recent' | 'palettes';
 type PeriodType = 'all' | 'day' | 'week' | 'month';
 type SortOrderType = 'desc' | 'asc';
 
@@ -116,6 +117,12 @@ export function Gallery({
   const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
   const fetchingDiffRef = useRef<Set<string>>(new Set());
 
+  // パレット関連の状態
+  const [palettes, setPalettes] = useState<ColorPalette[]>([]);
+  const [palettesLoading, setPalettesLoading] = useState(false);
+  const [favoritePalettes, setFavoritePalettes] = useState<Set<string>>(new Set());
+  const [importedPaletteId, setImportedPaletteId] = useState<string | null>(null);
+
   // 期間をdays数に変換
   const periodToDays = useCallback((p: PeriodType): number => {
     switch (p) {
@@ -125,6 +132,45 @@ export function Gallery({
       default: return 365; // all
     }
   }, []);
+
+  // パレットタブの場合、パレットを取得
+  useEffect(() => {
+    if (activeTab !== 'palettes') return;
+    
+    setPalettesLoading(true);
+    
+    const loadPalettes = async () => {
+      try {
+        let fetchedPalettes: ColorPalette[];
+        if (authorFilter) {
+          let authorPubkey = authorFilter;
+          if (authorFilter.startsWith('npub')) {
+            const converted = npubToPubkey(authorFilter);
+            if (converted) authorPubkey = converted;
+          }
+          fetchedPalettes = await fetchPalettesByAuthor(authorPubkey);
+        } else {
+          fetchedPalettes = await fetchPublicPalettes(100);
+        }
+        setPalettes(fetchedPalettes);
+        
+        // お気に入り状態を初期化
+        const favorites = new Set<string>();
+        fetchedPalettes.forEach(p => {
+          if (p.eventId && isFavoritePalette(p.eventId)) {
+            favorites.add(p.eventId);
+          }
+        });
+        setFavoritePalettes(favorites);
+      } catch (err) {
+        console.error('パレット取得エラー:', err);
+      } finally {
+        setPalettesLoading(false);
+      }
+    };
+    
+    loadPalettes();
+  }, [activeTab, authorFilter]);
 
   // displayLimitが変わったらrefも更新
   useEffect(() => {
@@ -525,6 +571,71 @@ export function Gallery({
     }
   };
 
+  // パレットのお気に入り切り替え（お気に入り追加時は自動インポート）
+  const handleToggleFavorite = useCallback((palette: ColorPalette) => {
+    if (!palette.eventId) return;
+    
+    const eventId = palette.eventId;
+    if (favoritePalettes.has(eventId)) {
+      // お気に入りから削除（ローカルのパレットは残す）
+      removeFavoritePalette(eventId);
+      setFavoritePalettes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(eventId);
+        return newSet;
+      });
+    } else {
+      // お気に入りに追加して、ローカルにもインポート
+      addFavoritePalette(eventId);
+      setFavoritePalettes(prev => new Set(prev).add(eventId));
+      
+      // 自動インポート
+      const localPalettes = loadPalettesFromLocal();
+      const existsLocally = localPalettes.some(p => p.eventId === eventId);
+      if (!existsLocally) {
+        const newPalette: ColorPalette = {
+          id: generatePaletteId(),
+          name: palette.name,
+          colors: palette.colors.slice(0, 64),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          eventId: eventId, // お気に入りとの紐付け用
+        };
+        localPalettes.push(newPalette);
+        savePalettesToLocal(localPalettes);
+      }
+    }
+  }, [favoritePalettes]);
+
+  // パレットをローカルにインポート
+  const handleImportPalette = useCallback((palette: ColorPalette) => {
+    const localPalettes = loadPalettesFromLocal();
+    
+    // 同じIDが既にあるかチェック
+    const existingIndex = localPalettes.findIndex(p => p.id === palette.id);
+    if (existingIndex >= 0) {
+      // 既存のパレットを更新
+      localPalettes[existingIndex] = {
+        ...palette,
+        updatedAt: Date.now(),
+      };
+    } else {
+      // 新しいパレットとして追加（ユニークなIDを生成）
+      const newPalette: ColorPalette = {
+        id: generatePaletteId(),
+        name: palette.name,
+        colors: palette.colors.slice(0, 64), // 最大64色
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      localPalettes.push(newPalette);
+    }
+    
+    savePalettesToLocal(localPalettes);
+    setImportedPaletteId(palette.eventId || null);
+    setTimeout(() => setImportedPaletteId(null), 2000);
+  }, []);
+
   // リアクション数を取得
   const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number => {
     // stateから取得（リアルタイム更新用）
@@ -564,6 +675,12 @@ export function Gallery({
           onClick={() => setActiveTab('recent')}
         >
           🆕 {t('gallery.recent')}
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'palettes' ? styles.active : ''}`}
+          onClick={() => setActiveTab('palettes')}
+        >
+          🎨 {t('gallery.palettes')}
         </button>
       </div>
 
@@ -619,24 +736,98 @@ export function Gallery({
 
       {/* コンテンツ */}
       <div className={styles.content}>
-        {isLoading && cards.length === 0 && (
-          <div className={styles.loading}>
-            <Spinner size="lg" />
-            <span>{t('card.loading')}</span>
-          </div>
-        )}
-
-        {error && (
-          <div className={styles.error}>{error}</div>
-        )}
-
-        {!isLoading && !error && cards.length === 0 && (
-          <div className={styles.empty}>{t('gallery.noResults')}</div>
-        )}
-
-        {cards.length > 0 && (
+        {/* パレットタブの場合 */}
+        {activeTab === 'palettes' ? (
           <>
-            <div className={styles.grid}>
+            {palettesLoading && (
+              <div className={styles.loading}>
+                <Spinner size="lg" />
+                <span>{t('card.loading')}</span>
+              </div>
+            )}
+
+            {!palettesLoading && palettes.length === 0 && (
+              <div className={styles.empty}>{t('gallery.noPalettes')}</div>
+            )}
+
+            {palettes.length > 0 && (
+              <div className={styles.paletteGrid}>
+                {palettes.map((palette) => {
+                  const picture = palette.pubkey ? profiles.get(palette.pubkey)?.picture : undefined;
+                  const name = palette.pubkey ? getProfileName(palette.pubkey) : t('gallery.unknownUser');
+                  const isFavorite = palette.eventId ? favoritePalettes.has(palette.eventId) : false;
+                  const isImported = palette.eventId === importedPaletteId;
+
+                  return (
+                    <div key={palette.eventId || palette.id} className={styles.paletteItem}>
+                      <div className={styles.paletteHeader}>
+                        <span className={styles.paletteName}>{palette.name}</span>
+                        <div className={styles.paletteActions}>
+                          <button
+                            className={`${styles.paletteActionButton} ${isFavorite ? styles.favorited : ''}`}
+                            onClick={() => handleToggleFavorite(palette)}
+                            title={isFavorite ? t('gallery.removeFromFavorites') : t('gallery.addToFavorites')}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0" }}>
+                              star
+                            </span>
+                          </button>
+                          <button
+                            className={styles.paletteActionButton}
+                            onClick={() => handleImportPalette(palette)}
+                            title={t('gallery.importPalette')}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                              {isImported ? 'check' : 'download'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                      <div className={styles.paletteColors}>
+                        {palette.colors.slice(0, 32).map((color, idx) => (
+                          <div
+                            key={idx}
+                            className={styles.paletteColorSwatch}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+                      <div className={styles.paletteAuthor} onClick={() => palette.pubkey && handleAuthorClick(palette.pubkey)}>
+                        {picture && (
+                          <img src={picture} alt="" className={styles.paletteAuthorAvatar} />
+                        )}
+                        <span className={styles.paletteAuthorName}>{name}</span>
+                        <span className={styles.paletteColorCount}>
+                          {t('gallery.colorsCount', { count: palette.colors.length })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {isLoading && cards.length === 0 && (
+              <div className={styles.loading}>
+                <Spinner size="lg" />
+                <span>{t('card.loading')}</span>
+              </div>
+            )}
+
+            {error && (
+              <div className={styles.error}>{error}</div>
+            )}
+
+            {!isLoading && !error && cards.length === 0 && (
+              <div className={styles.empty}>{t('gallery.noResults')}</div>
+            )}
+
+            {cards.length > 0 && (
+              <>
+                <div className={styles.grid}>
               {cards.map((card) => {
                 const picture = getProfilePicture(card.pubkey);
                 const name = getProfileName(card.pubkey);
@@ -713,6 +904,8 @@ export function Gallery({
               <div className={styles.noMore}>
                 {t('gallery.noMoreResults')}
               </div>
+            )}
+              </>
             )}
           </>
         )}

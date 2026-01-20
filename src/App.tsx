@@ -75,6 +75,8 @@ function App() {
 
   const {
     followees,
+    isLoading: isLoadingFollowees,
+    refresh: refreshFollowees,
   } = useFollowees(authState.pubkey);
 
   const {
@@ -293,6 +295,7 @@ function App() {
                     onSvgChange={setSvg}
                     onMessageChange={setMessage}
                     userPubkey={authState.pubkey}
+                    signEvent={signEvent}
                     extendingCard={extendingCard}
                     allowExtend={allowExtend}
                     onAllowExtendChange={setAllowExtend}
@@ -481,6 +484,8 @@ function App() {
             relays={relays}
             onRelaysChange={updateRelays}
             userPubkey={authState.pubkey}
+            onRefreshFollowees={refreshFollowees}
+            isLoadingFollowees={isLoadingFollowees}
           />
         </div>
       </div>

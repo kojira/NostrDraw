@@ -32,6 +32,13 @@
   margin: 0 0 var(--space-4) 0;
 }
 
+.sectionDescription {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-4) 0;
+  line-height: var(--leading-normal);
+}
+
 /* テーマ選択 */
 .themeSelector {
   display: flex;

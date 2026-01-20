@@ -15,6 +15,7 @@ interface CardEditorProps {
   onSvgChange: (svg: string | null) => void;
   onMessageChange: (message: string) => void;
   userPubkey?: string | null;
+  signEvent?: (event: import('nostr-tools').EventTemplate) => Promise<import('nostr-tools').Event>; // パレット保存用
   extendingCard?: NostrDrawPost | null; // 描き足し元のカード
   allowExtend?: boolean;
   onAllowExtendChange?: (allow: boolean) => void;
@@ -32,6 +33,7 @@ export function CardEditor({
   onSvgChange,
   onMessageChange,
   userPubkey,
+  signEvent,
   extendingCard,
   allowExtend = true,
   onAllowExtendChange,
@@ -119,6 +121,8 @@ export function CardEditor({
           isLoadingEmojis={isLoadingEmojis}
           etoImages={ETO_IMAGES}
           baseImageSvg={extendingCard?.svg}
+          signEvent={signEvent}
+          userPubkey={userPubkey}
         />
       </div>
       

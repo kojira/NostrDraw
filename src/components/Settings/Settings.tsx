@@ -13,6 +13,8 @@ interface SettingsProps {
   relays: RelayConfig[];
   onRelaysChange: (relays: RelayConfig[]) => void;
   userPubkey: string | null;
+  onRefreshFollowees?: () => void;
+  isLoadingFollowees?: boolean;
 }
 
 // デフォルトリレーのURLリスト
@@ -24,6 +26,8 @@ export function Settings({
   relays,
   onRelaysChange,
   userPubkey,
+  onRefreshFollowees,
+  isLoadingFollowees,
 }: SettingsProps) {
   const { t, i18n } = useTranslation();
   const [newRelayUrl, setNewRelayUrl] = useState('');
@@ -221,6 +225,24 @@ export function Settings({
           </button>
         </div>
       </section>
+
+      {/* フォロー情報 */}
+      {userPubkey && onRefreshFollowees && (
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>{t('settings.followees')}</h3>
+          <p className={styles.sectionDescription}>{t('settings.followeesDescription')}</p>
+          <button
+            className={styles.nip65Button}
+            onClick={onRefreshFollowees}
+            disabled={isLoadingFollowees}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px', verticalAlign: 'middle' }}>
+              {isLoadingFollowees ? 'hourglass_empty' : 'refresh'}
+            </span>
+            {isLoadingFollowees ? t('settings.followeesLoading') : t('settings.followeesRefresh')}
+          </button>
+        </section>
+      )}
 
       {/* リレー設定 */}
       <section className={styles.section}>

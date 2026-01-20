@@ -1,12 +1,13 @@
 // お絵描きキャンバスコンポーネント（統合）
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDrawingCanvas } from './useDrawingCanvas';
 import { TemplateSelector } from './TemplateSelector';
 import { Toolbar } from './Toolbar';
 import { StampPalette } from './StampPalette';
 import { FontSelector } from './FontSelector';
 import { LayerPanel } from './LayerPanel';
+import { PaletteGallery } from '../../PaletteGallery';
 import { STAMPS } from '../../../data/templates';
 import type { DrawingCanvasProps, Template } from './types';
 import styles from './DrawingCanvas.module.css';
@@ -25,6 +26,8 @@ export function DrawingCanvas({
   isLoadingEmojis = false,
   etoImages = [],
   baseImageSvg,
+  signEvent,
+  userPubkey,
 }: DrawingCanvasProps) {
   const {
     canvasRef,
@@ -41,6 +44,17 @@ export function DrawingCanvas({
     customColors,
     addCustomColor,
     removeCustomColor,
+    // パレット管理
+    palettes,
+    activePaletteId,
+    switchPalette,
+    createPalette,
+    deletePalette,
+    renamePalette,
+    savePaletteToCloud,
+    importPalette,
+    isSavingPaletteToNostr,
+    canSaveToNostr,
     textBoxes,
     selectedTextBoxId,
     selectedTextBox,
@@ -105,7 +119,10 @@ export function DrawingCanvas({
     useDraft,
     discardDraft,
     clearDraft,
-  } = useDrawingCanvas({ width, height, initialMessage });
+  } = useDrawingCanvas({ width, height, initialMessage, signEvent, userPubkey });
+
+  // パレットギャラリーモーダル
+  const [showPaletteGallery, setShowPaletteGallery] = useState(false);
 
   // 描き足し元のSVGが渡されたらテンプレートとして設定
   const hasSetBaseImage = useRef(false);
@@ -209,6 +226,16 @@ export function DrawingCanvas({
         canUndo={canUndo}
         canRedo={canRedo}
         customColors={customColors}
+        palettes={palettes}
+        activePaletteId={activePaletteId}
+        onPaletteChange={switchPalette}
+        onCreatePalette={createPalette}
+        onDeletePalette={deletePalette}
+        onRenamePalette={renamePalette}
+        onSavePaletteToCloud={savePaletteToCloud}
+        isSavingPaletteToNostr={isSavingPaletteToNostr}
+        canSaveToNostr={canSaveToNostr}
+        onOpenPaletteGallery={() => setShowPaletteGallery(true)}
         onToolChange={selectTool}
         onColorChange={setColor}
         onLineWidthChange={setLineWidth}
@@ -538,6 +565,29 @@ export function DrawingCanvas({
           {isPosting ? '投稿中...' : '📤 投稿する'}
         </button>
       </div>
+
+      {/* パレットギャラリーモーダル */}
+      {showPaletteGallery && (
+        <div className={styles.paletteGalleryModal}>
+          <div className={styles.paletteGalleryContent}>
+            <div className={styles.paletteGalleryHeader}>
+              <h3>パレットギャラリー</h3>
+              <button
+                className={styles.paletteGalleryClose}
+                onClick={() => setShowPaletteGallery(false)}
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <PaletteGallery 
+              onImportPalette={(palette) => {
+                importPalette(palette);
+                setShowPaletteGallery(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

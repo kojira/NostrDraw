@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { refreshProfile, npubToPubkey, pubkeyToNpub, isFollowing, followUser, unfollowUser, updateProfile } from '../../services/profile';
+import { fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId } from '../../services/palette';
 import { Gallery } from '../Gallery/Gallery';
 import { ProfileEditModal } from './ProfileEditModal';
 import styles from './UserGallery.module.css';
@@ -35,6 +36,12 @@ export function UserGallery({
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  
+  // パレット関連の状態
+  const [palettes, setPalettes] = useState<ColorPalette[]>([]);
+  const [palettesLoading, setPalettesLoading] = useState(false);
+  const [favoritePalettes, setFavoritePalettes] = useState<Set<string>>(new Set());
+  const [importedPaletteId, setImportedPaletteId] = useState<string | null>(null);
 
   // npubからpubkeyを取得（無効なnpubの場合はnullになる）
   const pubkey = npub.startsWith('npub') ? npubToPubkey(npub) : npub;
@@ -86,6 +93,29 @@ export function UserGallery({
     }
   }, [userPubkey, pubkey]);
 
+  // パレットを取得
+  useEffect(() => {
+    if (!pubkey) return;
+    
+    setPalettesLoading(true);
+    fetchPalettesByAuthor(pubkey).then((fetchedPalettes) => {
+      setPalettes(fetchedPalettes);
+      
+      // お気に入り状態を初期化
+      const favorites = new Set<string>();
+      fetchedPalettes.forEach(p => {
+        if (p.eventId && isFavoritePalette(p.eventId)) {
+          favorites.add(p.eventId);
+        }
+      });
+      setFavoritePalettes(favorites);
+    }).catch((err) => {
+      console.error('パレット取得エラー:', err);
+    }).finally(() => {
+      setPalettesLoading(false);
+    });
+  }, [pubkey]);
+
   // フォロー/アンフォロー処理
   const handleFollowToggle = useCallback(async () => {
     if (!userPubkey || !pubkey || !signEvent || isUpdatingFollow) return;
@@ -114,6 +144,61 @@ export function UserGallery({
 
   // 自分自身かどうか
   const isSelf = userPubkey === pubkey;
+
+  // パレットのお気に入り切り替え（お気に入り追加時は自動インポート）
+  const handleToggleFavorite = useCallback((palette: ColorPalette) => {
+    if (!palette.eventId) return;
+    
+    const eventId = palette.eventId;
+    if (favoritePalettes.has(eventId)) {
+      // お気に入りから削除（ローカルのパレットは残す）
+      removeFavoritePalette(eventId);
+      setFavoritePalettes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(eventId);
+        return newSet;
+      });
+    } else {
+      // お気に入りに追加して、ローカルにもインポート
+      addFavoritePalette(eventId);
+      setFavoritePalettes(prev => new Set(prev).add(eventId));
+      
+      // 自動インポート
+      const localPalettes = loadPalettesFromLocal();
+      const existsLocally = localPalettes.some(p => p.eventId === eventId);
+      if (!existsLocally) {
+        const newPalette: ColorPalette = {
+          id: generatePaletteId(),
+          name: palette.name,
+          colors: palette.colors.slice(0, 64),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          eventId: eventId,
+        };
+        localPalettes.push(newPalette);
+        savePalettesToLocal(localPalettes);
+      }
+    }
+  }, [favoritePalettes]);
+
+  // パレットをローカルにインポート
+  const handleImportPalette = useCallback((palette: ColorPalette) => {
+    const localPalettes = loadPalettesFromLocal();
+    
+    // 新しいパレットとして追加
+    const newPalette: ColorPalette = {
+      id: generatePaletteId(),
+      name: palette.name,
+      colors: palette.colors.slice(0, 64), // 最大64色
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    localPalettes.push(newPalette);
+    
+    savePalettesToLocal(localPalettes);
+    setImportedPaletteId(palette.eventId || null);
+    setTimeout(() => setImportedPaletteId(null), 2000);
+  }, []);
 
   // プロフィール保存
   const handleSaveProfile = useCallback(async (newProfile: { name: string; about: string; picture: string }) => {
@@ -221,6 +306,60 @@ export function UserGallery({
           onClose={() => setShowEditModal(false)}
           signEvent={signEvent}
         />
+      )}
+
+      {/* パレットセクション */}
+      {!palettesLoading && palettes.length > 0 && (
+        <div className={styles.palettesSection}>
+          <h2 className={styles.sectionTitle}>🎨 {t('gallery.palettes')}</h2>
+          <div className={styles.paletteGrid}>
+            {palettes.map((palette) => {
+              const isFavorite = palette.eventId ? favoritePalettes.has(palette.eventId) : false;
+              const isImported = palette.eventId === importedPaletteId;
+
+              return (
+                <div key={palette.eventId || palette.id} className={styles.paletteItem}>
+                  <div className={styles.paletteHeader}>
+                    <span className={styles.paletteName}>{palette.name}</span>
+                    <div className={styles.paletteActions}>
+                      <button
+                        className={`${styles.paletteActionButton} ${isFavorite ? styles.favorited : ''}`}
+                        onClick={() => handleToggleFavorite(palette)}
+                        title={isFavorite ? t('gallery.removeFromFavorites') : t('gallery.addToFavorites')}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0" }}>
+                          star
+                        </span>
+                      </button>
+                      <button
+                        className={styles.paletteActionButton}
+                        onClick={() => handleImportPalette(palette)}
+                        title={t('gallery.importPalette')}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                          {isImported ? 'check' : 'download'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.paletteColors}>
+                    {palette.colors.slice(0, 24).map((color, idx) => (
+                      <div
+                        key={idx}
+                        className={styles.paletteColorSwatch}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                  <span className={styles.paletteColorCount}>
+                    {t('gallery.colorsCount', { count: palette.colors.length })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Galleryコンポーネントを再利用 */}

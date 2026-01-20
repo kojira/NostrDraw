@@ -216,6 +216,7 @@
     "title": "Gallery",
     "popular": "Popular",
     "recent": "Recent",
+    "palettes": "Palettes",
     "all": "All",
     "filter": "Filter",
     "period": "Period",
@@ -226,6 +227,7 @@
     "lastMonth": "Last month",
     "loadMore": "Load more",
     "noResults": "No posts found",
+    "noPalettes": "No palettes found",
     "userGallery": "'s Posts",
     "backToGallery": "Back to Gallery",
     "backToHome": "Back to Home",
@@ -234,7 +236,13 @@
     "sortDesc": "Newest first",
     "sortAsc": "Oldest first",
     "loadingMore": "Loading more...",
-    "noMoreResults": "No more posts"
+    "noMoreResults": "No more posts",
+    "colorsCount": "{{count}} colors",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "favorited": "Favorited",
+    "importPalette": "Import palette",
+    "imported": "Imported"
   },
   "timeline": {
     "follow": "Following",
@@ -287,7 +295,11 @@
       "50": "50 MB",
       "100": "100 MB",
       "200": "200 MB"
-    }
+    },
+    "followees": "Followees",
+    "followeesDescription": "If people you followed from another client don't appear in your timeline, refresh here.",
+    "followeesRefresh": "Refresh Followees",
+    "followeesLoading": "Refreshing..."
   },
   "help": {
     "title": "How to Use",
