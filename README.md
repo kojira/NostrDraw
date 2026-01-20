@@ -101,7 +101,10 @@ pnpm build    # プロダクションビルド
 
 ### 技術スタック
 
-React 19 / TypeScript / Vite / nostr-tools / CSS Modules
+- **フレームワーク**: React 19 / TypeScript / Vite
+- **Nostr**: rx-nostr（リレー通信） / nostr-tools（型定義・ユーティリティ）
+- **スタイリング**: CSS Modules
+- **圧縮**: pako（gzip）
 
 ## ライセンス
 
