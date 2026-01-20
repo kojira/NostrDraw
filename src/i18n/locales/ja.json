@@ -242,7 +242,10 @@
     "removeFromFavorites": "お気に入りから削除",
     "favorited": "お気に入り済み",
     "importPalette": "パレットをインポート",
-    "imported": "インポートしました"
+    "imported": "インポートしました",
+    "deletePalette": "パレットを削除",
+    "confirmDeletePalette": "このパレットを削除しますか？",
+    "paletteDeleted": "パレットを削除しました"
   },
   "timeline": {
     "follow": "フォロー",

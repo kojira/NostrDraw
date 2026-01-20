@@ -359,9 +359,16 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const [stampTab, setStampTab] = useState<StampTab>('builtin');
   const [stampDragStart, setStampDragStart] = useState<Point | null>(null);
 
-  // パレット管理用のローカルストレージキー
-  const PALETTES_STORAGE_KEY = 'nostrdraw-palettes';
-  const ACTIVE_PALETTE_KEY = 'nostrdraw-active-palette';
+  // パレット管理用のローカルストレージキー（pubkeyごとに分離）
+  const getPalettesKey = useCallback((pubkey?: string | null) => {
+    const suffix = pubkey || 'anonymous';
+    return `nostrdraw-palettes-${suffix}`;
+  }, []);
+  
+  const getActiveKey = useCallback((pubkey?: string | null) => {
+    const suffix = pubkey || 'anonymous';
+    return `nostrdraw-active-palette-${suffix}`;
+  }, []);
 
   // パレット型
   interface LocalPalette {
@@ -373,10 +380,11 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // デフォルトパレット
   const defaultPalette: LocalPalette = { id: 'default', name: 'デフォルト', colors: [] };
 
-  // パレット一覧
-  const [palettes, setPalettes] = useState<LocalPalette[]>(() => {
+  // パレットをローカルストレージから読み込む
+  const loadPalettesForUser = useCallback((pubkey?: string | null): LocalPalette[] => {
     try {
-      const saved = localStorage.getItem(PALETTES_STORAGE_KEY);
+      const key = getPalettesKey(pubkey);
+      const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
         // 古いフォーマットからの移行
@@ -399,16 +407,36 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     } catch {
       return [defaultPalette];
     }
-  });
+  }, [getPalettesKey]);
+
+  // パレット一覧
+  const [palettes, setPalettes] = useState<LocalPalette[]>(() => loadPalettesForUser(userPubkey));
 
   // アクティブパレットID
   const [activePaletteId, setActivePaletteId] = useState<string>(() => {
     try {
-      return localStorage.getItem(ACTIVE_PALETTE_KEY) || 'default';
+      const key = getActiveKey(userPubkey);
+      return localStorage.getItem(key) || 'default';
     } catch {
       return 'default';
     }
   });
+
+  // userPubkeyが変更されたらパレットを再読み込み
+  useEffect(() => {
+    const newPalettes = loadPalettesForUser(userPubkey);
+    setPalettes(newPalettes);
+    
+    try {
+      const key = getActiveKey(userPubkey);
+      const savedActiveId = localStorage.getItem(key) || 'default';
+      // パレットが存在するか確認
+      const exists = newPalettes.some(p => p.id === savedActiveId);
+      setActivePaletteId(exists ? savedActiveId : 'default');
+    } catch {
+      setActivePaletteId('default');
+    }
+  }, [userPubkey, loadPalettesForUser, getActiveKey]);
 
   // アクティブパレットの色
   const customColors = useMemo(() => {
@@ -424,21 +452,23 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // パレットを保存
   const savePalettes = useCallback((newPalettes: LocalPalette[]) => {
     try {
-      localStorage.setItem(PALETTES_STORAGE_KEY, JSON.stringify(newPalettes));
+      const key = getPalettesKey(userPubkey);
+      localStorage.setItem(key, JSON.stringify(newPalettes));
     } catch {
       // エラーを無視
     }
-  }, []);
+  }, [getPalettesKey, userPubkey]);
 
   // パレットを切り替え
   const switchPalette = useCallback((paletteId: string) => {
     setActivePaletteId(paletteId);
     try {
-      localStorage.setItem(ACTIVE_PALETTE_KEY, paletteId);
+      const key = getActiveKey(userPubkey);
+      localStorage.setItem(key, paletteId);
     } catch {
       // エラーを無視
     }
-  }, []);
+  }, [getActiveKey, userPubkey]);
 
   // 新しいパレットを作成
   const createPalette = useCallback((name: string) => {

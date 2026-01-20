@@ -107,8 +107,16 @@ export function Toolbar({
   const handleSaveToCloud = async () => {
     if (!onSavePaletteToCloud) return;
     
-    // デフォルトパレット（名前が「デフォルト」）の場合は名前入力を促す
     const activePalette = palettes.find(p => p.id === activePaletteId);
+    
+    // 新規パレット名の入力欄に名前が入っている場合は、その名前を使って保存
+    if (newPaletteName.trim()) {
+      await onSavePaletteToCloud(undefined, newPaletteName.trim());
+      setNewPaletteName('');
+      return;
+    }
+    
+    // デフォルトパレット（名前が「デフォルト」）の場合は名前入力を促す
     if (activePaletteId === 'default' && activePalette?.name === 'デフォルト') {
       setShowSaveNameInput(true);
       setSaveNameInput('');
@@ -253,7 +261,7 @@ export function Toolbar({
                           value={editingPaletteName}
                           onChange={(e) => setEditingPaletteName(e.target.value)}
                           className={styles.newPaletteInput}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEditName()}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSaveEditName()}
                           autoFocus
                         />
                         <button
@@ -305,7 +313,7 @@ export function Toolbar({
                       onChange={(e) => setNewPaletteName(e.target.value)}
                       placeholder="新規パレット名"
                       className={styles.newPaletteInput}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreatePalette()}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleCreatePalette()}
                     />
                     <button
                       className={styles.newPaletteButton}
@@ -327,7 +335,7 @@ export function Toolbar({
                           onChange={(e) => setSaveNameInput(e.target.value)}
                           placeholder="パレット名を入力"
                           className={styles.newPaletteInput}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSaveWithName()}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSaveWithName()}
                           autoFocus
                         />
                         <button

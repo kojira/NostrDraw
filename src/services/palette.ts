@@ -8,10 +8,19 @@ import { fetchEvents, publishEvent } from './relay';
 const PALETTE_KIND = 30078;
 const PALETTE_D_TAG_PREFIX = 'nostrdraw-palette';
 
-// ローカルストレージキー
-const LOCAL_PALETTES_KEY = 'nostrdraw-palettes';
-const ACTIVE_PALETTE_KEY = 'nostrdraw-active-palette';
+// ローカルストレージキー（pubkeyごとに分離）
+const LOCAL_PALETTES_KEY_PREFIX = 'nostrdraw-palettes';
+const ACTIVE_PALETTE_KEY_PREFIX = 'nostrdraw-active-palette';
 const FAVORITE_PALETTES_KEY = 'nostrdraw-favorite-palettes';
+
+// pubkeyを含むキーを生成（未ログインの場合は'anonymous'）
+function getPalettesKey(pubkey?: string): string {
+  return pubkey ? `${LOCAL_PALETTES_KEY_PREFIX}-${pubkey}` : `${LOCAL_PALETTES_KEY_PREFIX}-anonymous`;
+}
+
+function getActiveKey(pubkey?: string): string {
+  return pubkey ? `${ACTIVE_PALETTE_KEY_PREFIX}-${pubkey}` : `${ACTIVE_PALETTE_KEY_PREFIX}-anonymous`;
+}
 
 export interface ColorPalette {
   id: string;
@@ -35,9 +44,10 @@ export const DEFAULT_PALETTE: ColorPalette = {
 };
 
 // ローカルストレージからパレット一覧を取得
-export function loadPalettesFromLocal(): ColorPalette[] {
+export function loadPalettesFromLocal(pubkey?: string): ColorPalette[] {
   try {
-    const saved = localStorage.getItem(LOCAL_PALETTES_KEY);
+    const key = getPalettesKey(pubkey);
+    const saved = localStorage.getItem(key);
     if (saved) {
       return JSON.parse(saved);
     }
@@ -48,27 +58,30 @@ export function loadPalettesFromLocal(): ColorPalette[] {
 }
 
 // ローカルストレージにパレット一覧を保存
-export function savePalettesToLocal(palettes: ColorPalette[]): void {
+export function savePalettesToLocal(palettes: ColorPalette[], pubkey?: string): void {
   try {
-    localStorage.setItem(LOCAL_PALETTES_KEY, JSON.stringify(palettes));
+    const key = getPalettesKey(pubkey);
+    localStorage.setItem(key, JSON.stringify(palettes));
   } catch {
     // エラーを無視
   }
 }
 
 // アクティブなパレットIDを取得
-export function getActivePaletteId(): string {
+export function getActivePaletteId(pubkey?: string): string {
   try {
-    return localStorage.getItem(ACTIVE_PALETTE_KEY) || 'default';
+    const key = getActiveKey(pubkey);
+    return localStorage.getItem(key) || 'default';
   } catch {
     return 'default';
   }
 }
 
 // アクティブなパレットIDを設定
-export function setActivePaletteId(id: string): void {
+export function setActivePaletteId(id: string, pubkey?: string): void {
   try {
-    localStorage.setItem(ACTIVE_PALETTE_KEY, id);
+    const key = getActiveKey(pubkey);
+    localStorage.setItem(key, id);
   } catch {
     // エラーを無視
   }

@@ -7,7 +7,7 @@ import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
 import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
-import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId } from '../../services/palette';
+import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
 import styles from './Gallery.module.css';
@@ -122,6 +122,8 @@ export function Gallery({
   const [palettesLoading, setPalettesLoading] = useState(false);
   const [favoritePalettes, setFavoritePalettes] = useState<Set<string>>(new Set());
   const [importedPaletteId, setImportedPaletteId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deletingPaletteId, setDeletingPaletteId] = useState<string | null>(null);
 
   // 期間をdays数に変換
   const periodToDays = useCallback((p: PeriodType): number => {
@@ -590,7 +592,7 @@ export function Gallery({
       setFavoritePalettes(prev => new Set(prev).add(eventId));
       
       // 自動インポート
-      const localPalettes = loadPalettesFromLocal();
+      const localPalettes = loadPalettesFromLocal(userPubkey || undefined);
       const existsLocally = localPalettes.some(p => p.eventId === eventId);
       if (!existsLocally) {
         const newPalette: ColorPalette = {
@@ -602,14 +604,14 @@ export function Gallery({
           eventId: eventId, // お気に入りとの紐付け用
         };
         localPalettes.push(newPalette);
-        savePalettesToLocal(localPalettes);
+        savePalettesToLocal(localPalettes, userPubkey || undefined);
       }
     }
-  }, [favoritePalettes]);
+  }, [favoritePalettes, userPubkey]);
 
   // パレットをローカルにインポート
   const handleImportPalette = useCallback((palette: ColorPalette) => {
-    const localPalettes = loadPalettesFromLocal();
+    const localPalettes = loadPalettesFromLocal(userPubkey || undefined);
     
     // 同じIDが既にあるかチェック
     const existingIndex = localPalettes.findIndex(p => p.id === palette.id);
@@ -631,10 +633,38 @@ export function Gallery({
       localPalettes.push(newPalette);
     }
     
-    savePalettesToLocal(localPalettes);
+    savePalettesToLocal(localPalettes, userPubkey || undefined);
     setImportedPaletteId(palette.eventId || null);
     setTimeout(() => setImportedPaletteId(null), 2000);
-  }, []);
+    
+    // Toast表示
+    setToastMessage(t('gallery.imported'));
+    setTimeout(() => setToastMessage(null), 2000);
+  }, [t, userPubkey]);
+
+  // パレットを削除
+  const handleDeletePalette = useCallback(async (palette: ColorPalette) => {
+    if (!signEvent || !palette.eventId) return;
+    
+    // 確認ダイアログ
+    if (!confirm(t('gallery.confirmDeletePalette'))) return;
+    
+    setDeletingPaletteId(palette.eventId);
+    
+    try {
+      const success = await deletePaletteFromNostr(palette.id, signEvent);
+      if (success) {
+        // パレットをリストから削除
+        setPalettes(prev => prev.filter(p => p.eventId !== palette.eventId));
+        setToastMessage(t('gallery.paletteDeleted'));
+        setTimeout(() => setToastMessage(null), 2000);
+      }
+    } catch (error) {
+      console.error('Failed to delete palette:', error);
+    } finally {
+      setDeletingPaletteId(null);
+    }
+  }, [signEvent, t]);
 
   // リアクション数を取得
   const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number => {
@@ -757,6 +787,8 @@ export function Gallery({
                   const name = palette.pubkey ? getProfileName(palette.pubkey) : t('gallery.unknownUser');
                   const isFavorite = palette.eventId ? favoritePalettes.has(palette.eventId) : false;
                   const isImported = palette.eventId === importedPaletteId;
+                  const isOwner = palette.pubkey === userPubkey;
+                  const isDeleting = palette.eventId === deletingPaletteId;
 
                   return (
                     <div key={palette.eventId || palette.id} className={styles.paletteItem}>
@@ -781,6 +813,18 @@ export function Gallery({
                               {isImported ? 'check' : 'download'}
                             </span>
                           </button>
+                          {isOwner && (
+                            <button
+                              className={`${styles.paletteActionButton} ${styles.deleteButton}`}
+                              onClick={() => handleDeletePalette(palette)}
+                              disabled={isDeleting}
+                              title={t('gallery.deletePalette')}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                {isDeleting ? 'hourglass_empty' : 'delete'}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className={styles.paletteColors}>
@@ -926,6 +970,14 @@ export function Gallery({
               onNavigateToCard={handleNavigateToCard}
             />
           </div>
+        </div>
+      )}
+
+      {/* Toast通知 */}
+      {toastMessage && (
+        <div className={styles.toast}>
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>check_circle</span>
+          {toastMessage}
         </div>
       )}
     </div>

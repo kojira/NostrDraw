@@ -529,6 +529,15 @@
   color: var(--color-warning);
 }
 
+.paletteActionButton.deleteButton:hover {
+  color: var(--color-error);
+}
+
+.paletteActionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .paletteColors {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -585,5 +594,36 @@
   
   .paletteColors {
     grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+/* Toast通知 */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-success);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  animation: toastSlideIn 0.3s ease-out;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 }
