@@ -17,7 +17,7 @@ import type {
   Layer,
 } from './types';
 import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer } from './types';
-import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, type ColorPalette as NostrPalette } from '../../../services/palette';
+import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, removeFavoritePalette, saveFavoritePalettesToNostr, getFavoritePaletteIds, type ColorPalette as NostrPalette } from '../../../services/palette';
 import { fetchProfile } from '../../../services/profile';
 
 // ローカルストレージのキー
@@ -378,6 +378,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     colors: string[];
     authorPubkey?: string; // インポート元の作者pubkey
     authorPicture?: string; // 作者のアバター画像URL
+    eventId?: string; // お気に入りからインポートした場合のイベントID
   }
 
   // デフォルトパレット
@@ -486,16 +487,32 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     switchPalette(newPalette.id);
   }, [palettes, savePalettes, switchPalette]);
 
-  // パレットを削除
+  // パレットを削除（お気に入りからインポートしたパレットの場合はお気に入りも解除）
   const deletePalette = useCallback((paletteId: string) => {
     if (paletteId === 'default') return;
+    
+    // 削除対象のパレットを取得
+    const targetPalette = palettes.find(p => p.id === paletteId);
+    
+    // お気に入りからインポートしたパレット（eventIdがある）の場合はお気に入りも解除
+    if (targetPalette?.eventId) {
+      removeFavoritePalette(targetPalette.eventId);
+      // Nostrにもお気に入りリストの更新を保存
+      if (signEvent) {
+        const newFavoriteIds = getFavoritePaletteIds();
+        saveFavoritePalettesToNostr(newFavoriteIds, signEvent).catch(err => {
+          console.error('Failed to save favorites to Nostr:', err);
+        });
+      }
+    }
+    
     const updated = palettes.filter(p => p.id !== paletteId);
     setPalettes(updated);
     savePalettes(updated);
     if (activePaletteId === paletteId) {
       switchPalette('default');
     }
-  }, [palettes, activePaletteId, savePalettes, switchPalette]);
+  }, [palettes, activePaletteId, savePalettes, switchPalette, signEvent]);
 
   // パレット名を変更（デフォルトパレットも変更可能）
   const renamePalette = useCallback((paletteId: string, newName: string) => {

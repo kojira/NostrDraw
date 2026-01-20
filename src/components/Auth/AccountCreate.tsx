@@ -283,6 +283,7 @@ export function AccountCreate({
             type="text"
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
+            onInput={(e) => setAccountName((e.target as HTMLInputElement).value)}
             placeholder={t('auth.accountNamePlaceholder')}
             className={styles.input}
             disabled={isLoading}
@@ -302,6 +303,7 @@ export function AccountCreate({
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
               placeholder={t('auth.passwordPlaceholder')}
               className={styles.input}
               disabled={isLoading}
@@ -329,6 +331,7 @@ export function AccountCreate({
             type={showPassword ? 'text' : 'password'}
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
+            onInput={(e) => setPasswordConfirm((e.target as HTMLInputElement).value)}
             placeholder={t('auth.passwordConfirmPlaceholder')}
             className={styles.input}
             disabled={isLoading}
@@ -347,6 +350,7 @@ export function AccountCreate({
               type="text"
               value={extraSecret}
               onChange={(e) => setExtraSecret(e.target.value)}
+              onInput={(e) => setExtraSecret((e.target as HTMLInputElement).value)}
               placeholder={t('auth.extraSecretPlaceholder')}
               className={styles.extraSecretInput}
               disabled={isLoading}

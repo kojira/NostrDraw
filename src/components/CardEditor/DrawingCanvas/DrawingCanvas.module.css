@@ -395,6 +395,26 @@
   color: #ff4757;
 }
 
+.paletteDeleteButton.favoriteButton {
+  color: #ffc107;
+}
+
+.paletteDeleteButton.favoriteButton:hover {
+  color: #ff9800;
+}
+
+.paletteDivider {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.25rem 0.25rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.7rem;
+  color: #ffc107;
+  opacity: 0.8;
+}
+
 .newPaletteForm,
 .saveNameForm {
   display: flex;
@@ -442,6 +462,29 @@
 }
 
 .newPaletteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.publishPaletteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background: #4d96ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.publishPaletteButton:hover:not(:disabled) {
+  background: #3d7acc;
+}
+
+.publishPaletteButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

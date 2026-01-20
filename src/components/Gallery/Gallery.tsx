@@ -7,7 +7,7 @@ import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
 import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
-import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr } from '../../services/palette';
+import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr, saveFavoritePalettesToNostr, getFavoritePaletteIds, fetchPalettePopularityCounts } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
 import styles from './Gallery.module.css';
@@ -121,7 +121,8 @@ export function Gallery({
   const [palettes, setPalettes] = useState<ColorPalette[]>([]);
   const [palettesLoading, setPalettesLoading] = useState(false);
   const [favoritePalettes, setFavoritePalettes] = useState<Set<string>>(new Set());
-  const [importedPaletteId, setImportedPaletteId] = useState<string | null>(null);
+  const [paletteReactions, setPaletteReactions] = useState<Map<string, number>>(new Map());
+  const [paletteSortOrder, setPaletteSortOrder] = useState<'popular' | 'newest'>('popular');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deletingPaletteId, setDeletingPaletteId] = useState<string | null>(null);
 
@@ -164,6 +165,10 @@ export function Gallery({
           }
         });
         setFavoritePalettes(favorites);
+        
+        // パレットの人気度（お気に入りリストに含まれている数）を取得
+        const popularityCounts = await fetchPalettePopularityCounts();
+        setPaletteReactions(popularityCounts);
       } catch (err) {
         console.error('パレット取得エラー:', err);
       } finally {
@@ -574,22 +579,43 @@ export function Gallery({
   };
 
   // パレットのお気に入り切り替え（お気に入り追加時は自動インポート）
-  const handleToggleFavorite = useCallback((palette: ColorPalette) => {
+  const handleToggleFavorite = useCallback(async (palette: ColorPalette) => {
     if (!palette.eventId) return;
     
     const eventId = palette.eventId;
+    let newFavoriteIds: string[];
+    
     if (favoritePalettes.has(eventId)) {
-      // お気に入りから削除（ローカルのパレットは残す）
+      // お気に入りから削除
       removeFavoritePalette(eventId);
       setFavoritePalettes(prev => {
         const newSet = new Set(prev);
         newSet.delete(eventId);
         return newSet;
       });
+      newFavoriteIds = getFavoritePaletteIds().filter(id => id !== eventId);
+      
+      // 人気度を即時更新（-1）
+      setPaletteReactions(prev => {
+        const newMap = new Map(prev);
+        const current = newMap.get(eventId) || 0;
+        if (current > 0) {
+          newMap.set(eventId, current - 1);
+        }
+        return newMap;
+      });
     } else {
-      // お気に入りに追加して、ローカルにもインポート
+      // お気に入りに追加
       addFavoritePalette(eventId);
       setFavoritePalettes(prev => new Set(prev).add(eventId));
+      newFavoriteIds = [...getFavoritePaletteIds()];
+      
+      // 人気度を即時更新（+1）
+      setPaletteReactions(prev => {
+        const newMap = new Map(prev);
+        newMap.set(eventId, (newMap.get(eventId) || 0) + 1);
+        return newMap;
+      });
       
       // 自動インポート
       const localPalettes = loadPalettesFromLocal(userPubkey || undefined);
@@ -607,46 +633,14 @@ export function Gallery({
         savePalettesToLocal(localPalettes, userPubkey || undefined);
       }
     }
-  }, [favoritePalettes, userPubkey]);
-
-  // パレットをローカルにインポート
-  const handleImportPalette = useCallback((palette: ColorPalette) => {
-    const localPalettes = loadPalettesFromLocal(userPubkey || undefined);
     
-    // 作者のアバター画像を取得
-    const authorPicture = palette.pubkey ? profiles.get(palette.pubkey)?.picture : undefined;
-    
-    // 同じIDが既にあるかチェック
-    const existingIndex = localPalettes.findIndex(p => p.id === palette.id);
-    if (existingIndex >= 0) {
-      // 既存のパレットを更新
-      localPalettes[existingIndex] = {
-        ...palette,
-        authorPicture,
-        updatedAt: Date.now(),
-      };
-    } else {
-      // 新しいパレットとして追加（ユニークなIDを生成）
-      const newPalette: ColorPalette = {
-        id: generatePaletteId(),
-        name: palette.name,
-        colors: palette.colors.slice(0, 64), // 最大64色
-        pubkey: palette.pubkey,
-        authorPicture,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      localPalettes.push(newPalette);
+    // Nostrにもお気に入りリストを保存
+    if (signEvent) {
+      saveFavoritePalettesToNostr(newFavoriteIds, signEvent).catch(err => {
+        console.error('Failed to save favorites to Nostr:', err);
+      });
     }
-    
-    savePalettesToLocal(localPalettes, userPubkey || undefined);
-    setImportedPaletteId(palette.eventId || null);
-    setTimeout(() => setImportedPaletteId(null), 2000);
-    
-    // Toast表示
-    setToastMessage(t('gallery.imported'));
-    setTimeout(() => setToastMessage(null), 2000);
-  }, [t, userPubkey, profiles]);
+  }, [favoritePalettes, userPubkey, signEvent]);
 
   // パレットを削除
   const handleDeletePalette = useCallback(async (palette: ColorPalette) => {
@@ -787,19 +781,49 @@ export function Gallery({
             )}
 
             {palettes.length > 0 && (
-              <div className={styles.paletteGrid}>
-                {palettes.map((palette) => {
+              <>
+                <div className={styles.paletteSortBar}>
+                  <button
+                    className={`${styles.sortButton} ${paletteSortOrder === 'popular' ? styles.active : ''}`}
+                    onClick={() => setPaletteSortOrder('popular')}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>favorite</span>
+                    {t('gallery.sortByPopular')}
+                  </button>
+                  <button
+                    className={`${styles.sortButton} ${paletteSortOrder === 'newest' ? styles.active : ''}`}
+                    onClick={() => setPaletteSortOrder('newest')}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+                    {t('gallery.sortByNewest')}
+                  </button>
+                </div>
+                <div className={styles.paletteGrid}>
+                {[...palettes].sort((a, b) => {
+                  if (paletteSortOrder === 'popular') {
+                    const countA = a.eventId ? (paletteReactions.get(a.eventId) || 0) : 0;
+                    const countB = b.eventId ? (paletteReactions.get(b.eventId) || 0) : 0;
+                    return countB - countA;
+                  } else {
+                    return (b.createdAt || 0) - (a.createdAt || 0);
+                  }
+                }).map((palette) => {
                   const picture = palette.pubkey ? profiles.get(palette.pubkey)?.picture : undefined;
                   const name = palette.pubkey ? getProfileName(palette.pubkey) : t('gallery.unknownUser');
                   const isFavorite = palette.eventId ? favoritePalettes.has(palette.eventId) : false;
-                  const isImported = palette.eventId === importedPaletteId;
                   const isOwner = palette.pubkey === userPubkey;
                   const isDeleting = palette.eventId === deletingPaletteId;
+                  const reactionCount = palette.eventId ? (paletteReactions.get(palette.eventId) || 0) : 0;
 
                   return (
                     <div key={palette.eventId || palette.id} className={styles.paletteItem}>
                       <div className={styles.paletteHeader}>
-                        <span className={styles.paletteName}>{palette.name}</span>
+                        <div className={styles.paletteNameWithAvatar} onClick={() => palette.pubkey && handleAuthorClick(palette.pubkey)}>
+                          {picture && (
+                            <img src={picture} alt="" className={styles.paletteHeaderAvatar} />
+                          )}
+                          <span className={styles.paletteName}>{palette.name}</span>
+                        </div>
                         <div className={styles.paletteActions}>
                           <button
                             className={`${styles.paletteActionButton} ${isFavorite ? styles.favorited : ''}`}
@@ -809,15 +833,9 @@ export function Gallery({
                             <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: isFavorite ? "'FILL' 1" : "'FILL' 0" }}>
                               star
                             </span>
-                          </button>
-                          <button
-                            className={styles.paletteActionButton}
-                            onClick={() => handleImportPalette(palette)}
-                            title={t('gallery.importPalette')}
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                              {isImported ? 'check' : 'download'}
-                            </span>
+                            {reactionCount > 0 && (
+                              <span className={styles.reactionCount}>{reactionCount}</span>
+                            )}
                           </button>
                           {isOwner && (
                             <button
@@ -855,7 +873,8 @@ export function Gallery({
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              </>
             )}
           </>
         ) : (

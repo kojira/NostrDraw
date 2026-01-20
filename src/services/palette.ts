@@ -1,12 +1,12 @@
 // カラーパレット管理サービス
-// NIP-78 (kind 30078) を使用してユーザーのカラーパレットをNostrに保存
+// kind 31899 を使用してユーザーのカラーパレットをNostrに保存
 
 import { type Event, type EventTemplate } from 'nostr-tools';
 import { fetchEvents, publishEvent } from './relay';
 
-// パレットのkind (NIP-78 Application Specific Data)
-const PALETTE_KIND = 30078;
-const PALETTE_D_TAG_PREFIX = 'nostrdraw-palette';
+// パレットのkind (NostrDraw専用)
+const PALETTE_KIND = 31899;
+const PALETTE_D_TAG_PREFIX = 'palette';
 
 // ローカルストレージキー（pubkeyごとに分離）
 const LOCAL_PALETTES_KEY_PREFIX = 'nostrdraw-palettes';
@@ -143,7 +143,7 @@ export async function fetchPublicPalettes(limit: number = 50): Promise<ColorPale
       limit,
     });
 
-    // dタグでフィルタリングしてパレットに変換
+    // パレットに変換
     const palettes = events
       .map(eventToPalette)
       .filter((p): p is ColorPalette => p !== null && p.colors.length > 0);
@@ -359,4 +359,35 @@ export async function fetchPalettesByAuthor(pubkey: string): Promise<ColorPalett
     console.error('Failed to fetch palettes by author:', error);
     return [];
   }
+}
+
+// 全ユーザーのお気に入りリストを取得して、各パレットの人気度（お気に入り数）をカウント
+export async function fetchPalettePopularityCounts(): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  
+  try {
+    // 全ユーザーのお気に入りリストイベントを取得
+    const events = await fetchEvents({
+      kinds: [PALETTE_KIND],
+      '#d': [FAVORITE_PALETTES_D_TAG],
+      limit: 500,
+    });
+
+    // 各イベントからfavoriteIdsを抽出してカウント
+    for (const event of events) {
+      try {
+        const content = JSON.parse(event.content);
+        const favoriteIds = content.favoriteIds || [];
+        for (const id of favoriteIds) {
+          counts.set(id, (counts.get(id) || 0) + 1);
+        }
+      } catch {
+        // JSONパースエラーは無視
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch palette popularity counts:', error);
+  }
+  
+  return counts;
 }

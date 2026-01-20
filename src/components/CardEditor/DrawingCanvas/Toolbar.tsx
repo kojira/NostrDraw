@@ -12,6 +12,7 @@ interface Palette {
   colors: string[];
   authorPubkey?: string;
   authorPicture?: string;
+  eventId?: string; // お気に入りからインポートした場合のイベントID
 }
 
 interface ToolbarProps {
@@ -81,9 +82,6 @@ export function Toolbar({
   const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
   const [editingPaletteName, setEditingPaletteName] = useState('');
   const [pickerColor, setPickerColor] = useState(color);
-  // Nostr保存時の名前入力用
-  const [showSaveNameInput, setShowSaveNameInput] = useState(false);
-  const [saveNameInput, setSaveNameInput] = useState('');
 
   const handleCreatePalette = () => {
     if (newPaletteName.trim() && onCreatePalette) {
@@ -106,35 +104,11 @@ export function Toolbar({
     setEditingPaletteName('');
   };
 
-  const handleSaveToCloud = async () => {
-    if (!onSavePaletteToCloud) return;
+  const handlePublishPalette = async () => {
+    if (!onSavePaletteToCloud || !newPaletteName.trim()) return;
     
-    const activePalette = palettes.find(p => p.id === activePaletteId);
-    
-    // 新規パレット名の入力欄に名前が入っている場合は、その名前を使って保存
-    if (newPaletteName.trim()) {
-      await onSavePaletteToCloud(undefined, newPaletteName.trim());
-      setNewPaletteName('');
-      return;
-    }
-    
-    // デフォルトパレット（名前が「デフォルト」）の場合は名前入力を促す
-    if (activePaletteId === 'default' && activePalette?.name === 'デフォルト') {
-      setShowSaveNameInput(true);
-      setSaveNameInput('');
-      return;
-    }
-    
-    await onSavePaletteToCloud();
-  };
-
-  const handleSaveWithName = async () => {
-    if (!onSavePaletteToCloud || !saveNameInput.trim()) return;
-    
-    // 名前を直接渡して保存（状態更新を待つ必要なし）
-    await onSavePaletteToCloud(undefined, saveNameInput.trim());
-    setShowSaveNameInput(false);
-    setSaveNameInput('');
+    await onSavePaletteToCloud(undefined, newPaletteName.trim());
+    setNewPaletteName('');
   };
 
   const handleColorPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,7 +235,70 @@ export function Toolbar({
             {/* パレット切り替えメニュー */}
             {showPaletteMenu && onPaletteChange && (
               <div className={styles.paletteMenu}>
-                {palettes.map((p) => (
+                {/* ローカルパレット（eventIdがないもの） */}
+                {palettes.filter(p => !p.eventId).map((p) => (
+                  <div key={p.id} className={styles.paletteMenuItem}>
+                    {editingPaletteId === p.id ? (
+                      <div className={styles.paletteEditForm}>
+                        <input
+                          type="text"
+                          value={editingPaletteName}
+                          onChange={(e) => setEditingPaletteName(e.target.value)}
+                          className={styles.newPaletteInput}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSaveEditName()}
+                          autoFocus
+                        />
+                        <button
+                          className={styles.newPaletteButton}
+                          onClick={handleSaveEditName}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>check</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          className={`${styles.paletteSelectButton} ${p.id === activePaletteId ? styles.active : ''}`}
+                          onClick={() => {
+                            onPaletteChange(p.id);
+                            setShowPaletteMenu(false);
+                          }}
+                        >
+                          {p.name} ({p.colors.length})
+                        </button>
+                        {onRenamePalette && (
+                          <button
+                            className={styles.paletteActionButton}
+                            onClick={() => handleStartEditName(p)}
+                            title="名前変更"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>edit</span>
+                          </button>
+                        )}
+                        {p.id !== 'default' && onDeletePalette && (
+                          <button
+                            className={styles.paletteDeleteButton}
+                            onClick={() => onDeletePalette(p.id)}
+                            title="削除"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>close</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+                
+                {/* お気に入りパレットがある場合は仕切り線を表示 */}
+                {palettes.some(p => p.eventId) && (
+                  <div className={styles.paletteDivider}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '12px', fontVariationSettings: "'FILL' 1" }}>star</span>
+                    <span>お気に入り</span>
+                  </div>
+                )}
+                
+                {/* お気に入りパレット（eventIdがあるもの） */}
+                {palettes.filter(p => p.eventId).map((p) => (
                   <div key={p.id} className={styles.paletteMenuItem}>
                     {editingPaletteId === p.id ? (
                       <div className={styles.paletteEditForm}>
@@ -307,13 +344,18 @@ export function Toolbar({
                             <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>edit</span>
                           </button>
                         )}
-                        {p.id !== 'default' && onDeletePalette && (
+                        {onDeletePalette && (
                           <button
-                            className={styles.paletteDeleteButton}
+                            className={`${styles.paletteDeleteButton} ${styles.favoriteButton}`}
                             onClick={() => onDeletePalette(p.id)}
-                            title="削除"
+                            title="お気に入りを解除"
                           >
-                            <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>close</span>
+                            <span 
+                              className="material-symbols-outlined" 
+                              style={{ fontSize: '12px', fontVariationSettings: "'FILL' 1" }}
+                            >
+                              star
+                            </span>
                           </button>
                         )}
                       </>
@@ -327,7 +369,8 @@ export function Toolbar({
                       type="text"
                       value={newPaletteName}
                       onChange={(e) => setNewPaletteName(e.target.value)}
-                      placeholder="新規パレット名"
+                      onInput={(e) => setNewPaletteName((e.target as HTMLInputElement).value)}
+                      placeholder="パレット名"
                       className={styles.newPaletteInput}
                       onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleCreatePalette()}
                     />
@@ -335,55 +378,21 @@ export function Toolbar({
                       className={styles.newPaletteButton}
                       onClick={handleCreatePalette}
                       disabled={!newPaletteName.trim()}
+                      title="ローカルに保存"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>add</span>
                     </button>
                   </div>
                 )}
-                {/* Nostr保存ボタン（常に表示） */}
+                {/* パレットを公開 */}
                 {canSaveToNostr && onSavePaletteToCloud && (
-                  <>
-                    {showSaveNameInput ? (
-                      <div className={styles.saveNameForm}>
-                        <input
-                          type="text"
-                          value={saveNameInput}
-                          onChange={(e) => setSaveNameInput(e.target.value)}
-                          placeholder="パレット名を入力"
-                          className={styles.newPaletteInput}
-                          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSaveWithName()}
-                          autoFocus
-                        />
-                        <button
-                          className={styles.newPaletteButton}
-                          onClick={handleSaveWithName}
-                          disabled={!saveNameInput.trim() || isSavingPaletteToNostr}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-                            {isSavingPaletteToNostr ? 'hourglass_empty' : 'cloud_upload'}
-                          </span>
-                        </button>
-                        <button
-                          className={styles.paletteDeleteButton}
-                          onClick={() => setShowSaveNameInput(false)}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>close</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className={styles.cloudSaveButton}
-                        onClick={handleSaveToCloud}
-                        disabled={isSavingPaletteToNostr}
-                        title="Nostrに保存して公開"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-                          {isSavingPaletteToNostr ? 'hourglass_empty' : 'cloud_upload'}
-                        </span>
-                        {isSavingPaletteToNostr ? '保存中...' : 'Nostrに公開'}
-                      </button>
-                    )}
-                  </>
+                  <button
+                    className={styles.publishPaletteButton}
+                    onClick={handlePublishPalette}
+                    disabled={!newPaletteName.trim() || isSavingPaletteToNostr}
+                  >
+                    {isSavingPaletteToNostr ? '公開中...' : 'パレットを公開'}
+                  </button>
                 )}
                 {/* パレットギャラリー */}
                 {onOpenPaletteGallery && (
@@ -398,7 +407,7 @@ export function Toolbar({
                     <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
                       explore
                     </span>
-                    ギャラリーからインポート
+                    パレットギャラリー
                   </button>
                 )}
               </div>

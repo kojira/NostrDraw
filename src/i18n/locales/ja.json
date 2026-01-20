@@ -245,7 +245,9 @@
     "imported": "インポートしました",
     "deletePalette": "パレットを削除",
     "confirmDeletePalette": "このパレットを削除しますか？",
-    "paletteDeleted": "パレットを削除しました"
+    "paletteDeleted": "パレットを削除しました",
+    "sortByPopular": "人気順",
+    "sortByNewest": "新着順"
   },
   "timeline": {
     "follow": "フォロー",

@@ -26,7 +26,7 @@ export function PaletteGallery({ onFavoriteChange, signEvent }: PaletteGalleryPr
     async function loadPalettes() {
       setIsLoading(true);
       try {
-        const fetchedPalettes = await fetchPublicPalettes(30);
+        const fetchedPalettes = await fetchPublicPalettes(50);
         setPalettes(fetchedPalettes);
         
         // お気に入りIDを取得
@@ -58,6 +58,7 @@ export function PaletteGallery({ onFavoriteChange, signEvent }: PaletteGalleryPr
     let newFavoriteIds: string[];
     
     if (favoriteIds.has(eventId)) {
+      // お気に入りから削除
       removeFavoritePalette(eventId);
       setFavoriteIds(prev => {
         const next = new Set(prev);
@@ -66,12 +67,13 @@ export function PaletteGallery({ onFavoriteChange, signEvent }: PaletteGalleryPr
       });
       newFavoriteIds = getFavoritePaletteIds();
     } else {
+      // お気に入りに追加
       addFavoritePalette(eventId);
       setFavoriteIds(prev => new Set(prev).add(eventId));
       newFavoriteIds = getFavoritePaletteIds();
     }
     
-    // Nostrにも保存
+    // Nostrにもお気に入りリストを保存
     if (signEvent) {
       saveFavoritePalettesToNostr(newFavoriteIds, signEvent).catch(err => {
         console.error('Failed to save favorites to Nostr:', err);

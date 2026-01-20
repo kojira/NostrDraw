@@ -245,7 +245,9 @@
     "imported": "Imported",
     "deletePalette": "Delete palette",
     "confirmDeletePalette": "Are you sure you want to delete this palette?",
-    "paletteDeleted": "Palette deleted"
+    "paletteDeleted": "Palette deleted",
+    "sortByPopular": "Popular",
+    "sortByNewest": "Newest"
   },
   "timeline": {
     "follow": "Following",
