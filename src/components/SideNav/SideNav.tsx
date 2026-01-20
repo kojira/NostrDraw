@@ -72,6 +72,15 @@ export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
 
         <div className={styles.navFooter}>
           <p className={styles.footerText}>Powered by Nostr</p>
+          <a 
+            href="https://github.com/kojira/NostrDraw" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className={styles.footerLink}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>code</span>
+            Source
+          </a>
         </div>
       </nav>
     </>

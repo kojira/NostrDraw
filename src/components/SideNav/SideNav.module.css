@@ -145,6 +145,26 @@
   text-orientation: mixed;
 }
 
+.footerLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--easing-default),
+              background-color var(--duration-fast) var(--easing-default);
+}
+
+.footerLink:hover {
+  color: var(--color-accent);
+  background: var(--color-bg-subtle);
+}
+
 /* モバイル対応 */
 @media (max-width: 1024px) {
   .hamburger {
