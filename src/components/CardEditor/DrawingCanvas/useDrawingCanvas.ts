@@ -17,7 +17,8 @@ import type {
   Layer,
 } from './types';
 import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer } from './types';
-import { savePaletteToNostr, fetchPalettesFromNostr, type ColorPalette as NostrPalette } from '../../../services/palette';
+import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, type ColorPalette as NostrPalette } from '../../../services/palette';
+import { fetchProfile } from '../../../services/profile';
 
 // ローカルストレージのキー
 const STORAGE_KEY = 'nostrdraw-canvas-state';
@@ -375,6 +376,8 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     id: string;
     name: string;
     colors: string[];
+    authorPubkey?: string; // インポート元の作者pubkey
+    authorPicture?: string; // 作者のアバター画像URL
   }
 
   // デフォルトパレット
@@ -598,15 +601,67 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   useEffect(() => {
     if (userPubkey) {
       syncPalettesFromCloud();
+      syncFavoritePalettes();
     }
   }, [userPubkey, syncPalettesFromCloud]);
 
+  // お気に入りパレットを同期してローカルパレットに追加
+  const syncFavoritePalettes = useCallback(async () => {
+    if (!userPubkey) return;
+    
+    try {
+      // お気に入りIDを取得（Nostrとローカルをマージ）
+      const favoriteIds = await syncFavoritesFromService(userPubkey);
+      if (favoriteIds.length === 0) return;
+      
+      // お気に入りパレットの実データを取得
+      const favoritePalettes = await fetchFavoritePaletteData(favoriteIds);
+      if (favoritePalettes.length === 0) return;
+      
+      // 作者のプロフィールを取得してアバター画像を追加
+      const palettesWithPictures: LocalPalette[] = [];
+      for (const fav of favoritePalettes) {
+        let authorPicture: string | undefined;
+        if (fav.pubkey) {
+          const profile = await fetchProfile(fav.pubkey);
+          authorPicture = profile?.picture;
+        }
+        palettesWithPictures.push({
+          id: `favorite-${fav.eventId || fav.id}`,
+          name: fav.name,
+          colors: fav.colors,
+          authorPubkey: fav.pubkey,
+          authorPicture,
+        });
+      }
+      
+      // ローカルパレットにマージ（既存のお気に入りは更新、新しいものは追加）
+      setPalettes(prev => {
+        const merged = [...prev];
+        for (const favPalette of palettesWithPictures) {
+          const existingIndex = merged.findIndex(p => p.id === favPalette.id);
+          if (existingIndex >= 0) {
+            merged[existingIndex] = favPalette;
+          } else {
+            merged.push(favPalette);
+          }
+        }
+        savePalettes(merged);
+        return merged;
+      });
+    } catch (error) {
+      console.error('Failed to sync favorite palettes:', error);
+    }
+  }, [userPubkey, savePalettes]);
+
   // パレットをインポート
-  const importPalette = useCallback((palette: NostrPalette) => {
+  const importPalette = useCallback((palette: NostrPalette, authorPicture?: string) => {
     const newPalette: LocalPalette = {
       id: `imported-${Date.now()}`,
       name: palette.name,
       colors: palette.colors,
+      authorPubkey: palette.pubkey,
+      authorPicture: authorPicture,
     };
     const updated = [...palettes, newPalette];
     setPalettes(updated);
@@ -1430,6 +1485,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     renamePalette,
     savePaletteToCloud,
     syncPalettesFromCloud,
+    syncFavoritePalettes,
     importPalette,
     isSavingPaletteToNostr,
     canSaveToNostr: !!signEvent,

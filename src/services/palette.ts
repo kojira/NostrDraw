@@ -30,6 +30,7 @@ export interface ColorPalette {
   updatedAt: number;
   isDefault?: boolean;
   pubkey?: string; // 著者のpubkey（ギャラリー用）
+  authorPicture?: string; // 著者のアバター画像URL
   eventId?: string; // NostrイベントID
 }
 
@@ -213,7 +214,10 @@ export function generatePaletteId(): string {
   return `palette-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// お気に入りパレットID一覧を取得
+// お気に入りパレットのdタグ
+const FAVORITE_PALETTES_D_TAG = 'nostrdraw-favorite-palettes';
+
+// お気に入りパレットID一覧を取得（ローカル）
 export function getFavoritePaletteIds(): string[] {
   try {
     const saved = localStorage.getItem(FAVORITE_PALETTES_KEY);
@@ -226,7 +230,7 @@ export function getFavoritePaletteIds(): string[] {
   return [];
 }
 
-// お気に入りパレットID一覧を保存
+// お気に入りパレットID一覧を保存（ローカル）
 export function saveFavoritePaletteIds(ids: string[]): void {
   try {
     localStorage.setItem(FAVORITE_PALETTES_KEY, JSON.stringify(ids));
@@ -235,7 +239,7 @@ export function saveFavoritePaletteIds(ids: string[]): void {
   }
 }
 
-// パレットをお気に入りに追加
+// パレットをお気に入りに追加（ローカル）
 export function addFavoritePalette(eventId: string): void {
   const ids = getFavoritePaletteIds();
   if (!ids.includes(eventId)) {
@@ -244,7 +248,7 @@ export function addFavoritePalette(eventId: string): void {
   }
 }
 
-// パレットをお気に入りから削除
+// パレットをお気に入りから削除（ローカル）
 export function removeFavoritePalette(eventId: string): void {
   const ids = getFavoritePaletteIds();
   const filtered = ids.filter(id => id !== eventId);
@@ -255,6 +259,85 @@ export function removeFavoritePalette(eventId: string): void {
 export function isFavoritePalette(eventId: string): boolean {
   const ids = getFavoritePaletteIds();
   return ids.includes(eventId);
+}
+
+// お気に入りパレットをNostrから取得
+export async function fetchFavoritePalettesFromNostr(pubkey: string): Promise<string[]> {
+  try {
+    const events = await fetchEvents({
+      kinds: [PALETTE_KIND],
+      authors: [pubkey],
+      '#d': [FAVORITE_PALETTES_D_TAG],
+    });
+
+    if (events.length === 0) return [];
+
+    // 最新のイベントを使用
+    const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+    const content = JSON.parse(latestEvent.content);
+    return content.favoriteIds || [];
+  } catch (error) {
+    console.error('Failed to fetch favorite palettes from Nostr:', error);
+    return [];
+  }
+}
+
+// お気に入りパレットをNostrに保存
+export async function saveFavoritePalettesToNostr(
+  favoriteIds: string[],
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<boolean> {
+  try {
+    const eventTemplate: EventTemplate = {
+      kind: PALETTE_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ['d', FAVORITE_PALETTES_D_TAG],
+      ],
+      content: JSON.stringify({
+        favoriteIds,
+      }),
+    };
+
+    const signedEvent = await signEvent(eventTemplate);
+    await publishEvent(signedEvent);
+    return true;
+  } catch (error) {
+    console.error('Failed to save favorite palettes to Nostr:', error);
+    return false;
+  }
+}
+
+// お気に入りパレットを同期（Nostrから取得してローカルにマージ）
+export async function syncFavoritePalettes(pubkey: string): Promise<string[]> {
+  const cloudFavorites = await fetchFavoritePalettesFromNostr(pubkey);
+  const localFavorites = getFavoritePaletteIds();
+  
+  // マージ（重複を除去）
+  const merged = [...new Set([...localFavorites, ...cloudFavorites])];
+  saveFavoritePaletteIds(merged);
+  
+  return merged;
+}
+
+// お気に入りパレットの実際のデータを取得
+export async function fetchFavoritePaletteData(favoriteIds: string[]): Promise<ColorPalette[]> {
+  if (favoriteIds.length === 0) return [];
+  
+  try {
+    // お気に入りのeventIdに対応するパレットを取得
+    const events = await fetchEvents({
+      kinds: [PALETTE_KIND],
+      ids: favoriteIds,
+    });
+
+    return events
+      .map(eventToPalette)
+      .filter((p): p is ColorPalette => p !== null && p.colors.length > 0);
+  } catch (error) {
+    console.error('Failed to fetch favorite palette data:', error);
+    return [];
+  }
 }
 
 // 特定ユーザーのパレットを取得

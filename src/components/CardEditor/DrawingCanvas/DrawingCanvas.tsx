@@ -52,7 +52,7 @@ export function DrawingCanvas({
     deletePalette,
     renamePalette,
     savePaletteToCloud,
-    importPalette,
+    syncFavoritePalettes,
     isSavingPaletteToNostr,
     canSaveToNostr,
     textBoxes,
@@ -580,9 +580,10 @@ export function DrawingCanvas({
               </button>
             </div>
             <PaletteGallery 
-              onImportPalette={(palette) => {
-                importPalette(palette);
-                setShowPaletteGallery(false);
+              signEvent={signEvent}
+              onFavoriteChange={() => {
+                // お気に入りが変更されたらパレットを再読み込み
+                syncFavoritePalettes();
               }}
             />
           </div>

@@ -468,3 +468,112 @@
   color: #888;
 }
 
+/* パレットセクション */
+.palettesSection {
+  margin-bottom: 2rem;
+  max-width: 1200px;
+}
+
+.palettesSection .sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.palettesSection .sectionTitle {
+  margin: 0;
+}
+
+.paletteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.paletteItem {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.paletteItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.paletteHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.paletteName {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.paletteActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.paletteActionButton {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.paletteActionButton:hover {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.paletteActionButton.favorited {
+  color: #fbbf24;
+}
+
+.paletteColors {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.paletteColorSwatch {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.paletteColorCount {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .paletteGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .paletteColors {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+

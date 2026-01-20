@@ -44,6 +44,56 @@
   gap: var(--space-2);
 }
 
+.authorInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.authorAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.authorName {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favoriteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: 
+    color var(--duration-fast) var(--easing-default),
+    background-color var(--duration-fast) var(--easing-default);
+}
+
+.favoriteButton:hover {
+  color: var(--color-warning);
+  background: var(--color-bg-subtle);
+}
+
+.favoriteButton.favorited {
+  color: var(--color-warning);
+}
+
 .paletteName {
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
@@ -90,50 +140,10 @@
   gap: var(--space-2);
 }
 
-.author {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .date {
   flex-shrink: 0;
   font-size: var(--text-xs);
   color: var(--color-text-tertiary);
-}
-
-.importButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-family: var(--font-family-base);
-  cursor: pointer;
-  transition: 
-    background-color var(--duration-fast) var(--easing-default),
-    transform var(--duration-fast) var(--easing-default);
-}
-
-.importButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: var(--color-accent-emphasis);
-}
-
-.importButton.imported {
-  background: var(--color-success);
-  cursor: default;
-}
-
-.importButton:disabled {
-  opacity: 0.8;
 }
 
 @media (max-width: 480px) {

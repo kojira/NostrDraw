@@ -613,12 +613,16 @@ export function Gallery({
   const handleImportPalette = useCallback((palette: ColorPalette) => {
     const localPalettes = loadPalettesFromLocal(userPubkey || undefined);
     
+    // 作者のアバター画像を取得
+    const authorPicture = palette.pubkey ? profiles.get(palette.pubkey)?.picture : undefined;
+    
     // 同じIDが既にあるかチェック
     const existingIndex = localPalettes.findIndex(p => p.id === palette.id);
     if (existingIndex >= 0) {
       // 既存のパレットを更新
       localPalettes[existingIndex] = {
         ...palette,
+        authorPicture,
         updatedAt: Date.now(),
       };
     } else {
@@ -627,6 +631,8 @@ export function Gallery({
         id: generatePaletteId(),
         name: palette.name,
         colors: palette.colors.slice(0, 64), // 最大64色
+        pubkey: palette.pubkey,
+        authorPicture,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -640,7 +646,7 @@ export function Gallery({
     // Toast表示
     setToastMessage(t('gallery.imported'));
     setTimeout(() => setToastMessage(null), 2000);
-  }, [t, userPubkey]);
+  }, [t, userPubkey, profiles]);
 
   // パレットを削除
   const handleDeletePalette = useCallback(async (palette: ColorPalette) => {

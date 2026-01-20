@@ -287,6 +287,13 @@
   color: #fff;
 }
 
+.customColorToggle .paletteName {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .customColorGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
@@ -360,6 +367,15 @@
   background: rgba(233, 69, 96, 0.2);
   border-color: #e94560;
   color: #e94560;
+}
+
+.paletteAuthorAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 0.35rem;
+  flex-shrink: 0;
 }
 
 .paletteDeleteButton {

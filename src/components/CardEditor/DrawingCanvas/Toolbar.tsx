@@ -10,6 +10,8 @@ interface Palette {
   id: string;
   name: string;
   colors: string[];
+  authorPubkey?: string;
+  authorPicture?: string;
 }
 
 interface ToolbarProps {
@@ -234,7 +236,14 @@ export function Toolbar({
                 <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
                   {showCustomColors ? 'expand_less' : 'expand_more'}
                 </span>
-                <span>マイカラー ({customColors.length})</span>
+                <span className={styles.paletteName}>
+                  {(() => {
+                    const activePalette = palettes.find(p => p.id === activePaletteId);
+                    const name = activePalette?.name || 'マイカラー';
+                    return name.length > 10 ? name.slice(0, 10) + '…' : name;
+                  })()}
+                  {' '}({customColors.length})
+                </span>
               </button>
               {onPaletteChange && (
                 <button
@@ -280,6 +289,13 @@ export function Toolbar({
                             setShowPaletteMenu(false);
                           }}
                         >
+                          {p.authorPicture && (
+                            <img 
+                              src={p.authorPicture} 
+                              alt="" 
+                              className={styles.paletteAuthorAvatar}
+                            />
+                          )}
                           {p.name} ({p.colors.length})
                         </button>
                         {onRenamePalette && (
