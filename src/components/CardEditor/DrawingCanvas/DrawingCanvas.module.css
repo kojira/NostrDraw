@@ -876,7 +876,7 @@
   line-height: 0;
   max-width: 100%;
   width: 100%;
-  aspect-ratio: 1 / 1; /* 正方形 */
+  aspect-ratio: 4 / 3; /* 800:600 = 4:3 */
   transition: transform 0.1s ease-out;
 }
 

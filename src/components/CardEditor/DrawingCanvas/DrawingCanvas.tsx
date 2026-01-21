@@ -415,9 +415,16 @@ export function DrawingCanvas({
             onPointerLeave={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerUp : undefined}
           />
           
-          {/* ピクセルレイヤー表示 */}
+          {/* ピクセルレイヤー表示（正方形を維持してキャンバス中央に配置） */}
           {pixelLayers.filter(l => l.visible).map(layer => {
-            // キャンバス全体に広げる
+            // 正方形領域を計算（キャンバスの短辺に合わせる）
+            const squareSize = Math.min(width, height);
+            const leftOffset = (width - squareSize) / 2;
+            const topOffset = (height - squareSize) / 2;
+            const leftPercent = (leftOffset / width) * 100;
+            const topPercent = (topOffset / height) * 100;
+            const sizePercentW = (squareSize / width) * 100;
+            const sizePercentH = (squareSize / height) * 100;
             const cellWidthPercent = 100 / layer.gridSize;
             const cellHeightPercent = 100 / layer.gridSize;
             
@@ -427,10 +434,10 @@ export function DrawingCanvas({
                 className={styles.pixelLayerCanvas}
                 style={{
                   position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: '100%',
+                  left: `${leftPercent}%`,
+                  top: `${topPercent}%`,
+                  width: `${sizePercentW}%`,
+                  height: `${sizePercentH}%`,
                   pointerEvents: 'none',
                 }}
               >
@@ -459,9 +466,18 @@ export function DrawingCanvas({
             );
           })}
           
-          {/* グリッドオーバーレイ（SVGで正確に描画） */}
+          {/* グリッドオーバーレイ（SVGで正確に描画、正方形を維持） */}
           {gridMode && showGrid && activePixelLayer && (() => {
             const layerGridSize = activePixelLayer.gridSize;
+            
+            // 正方形領域を計算
+            const squareSize = Math.min(width, height);
+            const leftOffset = (width - squareSize) / 2;
+            const topOffset = (height - squareSize) / 2;
+            const leftPercent = (leftOffset / width) * 100;
+            const topPercent = (topOffset / height) * 100;
+            const sizePercentW = (squareSize / width) * 100;
+            const sizePercentH = (squareSize / height) * 100;
             
             // SVGでグリッド線を描画
             const gridLines: React.ReactNode[] = [];
@@ -500,10 +516,10 @@ export function DrawingCanvas({
                 className={styles.pixelGridOverlay}
                 style={{
                   position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: '100%',
+                  left: `${leftPercent}%`,
+                  top: `${topPercent}%`,
+                  width: `${sizePercentW}%`,
+                  height: `${sizePercentH}%`,
                   pointerEvents: 'none',
                 }}
                 preserveAspectRatio="none"
@@ -513,9 +529,18 @@ export function DrawingCanvas({
             );
           })()}
           
-          {/* ピクセル描画オーバーレイ */}
+          {/* ピクセル描画オーバーレイ（正方形を維持） */}
           {gridMode && activePixelLayer && (() => {
             const layerGridSize = activePixelLayer.gridSize;
+            
+            // 正方形領域を計算
+            const squareSize = Math.min(width, height);
+            const leftOffset = (width - squareSize) / 2;
+            const topOffset = (height - squareSize) / 2;
+            const leftPercent = (leftOffset / width) * 100;
+            const topPercent = (topOffset / height) * 100;
+            const sizePercentW = (squareSize / width) * 100;
+            const sizePercentH = (squareSize / height) * 100;
             
             // DOM座標からピクセルグリッド座標に変換（レイヤーのgridSizeを使用）
             const getGridCoords = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -532,10 +557,10 @@ export function DrawingCanvas({
                 className={styles.pixelDrawOverlay}
                 style={{
                   position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: '100%',
+                  left: `${leftPercent}%`,
+                  top: `${topPercent}%`,
+                  width: `${sizePercentW}%`,
+                  height: `${sizePercentH}%`,
                   cursor: tool === 'pixelFill' ? 'crosshair' : 'default',
                 }}
                 onPointerDown={(e) => {

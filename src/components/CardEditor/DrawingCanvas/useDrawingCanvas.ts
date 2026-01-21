@@ -19,7 +19,7 @@ import type {
   GridSize,
 } from './types';
 import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer, createDefaultPixelLayer, DEFAULT_GRID_SIZE, getPixelScale } from './types';
-import { getOrAddPaletteIndex } from '../../../utils/pixelFormat';
+import { getOrAddPaletteIndex, pixelLayerToSvg } from '../../../utils/pixelFormat';
 import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, removeFavoritePalette, saveFavoritePalettesToNostr, getFavoritePaletteIds, type ColorPalette as NostrPalette } from '../../../services/palette';
 import { fetchProfile } from '../../../services/profile';
 
@@ -1323,14 +1323,29 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       .join('\n  ');
   }, [layers, strokesToSvg, stampsToSvg, textBoxesToSvg]);
 
+  // ピクセルレイヤーをSVG要素に変換
+  const pixelLayersToSvgElements = useCallback((): string => {
+    return pixelLayers
+      .filter(layer => layer.visible)
+      .map(layer => {
+        const pixelSvg = pixelLayerToSvg(layer, width, height);
+        if (!pixelSvg) return '';
+        return `<g data-pixel-layer="${layer.id}">${pixelSvg}</g>`;
+      })
+      .filter(Boolean)
+      .join('\n  ');
+  }, [pixelLayers, width, height]);
+
   // 完全なSVGを生成（テンプレート含む）- プレビュー用
   const generateSvg = useCallback((): string => {
     const layerElements = layersToSvgElements();
+    const pixelElements = pixelLayersToSvgElements();
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
   ${selectedTemplate.svg}
+  ${pixelElements}
   ${layerElements}
 </svg>`;
-  }, [layersToSvgElements, width, height, selectedTemplate]);
+  }, [layersToSvgElements, pixelLayersToSvgElements, width, height, selectedTemplate]);
 
   // 差分SVGを生成（テンプレートを含まない）- 描き足し保存用
   const generateDiffSvg = useCallback((): string => {

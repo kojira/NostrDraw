@@ -298,7 +298,8 @@ export function mergePixelDiff(layer: PixelLayer, changes: PixelChange[]): Pixel
 }
 
 /**
- * ピクセルレイヤーをSVGに変換（互換性・表示用）
+ * ピクセルレイヤーをSVG要素に変換（正方形を維持してキャンバス中央に配置）
+ * 外部のSVGに埋め込む用（svg要素は含まない）
  */
 export function pixelLayerToSvg(
   layer: PixelLayer,
@@ -307,18 +308,13 @@ export function pixelLayerToSvg(
 ): string {
   const { gridSize, palette, pixels } = layer;
   
-  // ピクセルパーフェクト表示用のスケール計算
-  const maxScaleX = Math.floor(canvasWidth / gridSize);
-  const maxScaleY = Math.floor(canvasHeight / gridSize);
-  const scale = Math.min(maxScaleX, maxScaleY);
+  // 正方形領域を計算（キャンバスの短辺に合わせる）
+  const squareSize = Math.min(canvasWidth, canvasHeight);
+  const offsetX = (canvasWidth - squareSize) / 2;
+  const offsetY = (canvasHeight - squareSize) / 2;
   
-  const pixelSize = scale;
-  const totalWidth = gridSize * pixelSize;
-  const totalHeight = gridSize * pixelSize;
-  
-  // 中央寄せ用のオフセット
-  const offsetX = Math.floor((canvasWidth - totalWidth) / 2);
-  const offsetY = Math.floor((canvasHeight - totalHeight) / 2);
+  // ピクセルサイズを正方形領域に合わせる
+  const pixelSize = squareSize / gridSize;
   
   const svgParts: string[] = [];
   
@@ -349,16 +345,32 @@ export function pixelLayerToSvg(
       const width = runLength * pixelSize;
       
       svgParts.push(
-        `<rect x="${px}" y="${py}" width="${width}" height="${pixelSize}" fill="${color}"/>`
+        `<rect x="${px.toFixed(2)}" y="${py.toFixed(2)}" width="${width.toFixed(2)}" height="${pixelSize.toFixed(2)}" fill="${color}"/>`
       );
       
       x += runLength;
     }
   }
   
+  if (svgParts.length === 0) return '';
+  
+  return svgParts.join('\n    ');
+}
+
+/**
+ * ピクセルレイヤーを完全なSVGとして変換（スタンドアロン用）
+ */
+export function pixelLayerToFullSvg(
+  layer: PixelLayer,
+  canvasWidth: number = 800,
+  canvasHeight: number = 600
+): string {
+  const innerSvg = pixelLayerToSvg(layer, canvasWidth, canvasHeight);
+  if (!innerSvg) return '';
+  
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}">
-  <g class="pixel-layer" data-grid-size="${gridSize}">
-    ${svgParts.join('\n    ')}
+  <g class="pixel-layer" data-grid-size="${layer.gridSize}">
+    ${innerSvg}
   </g>
 </svg>`;
 }

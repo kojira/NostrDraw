@@ -1,6 +1,6 @@
 // カードフリップアニメーションコンポーネント
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
@@ -23,6 +23,30 @@ interface CardFlipProps {
   onExtend?: (card: NostrDrawPost) => void; // 描き足しボタンのコールバック
   onNavigateToCard?: (card: NostrDrawPost) => void; // 親子カードへのナビゲーション
   usePortal?: boolean; // デフォルトtrue: createPortalでbodyに表示、false: 親コンポーネント内に表示
+}
+
+// SVGからviewBoxを解析してアスペクト比を計算
+function getAspectRatioFromSvg(svg: string): number {
+  // viewBox="x y width height" 形式を解析
+  const viewBoxMatch = svg.match(/viewBox=["'](\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)["']/);
+  if (viewBoxMatch) {
+    const width = parseFloat(viewBoxMatch[3]);
+    const height = parseFloat(viewBoxMatch[4]);
+    if (width > 0 && height > 0) {
+      return width / height;
+    }
+  }
+  // width/height属性からも試みる
+  const widthMatch = svg.match(/width=["'](\d+(?:\.\d+)?)["']/);
+  const heightMatch = svg.match(/height=["'](\d+(?:\.\d+)?)["']/);
+  if (widthMatch && heightMatch) {
+    const width = parseFloat(widthMatch[1]);
+    const height = parseFloat(heightMatch[1]);
+    if (width > 0 && height > 0) {
+      return width / height;
+    }
+  }
+  return 4 / 3; // デフォルトは4:3
 }
 
 export const CardFlip = memo(function CardFlip({
@@ -51,6 +75,12 @@ export const CardFlip = memo(function CardFlip({
   const [animatedSvg, setAnimatedSvg] = useState<string | null>(null);
   // 親カードがある場合は最初からロード中状態にする（アニメーション前に最終形が見えるのを防ぐ）
   const [isLoadingParent, setIsLoadingParent] = useState(!!card.parentEventId);
+  
+  // SVGのviewBoxからアスペクト比を動的に計算
+  const cardAspectRatio = useMemo(() => {
+    const svgToAnalyze = animatedSvg || card.svg;
+    return getAspectRatioFromSvg(svgToAnalyze);
+  }, [animatedSvg, card.svg]);
   
   // 祖先の欠落情報（歯抜け対応）
   const [hasMissingAncestors, setHasMissingAncestors] = useState(false);
@@ -486,6 +516,7 @@ export const CardFlip = memo(function CardFlip({
       <div
         className={`${styles.card} ${isFlipped ? styles.flipped : ''}`}
         onClick={handleFlip}
+        style={{ aspectRatio: cardAspectRatio }}
       >
         {/* 表面（宛名面） */}
         <div className={styles.cardFace + ' ' + styles.cardFront}>
