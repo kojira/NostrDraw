@@ -1552,8 +1552,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const paintPixel = useCallback((gridX: number, gridY: number) => {
     if (!activePixelLayer) return;
 
-    // 範囲外チェック
-    if (gridX < 0 || gridX >= gridSize || gridY < 0 || gridY >= gridSize) return;
+    // 範囲外チェック（アクティブレイヤーのgridSizeを使用）
+    const layerGridSize = activePixelLayer.gridSize;
+    if (gridX < 0 || gridX >= layerGridSize || gridY < 0 || gridY >= layerGridSize) return;
 
     // 同一ドラッグ中の重複防止
     const key = `${gridX},${gridY}`;
@@ -1610,8 +1611,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const fillPixels = useCallback((startX: number, startY: number) => {
     if (!activePixelLayer) return;
 
-    // 範囲外チェック
-    if (startX < 0 || startX >= gridSize || startY < 0 || startY >= gridSize) return;
+    // 範囲外チェック（アクティブレイヤーのgridSizeを使用）
+    const layerGridSize = activePixelLayer.gridSize;
+    if (startX < 0 || startX >= layerGridSize || startY < 0 || startY >= layerGridSize) return;
 
     // 新しいpixelLayersを計算
     const newPixelLayers = pixelLayers.map(layer => {
@@ -1703,9 +1705,13 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
             pixels: newPixels,
           };
         } else {
-          // サイズのみ変更（ピクセルはそのまま維持、新しいサイズで再解釈）
-          // 実際には既存のピクセルを維持するため、レイヤー自体は変更しない
-          return layer;
+          // ピクセルデータをクリアして新しいサイズに変更
+          return {
+            ...layer,
+            gridSize: newSize,
+            pixels: new Uint8Array(newSize * newSize),
+            palette: [],
+          };
         }
       }));
     }

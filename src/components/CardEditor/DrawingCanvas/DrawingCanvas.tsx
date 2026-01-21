@@ -187,12 +187,12 @@ export function DrawingCanvas({
   const handleKeepAndChange = useCallback(() => {
     if (pendingGridSize) {
       // 既存のピクセルレイヤーはそのまま維持し、新しいサイズで新しいレイヤーを追加
-      changeGridSize(pendingGridSize, false); // UIのgridSizeを更新
+      // changeGridSizeは呼ばない（既存レイヤーを変更しない）
       addPixelLayer(undefined, pendingGridSize); // 明示的に新しいサイズを渡す
     }
     setShowGridSizeDialog(false);
     setPendingGridSize(null);
-  }, [pendingGridSize, changeGridSize, addPixelLayer]);
+  }, [pendingGridSize, addPixelLayer]);
   
   // ダイアログをキャンセル
   const handleCancelGridChange = useCallback(() => {
