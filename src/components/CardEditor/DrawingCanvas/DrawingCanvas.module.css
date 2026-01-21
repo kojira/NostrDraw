@@ -876,6 +876,7 @@
   line-height: 0;
   max-width: 100%;
   width: 100%;
+  aspect-ratio: 1 / 1; /* 正方形 */
   transition: transform 0.1s ease-out;
 }
 
@@ -899,11 +900,12 @@
 }
 
 .canvas {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 1;
-  max-width: 100%;
   width: 100%;
-  height: auto;
+  height: 100%;
   border-radius: 4px;
   cursor: crosshair;
   touch-action: none;
@@ -2204,4 +2206,251 @@
 :global(body.light-theme) .draftConfirmButtonSecondary:hover {
   background: #eee;
   color: #222;
+}
+
+/* ========================
+   グリッドモード（ドット絵）
+   ======================== */
+
+.gridSizeSelect {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+.gridSizeSelect:focus {
+  border-color: var(--color-primary);
+}
+
+:global(body.light-theme) .gridSizeSelect {
+  background: #f5f5f5;
+  border-color: #ddd;
+  color: #333;
+}
+
+.pixelLayerCanvas {
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.pixelGridOverlay {
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.pixelDrawOverlay {
+  cursor: crosshair;
+  background: transparent;
+}
+
+/* ========================
+   グリッドサイズ変更ダイアログ
+   ======================== */
+
+.dialogOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.dialogContent {
+  background: var(--color-bg-raised, #161b22);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #e6edf3);
+}
+
+.dialogMessage {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--color-text-primary, #e6edf3);
+  line-height: 1.5;
+}
+
+.dialogMessage strong {
+  color: var(--color-accent, #58a6ff);
+}
+
+.dialogSubMessage {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #8b949e);
+}
+
+.dialogOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dialogOptionButton {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.dialogOptionButton:hover {
+  background: rgba(88, 166, 255, 0.1);
+  border-color: var(--color-accent, #58a6ff);
+  transform: translateY(-2px);
+}
+
+.dialogOptionButton:active {
+  transform: translateY(0);
+}
+
+.dialogOptionButton .material-symbols-outlined {
+  font-size: 28px;
+  color: var(--color-accent, #58a6ff);
+  flex-shrink: 0;
+}
+
+.dialogOptionText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dialogOptionTitle {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #e6edf3);
+}
+
+.dialogOptionDescription {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #8b949e);
+}
+
+.dialogCancelButton {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: var(--color-text-secondary, #8b949e);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dialogCancelButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #e6edf3);
+}
+
+/* ライトテーマ */
+:global(body.light-theme) .dialogContent {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+:global(body.light-theme) .dialogTitle {
+  color: #1f2328;
+}
+
+:global(body.light-theme) .dialogMessage {
+  color: #1f2328;
+}
+
+:global(body.light-theme) .dialogMessage strong {
+  color: #0969da;
+}
+
+:global(body.light-theme) .dialogSubMessage {
+  color: #656d76;
+}
+
+:global(body.light-theme) .dialogOptionButton {
+  background: #f6f8fa;
+  border-color: #d0d7de;
+}
+
+:global(body.light-theme) .dialogOptionButton:hover {
+  background: rgba(9, 105, 218, 0.1);
+  border-color: #0969da;
+}
+
+:global(body.light-theme) .dialogOptionButton .material-symbols-outlined {
+  color: #0969da;
+}
+
+:global(body.light-theme) .dialogOptionTitle {
+  color: #1f2328;
+}
+
+:global(body.light-theme) .dialogOptionDescription {
+  color: #656d76;
+}
+
+:global(body.light-theme) .dialogCancelButton {
+  border-color: #d0d7de;
+  color: #656d76;
+}
+
+:global(body.light-theme) .dialogCancelButton:hover {
+  background: #f6f8fa;
+  color: #1f2328;
 }

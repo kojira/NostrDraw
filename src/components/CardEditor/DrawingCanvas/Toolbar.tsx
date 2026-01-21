@@ -1,7 +1,7 @@
 // ツールバーコンポーネント
 
 import { useState } from 'react';
-import type { ToolType, MessageBox } from './types';
+import type { ToolType, MessageBox, GridSize } from './types';
 import { COLORS } from './types';
 import styles from './DrawingCanvas.module.css';
 
@@ -35,6 +35,15 @@ interface ToolbarProps {
   isSavingPaletteToNostr?: boolean;
   canSaveToNostr?: boolean;
   onOpenPaletteGallery?: () => void;
+  // グリッドモード
+  gridMode?: boolean;
+  gridSize?: GridSize;
+  showGrid?: boolean;
+  onToggleGridMode?: () => void;
+  onGridSizeChange?: (size: GridSize) => void;
+  onToggleShowGrid?: () => void;
+  onAddPixelLayer?: () => void;
+  // ツール変更
   onToolChange: (tool: ToolType) => void;
   onColorChange: (color: string) => void;
   onLineWidthChange: (width: number) => void;
@@ -65,6 +74,13 @@ export function Toolbar({
   isSavingPaletteToNostr,
   canSaveToNostr,
   onOpenPaletteGallery,
+  gridMode = false,
+  gridSize = 32,
+  showGrid = true,
+  onToggleGridMode,
+  onGridSizeChange,
+  onToggleShowGrid,
+  onAddPixelLayer,
   onToolChange,
   onColorChange,
   onLineWidthChange,
@@ -174,10 +190,75 @@ export function Toolbar({
         >
           📝
         </button>
+        {/* グリッドモードトグル */}
+        <button
+          className={`${styles.toolButton} ${gridMode ? styles.active : ''}`}
+          onClick={onToggleGridMode}
+          title={gridMode ? 'グリッドモード OFF' : 'グリッドモード ON'}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>grid_on</span>
+        </button>
       </div>
 
-      {/* 色選択（ペンモード時） */}
-      {tool === 'pen' && (
+      {/* グリッドモードUI */}
+      {gridMode && (
+        <div className={styles.toolGroup}>
+          {/* ピクセルツール */}
+          <button
+            className={`${styles.toolButton} ${tool === 'pixel' ? styles.active : ''}`}
+            onClick={() => onToolChange('pixel')}
+            title="ピクセルペン"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+          </button>
+          <button
+            className={`${styles.toolButton} ${tool === 'pixelEraser' ? styles.active : ''}`}
+            onClick={() => onToolChange('pixelEraser')}
+            title="ピクセル消しゴム"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>ink_eraser</span>
+          </button>
+          <button
+            className={`${styles.toolButton} ${tool === 'pixelFill' ? styles.active : ''}`}
+            onClick={() => onToolChange('pixelFill')}
+            title="塗りつぶし"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>format_color_fill</span>
+          </button>
+          {/* グリッド表示トグル */}
+          <button
+            className={`${styles.toolButton} ${showGrid ? styles.active : ''}`}
+            onClick={onToggleShowGrid}
+            title={showGrid ? 'グリッド非表示' : 'グリッド表示'}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>grid_view</span>
+          </button>
+          {/* グリッドサイズ選択 */}
+          <select
+            className={styles.gridSizeSelect}
+            value={gridSize}
+            onChange={(e) => onGridSizeChange?.(parseInt(e.target.value) as GridSize)}
+            title="グリッドサイズ"
+          >
+            <option value={16}>16×16</option>
+            <option value={24}>24×24</option>
+            <option value={32}>32×32</option>
+            <option value={48}>48×48</option>
+            <option value={64}>64×64</option>
+          </select>
+          {/* 新しいピクセルレイヤー追加 */}
+          <button
+            className={styles.toolButton}
+            onClick={onAddPixelLayer}
+            title="新しいドット絵レイヤー"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>add</span>
+          </button>
+        </div>
+      )}
+
+      {/* 色選択（ペンモード・ピクセルモード時） */}
+      {(tool === 'pen' || tool === 'pixel' || tool === 'pixelFill') && (
         <div className={styles.colorPickerContainer}>
           {/* プリセットカラー */}
           <div className={styles.colorPicker}>

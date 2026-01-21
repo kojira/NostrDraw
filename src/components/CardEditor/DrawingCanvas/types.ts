@@ -75,9 +75,44 @@ export function createDefaultLayer(id: string, name: string): Layer {
   };
 }
 
-export type ToolType = 'pen' | 'eraser' | 'stamp' | 'text';
+export type ToolType = 'pen' | 'eraser' | 'stamp' | 'text' | 'pixel' | 'pixelEraser' | 'pixelFill';
 export type DragMode = 'none' | 'move' | 'resize-se' | 'resize-sw' | 'resize-ne' | 'resize-nw';
 export type StampTab = 'builtin' | 'custom';
+
+// ドット絵用の型定義
+export type GridSize = 16 | 24 | 32 | 48 | 64;
+
+export interface PixelLayer {
+  id: string;
+  name: string;
+  gridSize: GridSize;
+  palette: string[];      // hex colors, max 64
+  pixels: Uint8Array;     // gridSize × gridSize, 0 = transparent
+  visible: boolean;
+}
+
+// ピクセルレイヤーのデフォルト値
+export const DEFAULT_GRID_SIZE: GridSize = 32;
+export const MAX_PIXEL_PALETTE_SIZE = 64;
+
+// デフォルトピクセルレイヤーを作成するヘルパー関数
+export function createDefaultPixelLayer(id: string, name: string, gridSize: GridSize = DEFAULT_GRID_SIZE): PixelLayer {
+  return {
+    id,
+    name,
+    gridSize,
+    palette: [],
+    pixels: new Uint8Array(gridSize * gridSize), // 0で初期化（透明）
+    visible: true,
+  };
+}
+
+// ピクセルパーフェクト表示用のスケール計算
+export function getPixelScale(gridSize: GridSize, canvasWidth: number = 800, canvasHeight: number = 600): number {
+  const maxScaleX = Math.floor(canvasWidth / gridSize);
+  const maxScaleY = Math.floor(canvasHeight / gridSize);
+  return Math.min(maxScaleX, maxScaleY);
+}
 
 // 投稿データの型
 export interface PostData {
@@ -85,6 +120,7 @@ export interface PostData {
   diffSvg: string;       // 差分SVG（描き足し時の保存用）
   message: string;
   layers: Layer[];
+  pixelLayers?: PixelLayer[];  // ドット絵レイヤー
   canvasSize: { width: number; height: number };
   templateId: string | null;
   isExtend: boolean;     // 描き足しかどうか

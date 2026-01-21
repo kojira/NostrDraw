@@ -1,6 +1,6 @@
 // お絵描きキャンバスコンポーネント（統合）
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDrawingCanvas } from './useDrawingCanvas';
 import { TemplateSelector } from './TemplateSelector';
 import { Toolbar } from './Toolbar';
@@ -9,7 +9,7 @@ import { FontSelector } from './FontSelector';
 import { LayerPanel } from './LayerPanel';
 import { PaletteGallery } from '../../PaletteGallery';
 import { STAMPS } from '../../../data/templates';
-import type { DrawingCanvasProps, Template } from './types';
+import type { DrawingCanvasProps, Template, GridSize } from './types';
 import styles from './DrawingCanvas.module.css';
 
 export function DrawingCanvas({
@@ -111,6 +111,20 @@ export function DrawingCanvas({
     setLayerOpacity,
     reorderLayers,
     renameLayer,
+    // ピクセルレイヤー機能
+    pixelLayers,
+    activePixelLayer,
+    gridMode,
+    gridSize,
+    showGrid,
+    addPixelLayer,
+    paintPixel,
+    startPixelPainting,
+    endPixelPainting,
+    fillPixels,
+    toggleGridMode,
+    changeGridSize,
+    setShowGrid,
     // キャンバスサイズ
     canvasSize,
     // 下書き機能
@@ -123,6 +137,68 @@ export function DrawingCanvas({
 
   // パレットギャラリーモーダル
   const [showPaletteGallery, setShowPaletteGallery] = useState(false);
+  
+  // グリッドサイズ変更確認ダイアログ
+  const [showGridSizeDialog, setShowGridSizeDialog] = useState(false);
+  const [pendingGridSize, setPendingGridSize] = useState<GridSize | null>(null);
+  
+  // ピクセルが描画されているか確認
+  const hasPixelContent = useCallback(() => {
+    if (!activePixelLayer) return false;
+    return activePixelLayer.pixels.some(p => p !== 0);
+  }, [activePixelLayer]);
+  
+  // グリッドサイズ変更のハンドラー（ダイアログ表示）
+  const handleGridSizeChange = useCallback((newSize: GridSize) => {
+    if (hasPixelContent() && activePixelLayer && activePixelLayer.gridSize !== newSize) {
+      setPendingGridSize(newSize);
+      setShowGridSizeDialog(true);
+    } else {
+      changeGridSize(newSize);
+    }
+  }, [hasPixelContent, activePixelLayer, changeGridSize]);
+  
+  // リサイズして変更
+  const handleResizeAndChange = useCallback(() => {
+    if (pendingGridSize && activePixelLayer) {
+      // リサンプリングしてサイズ変更
+      const oldSize = activePixelLayer.gridSize;
+      const newPixels = new Uint8Array(pendingGridSize * pendingGridSize);
+      
+      for (let newY = 0; newY < pendingGridSize; newY++) {
+        for (let newX = 0; newX < pendingGridSize; newX++) {
+          const oldX = Math.floor((newX / pendingGridSize) * oldSize);
+          const oldY = Math.floor((newY / pendingGridSize) * oldSize);
+          const oldIndex = oldY * oldSize + oldX;
+          const newIndex = newY * pendingGridSize + newX;
+          newPixels[newIndex] = activePixelLayer.pixels[oldIndex];
+        }
+      }
+      
+      // useDrawingCanvasの関数を直接呼び出す代わりに、changeGridSizeを呼んでから手動でリサイズ
+      // 注: これはuseDrawingCanvas側でリサイズ版を追加する必要あり
+      changeGridSize(pendingGridSize, true); // resizeフラグ付き
+    }
+    setShowGridSizeDialog(false);
+    setPendingGridSize(null);
+  }, [pendingGridSize, activePixelLayer, changeGridSize]);
+  
+  // そのまま維持して新しいレイヤーを追加
+  const handleKeepAndChange = useCallback(() => {
+    if (pendingGridSize) {
+      // 既存のピクセルレイヤーはそのまま維持し、新しいサイズで新しいレイヤーを追加
+      changeGridSize(pendingGridSize, false); // UIのgridSizeを更新
+      addPixelLayer(undefined, pendingGridSize); // 明示的に新しいサイズを渡す
+    }
+    setShowGridSizeDialog(false);
+    setPendingGridSize(null);
+  }, [pendingGridSize, changeGridSize, addPixelLayer]);
+  
+  // ダイアログをキャンセル
+  const handleCancelGridChange = useCallback(() => {
+    setShowGridSizeDialog(false);
+    setPendingGridSize(null);
+  }, []);
 
   // 描き足し元のSVGが渡されたらテンプレートとして設定
   const hasSetBaseImage = useRef(false);
@@ -236,6 +312,13 @@ export function DrawingCanvas({
         isSavingPaletteToNostr={isSavingPaletteToNostr}
         canSaveToNostr={canSaveToNostr}
         onOpenPaletteGallery={() => setShowPaletteGallery(true)}
+        gridMode={gridMode}
+        gridSize={activePixelLayer?.gridSize || gridSize}
+        showGrid={showGrid}
+        onToggleGridMode={toggleGridMode}
+        onGridSizeChange={handleGridSizeChange}
+        onToggleShowGrid={() => setShowGrid(!showGrid)}
+        onAddPixelLayer={() => addPixelLayer()}
         onToolChange={selectTool}
         onColorChange={setColor}
         onLineWidthChange={setLineWidth}
@@ -317,7 +400,7 @@ export function DrawingCanvas({
           <div 
             className={styles.backgroundSvg}
             dangerouslySetInnerHTML={{ 
-              __html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">${selectedTemplate.svg}</svg>` 
+              __html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%" preserveAspectRatio="none">${selectedTemplate.svg}</svg>` 
             }}
           />
           <canvas
@@ -325,12 +408,165 @@ export function DrawingCanvas({
             width={width}
             height={height}
             className={`${styles.canvas} ${tool === 'stamp' && (selectedStamp || selectedCustomEmoji) ? styles.stampCursor : ''} ${tool === 'text' ? styles.textMode : ''}`}
-            style={{ pointerEvents: (tool === 'stamp' || tool === 'text') ? 'none' : 'auto' }}
-            onPointerDown={tool !== 'text' && tool !== 'stamp' ? handlePointerDown : undefined}
-            onPointerMove={tool !== 'text' && tool !== 'stamp' ? handlePointerMove : undefined}
-            onPointerUp={tool !== 'text' && tool !== 'stamp' ? handlePointerUp : undefined}
-            onPointerLeave={tool !== 'text' && tool !== 'stamp' ? handlePointerUp : undefined}
+            style={{ pointerEvents: (tool === 'stamp' || tool === 'text' || gridMode) ? 'none' : 'auto' }}
+            onPointerDown={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerDown : undefined}
+            onPointerMove={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerMove : undefined}
+            onPointerUp={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerUp : undefined}
+            onPointerLeave={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerUp : undefined}
           />
+          
+          {/* ピクセルレイヤー表示 */}
+          {pixelLayers.filter(l => l.visible).map(layer => {
+            // キャンバス全体に広げる
+            const cellWidthPercent = 100 / layer.gridSize;
+            const cellHeightPercent = 100 / layer.gridSize;
+            
+            return (
+              <div
+                key={layer.id}
+                className={styles.pixelLayerCanvas}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                }}
+              >
+                {/* ピクセルを描画 */}
+                {Array.from({ length: layer.gridSize * layer.gridSize }).map((_, idx) => {
+                  const colorIndex = layer.pixels[idx];
+                  if (colorIndex === 0) return null; // 透明はスキップ
+                  const x = idx % layer.gridSize;
+                  const y = Math.floor(idx / layer.gridSize);
+                  const color = layer.palette[colorIndex - 1] || '#000000';
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        position: 'absolute',
+                        left: `${x * cellWidthPercent}%`,
+                        top: `${y * cellHeightPercent}%`,
+                        width: `${cellWidthPercent}%`,
+                        height: `${cellHeightPercent}%`,
+                        backgroundColor: color,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
+          
+          {/* グリッドオーバーレイ（SVGで正確に描画） */}
+          {gridMode && showGrid && activePixelLayer && (() => {
+            const layerGridSize = activePixelLayer.gridSize;
+            
+            // SVGでグリッド線を描画
+            const gridLines: React.ReactNode[] = [];
+            for (let i = 0; i <= layerGridSize; i++) {
+              const pos = (i / layerGridSize) * 100;
+              // 縦線
+              gridLines.push(
+                <line
+                  key={`v-${i}`}
+                  x1={`${pos}%`}
+                  y1="0%"
+                  x2={`${pos}%`}
+                  y2="100%"
+                  stroke="rgba(128, 128, 128, 0.4)"
+                  strokeWidth="1"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+              // 横線
+              gridLines.push(
+                <line
+                  key={`h-${i}`}
+                  x1="0%"
+                  y1={`${pos}%`}
+                  x2="100%"
+                  y2={`${pos}%`}
+                  stroke="rgba(128, 128, 128, 0.4)"
+                  strokeWidth="1"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            }
+            
+            return (
+              <svg
+                className={styles.pixelGridOverlay}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                }}
+                preserveAspectRatio="none"
+              >
+                {gridLines}
+              </svg>
+            );
+          })()}
+          
+          {/* ピクセル描画オーバーレイ */}
+          {gridMode && activePixelLayer && (() => {
+            const layerGridSize = activePixelLayer.gridSize;
+            
+            // DOM座標からピクセルグリッド座標に変換（レイヤーのgridSizeを使用）
+            const getGridCoords = (e: React.PointerEvent<HTMLDivElement>) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const localX = e.clientX - rect.left;
+              const localY = e.clientY - rect.top;
+              const gridX = Math.floor((localX / rect.width) * layerGridSize);
+              const gridY = Math.floor((localY / rect.height) * layerGridSize);
+              return { gridX, gridY };
+            };
+            
+            return (
+              <div
+                className={styles.pixelDrawOverlay}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  cursor: tool === 'pixelFill' ? 'crosshair' : 'default',
+                }}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  const { gridX, gridY } = getGridCoords(e);
+                  
+                  if (tool === 'pixelFill') {
+                    fillPixels(gridX, gridY);
+                  } else {
+                    startPixelPainting();
+                    paintPixel(gridX, gridY);
+                  }
+                }}
+                onPointerMove={(e) => {
+                  if (e.buttons !== 1 || tool === 'pixelFill') return;
+                  const { gridX, gridY } = getGridCoords(e);
+                  paintPixel(gridX, gridY);
+                }}
+                onPointerUp={() => {
+                  if (tool !== 'pixelFill') {
+                    endPixelPainting();
+                  }
+                }}
+                onPointerLeave={() => {
+                  if (tool !== 'pixelFill') {
+                    endPixelPainting();
+                  }
+                }}
+              />
+            );
+          })()}
           
           {/* スタンプオーバーレイ（ドラッグ可能） */}
           <div
@@ -586,6 +822,59 @@ export function DrawingCanvas({
                 syncFavoritePalettes();
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* グリッドサイズ変更確認ダイアログ */}
+      {showGridSizeDialog && pendingGridSize && (
+        <div className={styles.dialogOverlay} onClick={handleCancelGridChange}>
+          <div className={styles.dialogContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.dialogHeader}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--color-warning)' }}>
+                warning
+              </span>
+              <h3 className={styles.dialogTitle}>グリッドサイズの変更</h3>
+            </div>
+            <p className={styles.dialogMessage}>
+              現在のグリッドサイズ <strong>{activePixelLayer?.gridSize}×{activePixelLayer?.gridSize}</strong> から{' '}
+              <strong>{pendingGridSize}×{pendingGridSize}</strong> に変更します。
+            </p>
+            <p className={styles.dialogSubMessage}>
+              描画済みのピクセルをどのように処理しますか？
+            </p>
+            <div className={styles.dialogOptions}>
+              <button
+                className={styles.dialogOptionButton}
+                onClick={handleResizeAndChange}
+              >
+                <span className="material-symbols-outlined">aspect_ratio</span>
+                <div className={styles.dialogOptionText}>
+                  <span className={styles.dialogOptionTitle}>リサイズする</span>
+                  <span className={styles.dialogOptionDescription}>
+                    新しいサイズに合わせてピクセルを拡大/縮小
+                  </span>
+                </div>
+              </button>
+              <button
+                className={styles.dialogOptionButton}
+                onClick={handleKeepAndChange}
+              >
+                <span className="material-symbols-outlined">layers</span>
+                <div className={styles.dialogOptionText}>
+                  <span className={styles.dialogOptionTitle}>そのまま残す</span>
+                  <span className={styles.dialogOptionDescription}>
+                    現在のレイヤーを保持し、新しいサイズのレイヤーを追加
+                  </span>
+                </div>
+              </button>
+            </div>
+            <button
+              className={styles.dialogCancelButton}
+              onClick={handleCancelGridChange}
+            >
+              キャンセル
+            </button>
           </div>
         </div>
       )}

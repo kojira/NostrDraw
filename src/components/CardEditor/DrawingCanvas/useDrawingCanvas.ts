@@ -15,8 +15,11 @@ import type {
   Stamp,
   CustomEmoji,
   Layer,
+  PixelLayer,
+  GridSize,
 } from './types';
-import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer } from './types';
+import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer, createDefaultPixelLayer, DEFAULT_GRID_SIZE, getPixelScale } from './types';
+import { getOrAddPaletteIndex } from '../../../utils/pixelFormat';
 import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, removeFavoritePalette, saveFavoritePalettesToNostr, getFavoritePaletteIds, type ColorPalette as NostrPalette } from '../../../services/palette';
 import { fetchProfile } from '../../../services/profile';
 
@@ -187,6 +190,32 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // アクティブレイヤーの取得
   const activeLayer = useMemo(() => layers.find(l => l.id === activeLayerId) || layers[0], [layers, activeLayerId]);
   
+  // ピクセルレイヤー関連のステート
+  const [pixelLayers, setPixelLayers] = useState<PixelLayer[]>([]);
+  const [activePixelLayerId, setActivePixelLayerId] = useState<string | null>(null);
+  const [gridMode, setGridMode] = useState(false);
+  const [gridSize, setGridSize] = useState<GridSize>(DEFAULT_GRID_SIZE);
+  const [showGrid, setShowGrid] = useState(true);
+  
+  // アクティブピクセルレイヤーの取得
+  const activePixelLayer = useMemo(() => 
+    pixelLayers.find(l => l.id === activePixelLayerId) || null, 
+    [pixelLayers, activePixelLayerId]
+  );
+  
+  // ピクセルレイヤーのスケール計算（ピクセルパーフェクト）
+  const pixelScale = useMemo(() => getPixelScale(gridSize, width, height), [gridSize, width, height]);
+  
+  // ピクセルレイヤーのオフセット計算（中央寄せ）
+  const pixelOffset = useMemo(() => {
+    const totalWidth = gridSize * pixelScale;
+    const totalHeight = gridSize * pixelScale;
+    return {
+      x: Math.floor((width - totalWidth) / 2),
+      y: Math.floor((height - totalHeight) / 2),
+    };
+  }, [gridSize, pixelScale, width, height]);
+  
   // 後方互換性のためのエイリアス（アクティブレイヤーのデータ）
   const strokes = activeLayer?.strokes || [];
   
@@ -226,7 +255,11 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   const currentStrokeRef = useRef<Point[]>([]);
   
   // Undo/Redo用の履歴（レイヤー全体のスナップショット）
-  const [history, setHistory] = useState<Layer[][]>([]);
+  interface HistorySnapshot {
+    layers: Layer[];
+    pixelLayers: PixelLayer[];
+  }
+  const [history, setHistory] = useState<HistorySnapshot[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const historyIndexRef = useRef(-1);
   const isUndoRedoRef = useRef(false); // Undo/Redo操作中かどうか
@@ -247,9 +280,27 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     }));
   }, []);
   
+  // ピクセルレイヤーの深いコピーを作成
+  const deepCopyPixelLayers = useCallback((pixelLayersToClone: PixelLayer[]): PixelLayer[] => {
+    return pixelLayersToClone.map(layer => ({
+      ...layer,
+      pixels: new Uint8Array(layer.pixels),
+      palette: [...layer.palette],
+    }));
+  }, []);
+  
+  // 履歴スナップショットの作成用ref（pixelLayers参照用）
+  const pixelLayersRef = useRef<PixelLayer[]>(pixelLayers);
+  useEffect(() => {
+    pixelLayersRef.current = pixelLayers;
+  }, [pixelLayers]);
+  
   // 履歴に状態を追加（内部用）
-  const addToHistory = useCallback((newLayers: Layer[]) => {
-    const snapshot = deepCopyLayers(newLayers);
+  const addToHistory = useCallback((newLayers: Layer[], newPixelLayers?: PixelLayer[]) => {
+    const snapshot: HistorySnapshot = {
+      layers: deepCopyLayers(newLayers),
+      pixelLayers: deepCopyPixelLayers(newPixelLayers ?? pixelLayersRef.current),
+    };
     const currentIndex = historyIndexRef.current;
     
     console.log('[addToHistory] called, currentIndex:', currentIndex);
@@ -268,7 +319,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     setHistoryIndex(newIndex);
     historyIndexRef.current = newIndex;
     console.log('[addToHistory] newIndex:', newIndex);
-  }, [deepCopyLayers]);
+  }, [deepCopyLayers, deepCopyPixelLayers]);
   
   // layersが変更されたら自動的に履歴に追加（Undo/Redo以外の変更のみ）
   useEffect(() => {
@@ -936,13 +987,14 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     
     // 1つ前の状態に戻る
     const newIndex = currentIndex - 1;
-    const previousState = deepCopyLayers(history[newIndex]);
-    setLayers(previousState);
+    const snapshot = history[newIndex];
+    setLayers(deepCopyLayers(snapshot.layers));
+    setPixelLayers(deepCopyPixelLayers(snapshot.pixelLayers));
     setHistoryIndex(newIndex);
     historyIndexRef.current = newIndex;
     console.log('[undo] restored to history[', newIndex, ']');
     // 再描画はlayersのuseEffectでトリガーされる
-  }, [history, deepCopyLayers]);
+  }, [history, deepCopyLayers, deepCopyPixelLayers]);
 
   // Redo - 履歴から次の状態を復元
   const redo = useCallback(() => {
@@ -958,13 +1010,14 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     // Redo操作中フラグを立てる（useEffectで履歴に追加されないように）
     isUndoRedoRef.current = true;
     
-    const nextState = deepCopyLayers(history[nextIndex]);
-    setLayers(nextState);
+    const snapshot = history[nextIndex];
+    setLayers(deepCopyLayers(snapshot.layers));
+    setPixelLayers(deepCopyPixelLayers(snapshot.pixelLayers));
     setHistoryIndex(nextIndex);
     historyIndexRef.current = nextIndex;
     console.log('[redo] restored to history[', nextIndex, ']');
     // 再描画はlayersのuseEffectでトリガーされる
-  }, [history, deepCopyLayers]);
+  }, [history, deepCopyLayers, deepCopyPixelLayers]);
 
   // キーボードショートカット
   useEffect(() => {
@@ -987,7 +1040,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // デバッグ用: 履歴をwindowに公開
   useEffect(() => {
-    (window as unknown as { __undoHistory: { history: Layer[][], historyIndex: number, historyIndexRef: number } }).__undoHistory = {
+    (window as unknown as { __undoHistory: { history: HistorySnapshot[], historyIndex: number, historyIndexRef: number } }).__undoHistory = {
       history,
       historyIndex,
       historyIndexRef: historyIndexRef.current,
@@ -1468,6 +1521,196 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     setPanOffset({ x: 0, y: 0 });
   }, []);
 
+  // ピクセルレイヤー操作
+  const addPixelLayer = useCallback((name?: string, overrideGridSize?: GridSize) => {
+    const id = `pixel-${Date.now()}`;
+    const sizeToUse = overrideGridSize ?? gridSize;
+    const newLayer = createDefaultPixelLayer(id, name || `ドット絵 ${pixelLayers.length + 1}`, sizeToUse);
+    setPixelLayers(prev => [...prev, newLayer]);
+    setActivePixelLayerId(id);
+    setGridMode(true);
+    return id;
+  }, [pixelLayers.length, gridSize]);
+
+  const removePixelLayer = useCallback((layerId: string) => {
+    setPixelLayers(prev => prev.filter(l => l.id !== layerId));
+    if (activePixelLayerId === layerId) {
+      setActivePixelLayerId(pixelLayers.length > 1 ? pixelLayers[0]?.id || null : null);
+    }
+  }, [activePixelLayerId, pixelLayers]);
+
+  const selectPixelLayer = useCallback((layerId: string | null) => {
+    setActivePixelLayerId(layerId);
+    if (layerId) {
+      setGridMode(true);
+    }
+  }, []);
+
+  // ピクセル描画（ドラッグ中に呼び出される）
+  const paintingPixelsRef = useRef<Set<string>>(new Set()); // "x,y" 形式で重複防止
+
+  const paintPixel = useCallback((gridX: number, gridY: number) => {
+    if (!activePixelLayer) return;
+
+    // 範囲外チェック
+    if (gridX < 0 || gridX >= gridSize || gridY < 0 || gridY >= gridSize) return;
+
+    // 同一ドラッグ中の重複防止
+    const key = `${gridX},${gridY}`;
+    if (paintingPixelsRef.current.has(key)) return;
+    paintingPixelsRef.current.add(key);
+
+    setPixelLayers(prev => prev.map(layer => {
+      if (layer.id !== activePixelLayerId) return layer;
+
+      const newPixels = new Uint8Array(layer.pixels);
+      const index = gridY * layer.gridSize + gridX;
+
+      if (tool === 'pixelEraser') {
+        // 消しゴム：透明（0）にする
+        newPixels[index] = 0;
+      } else {
+        // ペン：色を追加
+        const palette = [...layer.palette];
+        const colorIndex = getOrAddPaletteIndex(palette, color);
+        newPixels[index] = colorIndex;
+        return { ...layer, pixels: newPixels, palette };
+      }
+
+      return { ...layer, pixels: newPixels };
+    }));
+  }, [activePixelLayer, activePixelLayerId, gridSize, tool, color]);
+
+  // ドラッグ開始時の履歴保存用
+  const pixelLayerBeforeDragRef = useRef<PixelLayer | null>(null);
+
+  const startPixelPainting = useCallback(() => {
+    paintingPixelsRef.current.clear();
+    // 履歴用にドラッグ前の状態を保存
+    if (activePixelLayer) {
+      pixelLayerBeforeDragRef.current = {
+        ...activePixelLayer,
+        pixels: new Uint8Array(activePixelLayer.pixels),
+        palette: [...activePixelLayer.palette],
+      };
+    }
+  }, [activePixelLayer]);
+
+  const endPixelPainting = useCallback(() => {
+    paintingPixelsRef.current.clear();
+    // ピクセル描画の履歴を保存
+    if (pixelLayerBeforeDragRef.current) {
+      // 現在の状態を履歴に追加（layers は現在の状態、pixelLayers も現在の状態）
+      addToHistory(layers, pixelLayers);
+    }
+    pixelLayerBeforeDragRef.current = null;
+  }, [layers, pixelLayers, addToHistory]);
+
+  // 塗りつぶし（Flood fill）
+  const fillPixels = useCallback((startX: number, startY: number) => {
+    if (!activePixelLayer) return;
+
+    // 範囲外チェック
+    if (startX < 0 || startX >= gridSize || startY < 0 || startY >= gridSize) return;
+
+    // 新しいpixelLayersを計算
+    const newPixelLayers = pixelLayers.map(layer => {
+      if (layer.id !== activePixelLayerId) return layer;
+
+      const newPixels = new Uint8Array(layer.pixels);
+      const palette = [...layer.palette];
+      const newColorIndex = getOrAddPaletteIndex(palette, color);
+      const targetColorIndex = layer.pixels[startY * layer.gridSize + startX];
+
+      // 同じ色なら何もしない
+      if (targetColorIndex === newColorIndex) return layer;
+
+      // Flood fill (BFS)
+      const queue: [number, number][] = [[startX, startY]];
+      const visited = new Set<string>();
+      visited.add(`${startX},${startY}`);
+
+      while (queue.length > 0) {
+        const [x, y] = queue.shift()!;
+        const index = y * layer.gridSize + x;
+
+        if (newPixels[index] !== targetColorIndex) continue;
+
+        newPixels[index] = newColorIndex;
+
+        // 4方向を探索
+        const neighbors: [number, number][] = [
+          [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+        ];
+
+        for (const [nx, ny] of neighbors) {
+          if (nx < 0 || nx >= layer.gridSize || ny < 0 || ny >= layer.gridSize) continue;
+          const nKey = `${nx},${ny}`;
+          if (visited.has(nKey)) continue;
+          visited.add(nKey);
+          queue.push([nx, ny]);
+        }
+      }
+
+      return { ...layer, pixels: newPixels, palette };
+    });
+
+    // pixelLayersを更新して履歴に追加
+    setPixelLayers(newPixelLayers);
+    addToHistory(layers, newPixelLayers);
+  }, [activePixelLayer, activePixelLayerId, pixelLayers, gridSize, color, layers, addToHistory]);
+
+  // グリッドモードの切り替え
+  const toggleGridMode = useCallback(() => {
+    setGridMode(prev => {
+      if (!prev && pixelLayers.length === 0) {
+        // グリッドモードをONにする際、ピクセルレイヤーがなければ作成
+        addPixelLayer();
+      }
+      return !prev;
+    });
+  }, [pixelLayers.length, addPixelLayer]);
+
+  // グリッドサイズの変更
+  const changeGridSize = useCallback((newSize: GridSize, resize: boolean = false) => {
+    setGridSize(newSize);
+    
+    // アクティブなピクセルレイヤーがある場合
+    if (activePixelLayerId) {
+      setPixelLayers(prev => prev.map(layer => {
+        if (layer.id !== activePixelLayerId) return layer;
+        
+        const oldSize = layer.gridSize;
+        if (oldSize === newSize) return layer;
+        
+        if (resize) {
+          // リサンプリングしてサイズ変更
+          const newPixels = new Uint8Array(newSize * newSize);
+          
+          for (let newY = 0; newY < newSize; newY++) {
+            for (let newX = 0; newX < newSize; newX++) {
+              const oldX = Math.floor((newX / newSize) * oldSize);
+              const oldY = Math.floor((newY / newSize) * oldSize);
+              const oldIndex = oldY * oldSize + oldX;
+              const newIndex = newY * newSize + newX;
+              newPixels[newIndex] = layer.pixels[oldIndex];
+            }
+          }
+          
+          return {
+            ...layer,
+            gridSize: newSize,
+            pixels: newPixels,
+          };
+        } else {
+          // サイズのみ変更（ピクセルはそのまま維持、新しいサイズで再解釈）
+          // 実際には既存のピクセルを維持するため、レイヤー自体は変更しない
+          return layer;
+        }
+      }));
+    }
+  }, [activePixelLayerId]);
+
   return {
     // refs
     canvasRef,
@@ -1583,6 +1826,26 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     setLayerOpacity,
     reorderLayers,
     renameLayer,
+    
+    // ピクセルレイヤー機能
+    pixelLayers,
+    activePixelLayerId,
+    activePixelLayer,
+    gridMode,
+    gridSize,
+    showGrid,
+    pixelScale,
+    pixelOffset,
+    addPixelLayer,
+    removePixelLayer,
+    selectPixelLayer,
+    paintPixel,
+    startPixelPainting,
+    endPixelPainting,
+    fillPixels,
+    toggleGridMode,
+    changeGridSize,
+    setShowGrid,
     
     // キャンバスサイズ（投稿用）
     canvasSize: { width, height },

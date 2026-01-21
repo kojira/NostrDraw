@@ -110,6 +110,8 @@ export function CardEditor({
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>✏️ {t('editor.draw')}</h3>
         <DrawingCanvas 
+          width={600}
+          height={600}
           onSave={handleDrawingSave}
           onPost={onPost}
           isPosting={isPosting}
