@@ -491,7 +491,12 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       reactionUnsubscribeRef.current = null;
     }
     
-    if (followees.length === 0) {
+    // フォロイー + 自分自身のpubkeyを含める
+    const authors = userPubkey 
+      ? [...new Set([...followees, userPubkey])]
+      : followees;
+    
+    if (authors.length === 0) {
       setCards([]);
       setIsLoading(false);
       return;
@@ -559,16 +564,21 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
     };
 
     try {
-      unsubscribeRef.current = subscribeToCardsByAuthors(followees, handleCard, handleEose, 50);
+      unsubscribeRef.current = subscribeToCardsByAuthors(authors, handleCard, handleEose, 50);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'フォロー中のユーザーの投稿取得に失敗しました');
       setIsLoading(false);
     }
-  }, [followees]);
+  }, [followees, userPubkey]);
 
   // 無限スクロール：追加読み込み
   const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || allCardsRef.current.length === 0 || followeesRef.current.length === 0) return;
+    // フォロイー + 自分自身のpubkeyを含める
+    const authors = userPubkeyRef.current
+      ? [...new Set([...followeesRef.current, userPubkeyRef.current])]
+      : followeesRef.current;
+    
+    if (isLoadingMore || !hasMore || allCardsRef.current.length === 0 || authors.length === 0) return;
     
     setIsLoadingMore(true);
     
@@ -579,7 +589,7 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       );
       
       const moreCards = await fetchMoreCardsByAuthors(
-        followeesRef.current,
+        authors,
         oldestCard.createdAt,
         20,
         seenIdsRef.current
