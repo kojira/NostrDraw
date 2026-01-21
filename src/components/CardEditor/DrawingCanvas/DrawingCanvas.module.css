@@ -2247,6 +2247,9 @@
 .pixelDrawOverlay {
   cursor: crosshair;
   background: transparent;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ========================

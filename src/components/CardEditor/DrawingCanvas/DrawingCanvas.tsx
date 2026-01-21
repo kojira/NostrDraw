@@ -576,6 +576,7 @@ export function DrawingCanvas({
                 }}
                 onPointerMove={(e) => {
                   if (e.buttons !== 1 || tool === 'pixelFill') return;
+                  e.preventDefault();
                   const { gridX, gridY } = getGridCoords(e);
                   paintPixel(gridX, gridY);
                 }}
