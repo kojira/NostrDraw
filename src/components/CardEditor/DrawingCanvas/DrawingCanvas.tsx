@@ -390,7 +390,7 @@ export function DrawingCanvas({
           </button>
         )}
         <div 
-          className={styles.canvasWrapper}
+          className={`${styles.canvasWrapper} ${gridMode ? styles.squareCanvas : ''}`}
           style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
             transformOrigin: 'center center',
@@ -415,16 +415,18 @@ export function DrawingCanvas({
             onPointerLeave={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerUp : undefined}
           />
           
-          {/* ピクセルレイヤー表示（正方形を維持してキャンバス中央に配置） */}
+          {/* ピクセルレイヤー表示（グリッドモード時は全体、それ以外は正方形を中央配置） */}
           {pixelLayers.filter(l => l.visible).map(layer => {
-            // 正方形領域を計算（キャンバスの短辺に合わせる）
-            const squareSize = Math.min(width, height);
-            const leftOffset = (width - squareSize) / 2;
-            const topOffset = (height - squareSize) / 2;
+            // グリッドモード時はキャンバス全体を使用（CSSで正方形になっている）
+            // グリッドモードOFF時は正方形領域を中央配置
+            const useFullCanvas = gridMode;
+            const squareSize = useFullCanvas ? Math.max(width, height) : Math.min(width, height);
+            const leftOffset = useFullCanvas ? 0 : (width - squareSize) / 2;
+            const topOffset = useFullCanvas ? 0 : (height - squareSize) / 2;
             const leftPercent = (leftOffset / width) * 100;
             const topPercent = (topOffset / height) * 100;
-            const sizePercentW = (squareSize / width) * 100;
-            const sizePercentH = (squareSize / height) * 100;
+            const sizePercentW = useFullCanvas ? 100 : (squareSize / width) * 100;
+            const sizePercentH = useFullCanvas ? 100 : (squareSize / height) * 100;
             const cellWidthPercent = 100 / layer.gridSize;
             const cellHeightPercent = 100 / layer.gridSize;
             
@@ -466,18 +468,15 @@ export function DrawingCanvas({
             );
           })}
           
-          {/* グリッドオーバーレイ（SVGで正確に描画、正方形を維持） */}
+          {/* グリッドオーバーレイ（SVGで正確に描画） */}
           {gridMode && showGrid && activePixelLayer && (() => {
             const layerGridSize = activePixelLayer.gridSize;
             
-            // 正方形領域を計算
-            const squareSize = Math.min(width, height);
-            const leftOffset = (width - squareSize) / 2;
-            const topOffset = (height - squareSize) / 2;
-            const leftPercent = (leftOffset / width) * 100;
-            const topPercent = (topOffset / height) * 100;
-            const sizePercentW = (squareSize / width) * 100;
-            const sizePercentH = (squareSize / height) * 100;
+            // グリッドモード時はキャンバス全体を使用（CSSで正方形になっている）
+            const leftPercent = 0;
+            const topPercent = 0;
+            const sizePercentW = 100;
+            const sizePercentH = 100;
             
             // SVGでグリッド線を描画
             const gridLines: React.ReactNode[] = [];
@@ -529,18 +528,15 @@ export function DrawingCanvas({
             );
           })()}
           
-          {/* ピクセル描画オーバーレイ（正方形を維持） */}
+          {/* ピクセル描画オーバーレイ */}
           {gridMode && activePixelLayer && (() => {
             const layerGridSize = activePixelLayer.gridSize;
             
-            // 正方形領域を計算
-            const squareSize = Math.min(width, height);
-            const leftOffset = (width - squareSize) / 2;
-            const topOffset = (height - squareSize) / 2;
-            const leftPercent = (leftOffset / width) * 100;
-            const topPercent = (topOffset / height) * 100;
-            const sizePercentW = (squareSize / width) * 100;
-            const sizePercentH = (squareSize / height) * 100;
+            // グリッドモード時はキャンバス全体を使用（CSSで正方形になっている）
+            const leftPercent = 0;
+            const topPercent = 0;
+            const sizePercentW = 100;
+            const sizePercentH = 100;
             
             // DOM座標からピクセルグリッド座標に変換（レイヤーのgridSizeを使用）
             const getGridCoords = (e: React.PointerEvent<HTMLDivElement>) => {

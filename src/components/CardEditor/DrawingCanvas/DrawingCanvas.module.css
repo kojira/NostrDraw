@@ -877,7 +877,12 @@
   max-width: 100%;
   width: 100%;
   aspect-ratio: 4 / 3; /* 800:600 = 4:3 */
-  transition: transform 0.1s ease-out;
+  transition: transform 0.1s ease-out, aspect-ratio 0.2s ease-out;
+}
+
+/* グリッドモード時は正方形 */
+.canvasWrapper.squareCanvas {
+  aspect-ratio: 1 / 1;
 }
 
 /* 背景SVG（外部画像参照を正しく表示するためDOMに直接配置） */
