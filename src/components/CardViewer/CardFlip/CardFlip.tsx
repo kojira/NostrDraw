@@ -606,7 +606,7 @@ export const CardFlip = memo(function CardFlip({
         </button>
         
         {/* 描き足しボタン（許可されている場合のみ表示） */}
-        {card.allowExtend && onExtend && userPubkey && signEvent && (
+        {card.allowExtend && onExtend && (
           <button
             className={styles.extendButton}
             onClick={(e) => {

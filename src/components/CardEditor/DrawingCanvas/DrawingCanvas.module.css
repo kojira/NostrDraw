@@ -712,10 +712,87 @@
   background: #3d7acc;
 }
 
+/* 背景色選択 */
+.bgLabel {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.bgColorButton {
+  width: 24px;
+  height: 24px;
+}
+
+.bgColorPickerWrapper {
+  position: relative;
+}
+
+.bgColorPickerPanel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(30, 30, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  min-width: 180px;
+}
+
+.bgColorSection {
+  margin-bottom: 0.5rem;
+}
+
+.bgColorSection:last-child {
+  margin-bottom: 0;
+}
+
+.bgColorSectionLabel {
+  display: block;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.25rem;
+}
+
+.bgColorPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.bgColorCustom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bgColorApplyButton {
+  padding: 0.25rem 0.5rem;
+  background: #4d96ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.bgColorApplyButton:hover {
+  background: #3d7acc;
+}
+
 @media (max-width: 480px) {
   .colorButton {
     width: 24px;
     height: 24px;
+  }
+  
+  .bgLabel {
+    display: none;
   }
 }
 

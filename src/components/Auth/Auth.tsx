@@ -89,8 +89,8 @@ export function Auth({
     return success;
   };
 
-  // ログイン済みだが再認証が必要な場合
-  if (authState.isLoggedIn && authState.needsReauth) {
+  // 再認証が必要な場合（セッション切れ）
+  if (authState.needsReauth && authState.npub) {
     return (
       <PasswordLogin
         storedNpub={authState.npub}

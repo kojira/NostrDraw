@@ -397,13 +397,32 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   }, []);
   
   // テンプレートとスタンプ
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(() => {
+  const [selectedTemplate, setSelectedTemplateState] = useState<Template>(() => {
     if (savedState?.templateId) {
       const found = TEMPLATES.find(t => t.id === savedState.templateId);
       if (found) return found;
     }
     return TEMPLATES[0];
   });
+  
+  // 背景色（テンプレートのデフォルト or ユーザー指定）
+  const [backgroundColor, setBackgroundColor] = useState<string>(() => {
+    if (savedState?.templateId) {
+      const found = TEMPLATES.find(t => t.id === savedState.templateId);
+      if (found?.backgroundColor) return found.backgroundColor;
+    }
+    return TEMPLATES[0].backgroundColor || '#ffffff';
+  });
+  
+  // テンプレート選択時に背景色も自動設定
+  const setSelectedTemplate = useCallback((template: Template) => {
+    setSelectedTemplateState(template);
+    // テンプレートに背景色が設定されていれば適用
+    if (template.backgroundColor) {
+      setBackgroundColor(template.backgroundColor);
+    }
+  }, []);
+  
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null);
   const [selectedCustomEmoji, setSelectedCustomEmoji] = useState<CustomEmoji | null>(null);
   const [selectedPlacedStampId, setSelectedPlacedStampId] = useState<string | null>(null);
@@ -1339,21 +1358,116 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   // 完全なSVGを生成（テンプレート含む）- プレビュー用
   const generateSvg = useCallback((): string => {
     const layerElements = layersToSvgElements();
-    const pixelElements = pixelLayersToSvgElements();
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+    
+    // テンプレートのviewBoxを解析
+    const viewBox = selectedTemplate.viewBox || '0 0 400 300';
+    const [, , vbWidth, vbHeight] = viewBox.split(/\s+/).map(Number);
+    const templateWidth = vbWidth || 400;
+    const templateHeight = vbHeight || 300;
+    
+    // 描き足し元の場合はそのまま使用（元のviewBoxを保持）
+    const isExtendBase = selectedTemplate.id === 'extend-base';
+    
+    if (isExtendBase) {
+      // 描き足し元：元のviewBoxサイズでピクセルレイヤーを生成
+      const pixelElements = pixelLayers
+        .filter(layer => layer.visible)
+        .map(layer => {
+          const pixelSvg = pixelLayerToSvg(layer, templateWidth, templateHeight);
+          if (!pixelSvg) return '';
+          return `<g data-pixel-layer="${layer.id}">${pixelSvg}</g>`;
+        })
+        .filter(Boolean)
+        .join('\n  ');
+      
+      const bgRect = backgroundColor && backgroundColor !== 'transparent'
+        ? `<rect width="${templateWidth}" height="${templateHeight}" fill="${backgroundColor}"/>`
+        : '';
+      
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
+  ${bgRect}
   ${selectedTemplate.svg}
   ${pixelElements}
   ${layerElements}
 </svg>`;
-  }, [layersToSvgElements, pixelLayersToSvgElements, width, height, selectedTemplate]);
+    }
+    
+    // ストロークがあるかどうかチェック
+    const hasStrokes = layers.some(layer => layer.visible && layer.strokes.length > 0);
+    const hasStamps = layers.some(layer => layer.visible && layer.placedStamps.length > 0);
+    const hasTextBoxes = layers.some(layer => layer.visible && layer.textBoxes.length > 0);
+    const hasNonPixelContent = hasStrokes || hasStamps || hasTextBoxes;
+    
+    // ドット絵だけの場合はテンプレートのviewBoxを使用
+    // ストローク等がある場合は800x600座標系を維持（座標ずれを防ぐ）
+    const useTemplateViewBox = !hasNonPixelContent;
+    const outputWidth = useTemplateViewBox ? templateWidth : width;
+    const outputHeight = useTemplateViewBox ? templateHeight : height;
+    const outputViewBox = useTemplateViewBox ? viewBox : `0 0 ${width} ${height}`;
+    
+    // ピクセルレイヤーを出力サイズに合わせて生成
+    const pixelElements = pixelLayers
+      .filter(layer => layer.visible)
+      .map(layer => {
+        const pixelSvg = pixelLayerToSvg(layer, outputWidth, outputHeight);
+        if (!pixelSvg) return '';
+        return `<g data-pixel-layer="${layer.id}">${pixelSvg}</g>`;
+      })
+      .filter(Boolean)
+      .join('\n  ');
+    
+    // 背景色を最初に配置
+    const bgRect = backgroundColor && backgroundColor !== 'transparent'
+      ? `<rect width="${outputWidth}" height="${outputHeight}" fill="${backgroundColor}"/>`
+      : '';
+    
+    // ストロークがある場合はスケーリングして配置
+    let templateContent = selectedTemplate.svg;
+    if (hasNonPixelContent && (templateWidth !== width || templateHeight !== height)) {
+      const scaleX = width / templateWidth;
+      const scaleY = height / templateHeight;
+      const scale = Math.min(scaleX, scaleY);
+      const scaledWidth = templateWidth * scale;
+      const scaledHeight = templateHeight * scale;
+      const offsetX = (width - scaledWidth) / 2;
+      const offsetY = (height - scaledHeight) / 2;
+      templateContent = `<g transform="translate(${offsetX}, ${offsetY}) scale(${scale})">${selectedTemplate.svg}</g>`;
+    }
+    
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${outputViewBox}">
+  ${bgRect}
+  ${templateContent}
+  ${pixelElements}
+  ${layerElements}
+</svg>`;
+  }, [layersToSvgElements, pixelLayersToSvgElements, pixelLayers, layers, width, height, selectedTemplate, backgroundColor]);
 
   // 差分SVGを生成（テンプレートを含まない）- 描き足し保存用
   const generateDiffSvg = useCallback((): string => {
     const layerElements = layersToSvgElements();
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+    
+    // 描き足し元の場合は元のviewBoxサイズでピクセルレイヤーを生成
+    const isExtendBase = selectedTemplate.id === 'extend-base';
+    const viewBox = selectedTemplate.viewBox || '0 0 400 300';
+    const [, , vbWidth, vbHeight] = viewBox.split(/\s+/).map(Number);
+    const targetWidth = isExtendBase ? (vbWidth || 400) : width;
+    const targetHeight = isExtendBase ? (vbHeight || 300) : height;
+    
+    const pixelElements = pixelLayers
+      .filter(layer => layer.visible)
+      .map(layer => {
+        const pixelSvg = pixelLayerToSvg(layer, targetWidth, targetHeight);
+        if (!pixelSvg) return '';
+        return `<g data-pixel-layer="${layer.id}">${pixelSvg}</g>`;
+      })
+      .filter(Boolean)
+      .join('\n  ');
+    
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetWidth} ${targetHeight}">
+  ${pixelElements}
   ${layerElements}
 </svg>`;
-  }, [layersToSvgElements, width, height]);
+  }, [layersToSvgElements, pixelLayers, selectedTemplate, width, height]);
 
   // テキストボックスのドラッグハンドラ（マウス・タッチ両対応）
   const handleTextBoxPointerDown = useCallback((e: React.PointerEvent | React.MouseEvent | React.TouchEvent, id: string, mode: DragMode) => {
@@ -1743,8 +1857,9 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     lineWidth,
     strokes,
     
-    // テンプレート・スタンプ
+    // テンプレート・スタンプ・背景
     selectedTemplate,
+    backgroundColor,
     selectedStamp,
     selectedCustomEmoji,
     placedStamps,
@@ -1785,6 +1900,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     setLineWidth,
     selectTool,
     setSelectedTemplate,
+    setBackgroundColor,
     setSelectedStamp,
     setSelectedCustomEmoji,
     setStampScale,

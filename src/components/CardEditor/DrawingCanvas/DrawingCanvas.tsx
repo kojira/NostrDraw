@@ -36,6 +36,7 @@ export function DrawingCanvas({
     color,
     lineWidth,
     selectedTemplate,
+    backgroundColor,
     selectedStamp,
     selectedCustomEmoji,
     selectedPlacedStampId,
@@ -65,6 +66,7 @@ export function DrawingCanvas({
     setLineWidth,
     selectTool,
     setSelectedTemplate,
+    setBackgroundColor,
     setSelectedStamp,
     setSelectedCustomEmoji,
     setStampScale,
@@ -208,12 +210,35 @@ export function DrawingCanvas({
       
       // SVGの内容を抽出してテンプレートとして設定
       const svgMatch = baseImageSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
-      const innerSvg = svgMatch ? svgMatch[1] : baseImageSvg;
+      let innerSvg = svgMatch ? svgMatch[1] : baseImageSvg;
+      
+      // 元のviewBoxを抽出
+      const viewBoxMatch = baseImageSvg.match(/viewBox=["']([^"']+)["']/);
+      const originalViewBox = viewBoxMatch ? viewBoxMatch[1] : null;
+      
+      // 描き足し元のSVGから背景色を抽出
+      // 最初のrect要素で、viewBox全体をカバーするものを背景とみなす
+      let extractedBgColor: string | undefined;
+      
+      // 複数の形式に対応（自己終了タグと終了タグ両方）
+      const firstRectMatch = innerSvg.match(/^\s*<rect\s+([^>]*?)(?:\/>|><\/rect>)/);
+      if (firstRectMatch) {
+        const rectAttrs = firstRectMatch[1];
+        const fillMatch = rectAttrs.match(/fill=["']([^"']+)["']/);
+        if (fillMatch) {
+          extractedBgColor = fillMatch[1];
+          // 背景色rectを除去（背景色は別管理するため）
+          innerSvg = innerSvg.replace(firstRectMatch[0], '');
+        }
+      }
+      
       
       const baseTemplate: Template = {
         id: 'extend-base',
         name: '描き足し元',
         svg: innerSvg,
+        viewBox: originalViewBox || undefined, // 元のviewBoxを保持
+        backgroundColor: extractedBgColor,
       };
       
       setSelectedTemplate(baseTemplate);
@@ -302,6 +327,8 @@ export function DrawingCanvas({
         canUndo={canUndo}
         canRedo={canRedo}
         customColors={customColors}
+        backgroundColor={backgroundColor}
+        onBackgroundColorChange={setBackgroundColor}
         palettes={palettes}
         activePaletteId={activePaletteId}
         onPaletteChange={switchPalette}
@@ -390,17 +417,68 @@ export function DrawingCanvas({
           </button>
         )}
         <div 
-          className={`${styles.canvasWrapper} ${gridMode ? styles.squareCanvas : ''}`}
+          className={styles.canvasWrapper}
           style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
             transformOrigin: 'center center',
+            // グリッドモード時は正方形、それ以外はテンプレートのviewBoxに合わせる
+            aspectRatio: gridMode ? '1 / 1' : (() => {
+              const viewBox = selectedTemplate.viewBox || '0 0 400 300';
+              const [, , vbWidth, vbHeight] = viewBox.split(/\s+/).map(Number);
+              const w = vbWidth || 400;
+              const h = vbHeight || 300;
+              return `${w} / ${h}`;
+            })(),
           }}
         >
           {/* 背景SVG（キャンバスの後ろに配置、外部画像参照が正しく表示される） */}
           <div 
             className={styles.backgroundSvg}
+            style={{ backgroundColor: backgroundColor }}
             dangerouslySetInnerHTML={{ 
-              __html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%" preserveAspectRatio="none">${selectedTemplate.svg}</svg>` 
+              __html: (() => {
+                // viewBoxを解析してサイズを取得
+                const viewBox = selectedTemplate.viewBox || '0 0 400 300';
+                const [, , vbWidth, vbHeight] = viewBox.split(/\s+/).map(Number);
+                const templateWidth = vbWidth || 400;
+                const templateHeight = vbHeight || 300;
+                
+                // 描き足し元の場合
+                const isExtendBase = selectedTemplate.id === 'extend-base';
+                
+                if (isExtendBase) {
+                  // グリッドモード時はドット絵領域（正方形）だけを表示
+                  if (gridMode) {
+                    const squareSize = Math.min(templateWidth, templateHeight);
+                    const offsetX = (templateWidth - squareSize) / 2;
+                    const offsetY = (templateHeight - squareSize) / 2;
+                    const pixelViewBox = `${offsetX} ${offsetY} ${squareSize} ${squareSize}`;
+                    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${pixelViewBox}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${selectedTemplate.svg}</svg>`;
+                  }
+                  // 通常モード：元のviewBoxをそのまま使用
+                  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${selectedTemplate.svg}</svg>`;
+                }
+                
+                // 通常のテンプレート：アスペクト比を維持してスケーリング
+                const scaleX = width / templateWidth;
+                const scaleY = height / templateHeight;
+                const scale = Math.min(scaleX, scaleY);
+                
+                // 中央配置のためのオフセット計算
+                const scaledWidth = templateWidth * scale;
+                const scaledHeight = templateHeight * scale;
+                const offsetX = (width - scaledWidth) / 2;
+                const offsetY = (height - scaledHeight) / 2;
+                
+                // スケーリングが必要かどうか判定
+                const needsTransform = Math.abs(scale - 1) > 0.001 || offsetX > 0.001 || offsetY > 0.001;
+                
+                if (needsTransform) {
+                  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet"><g transform="translate(${offsetX}, ${offsetY}) scale(${scale})">${selectedTemplate.svg}</g></svg>`;
+                } else {
+                  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${selectedTemplate.svg}</svg>`;
+                }
+              })()
             }}
           />
           <canvas
@@ -415,56 +493,65 @@ export function DrawingCanvas({
             onPointerLeave={tool !== 'text' && tool !== 'stamp' && !gridMode ? handlePointerUp : undefined}
           />
           
-          {/* ピクセルレイヤー表示（グリッドモード時は全体、それ以外は正方形を中央配置） */}
+          {/* ピクセルレイヤー表示（SVGで正確に描画、グリッドと同じ座標系） */}
           {pixelLayers.filter(l => l.visible).map(layer => {
-            // グリッドモード時はキャンバス全体を使用（CSSで正方形になっている）
-            // グリッドモードOFF時は正方形領域を中央配置
-            const useFullCanvas = gridMode;
-            const squareSize = useFullCanvas ? Math.max(width, height) : Math.min(width, height);
-            const leftOffset = useFullCanvas ? 0 : (width - squareSize) / 2;
-            const topOffset = useFullCanvas ? 0 : (height - squareSize) / 2;
-            const leftPercent = (leftOffset / width) * 100;
-            const topPercent = (topOffset / height) * 100;
-            const sizePercentW = useFullCanvas ? 100 : (squareSize / width) * 100;
-            const sizePercentH = useFullCanvas ? 100 : (squareSize / height) * 100;
-            const cellWidthPercent = 100 / layer.gridSize;
-            const cellHeightPercent = 100 / layer.gridSize;
+            // viewBoxを解析
+            const viewBox = selectedTemplate.viewBox || '0 0 400 300';
+            const [, , vbWidth, vbHeight] = viewBox.split(/\s+/).map(Number);
+            const templateWidth = vbWidth || 400;
+            const templateHeight = vbHeight || 300;
+            
+            // ドット絵の正方形領域を計算
+            const squareSize = Math.min(templateWidth, templateHeight);
+            const pixelSize = squareSize / layer.gridSize;
+            
+            // グリッドモード時はドット絵領域だけを表示（オフセット不要）
+            // 通常モード時は元のviewBox内で中央配置
+            const usePixelViewBox = gridMode;
+            const drawOffsetX = usePixelViewBox ? 0 : (templateWidth - squareSize) / 2;
+            const drawOffsetY = usePixelViewBox ? 0 : (templateHeight - squareSize) / 2;
+            
+            // ピクセルをSVG rect要素として生成
+            const pixelRects: React.ReactNode[] = [];
+            for (let idx = 0; idx < layer.gridSize * layer.gridSize; idx++) {
+              const colorIndex = layer.pixels[idx];
+              if (colorIndex === 0) continue; // 透明はスキップ
+              const x = idx % layer.gridSize;
+              const y = Math.floor(idx / layer.gridSize);
+              const color = layer.palette[colorIndex - 1] || '#000000';
+              pixelRects.push(
+                <rect
+                  key={idx}
+                  x={drawOffsetX + x * pixelSize}
+                  y={drawOffsetY + y * pixelSize}
+                  width={pixelSize}
+                  height={pixelSize}
+                  fill={color}
+                />
+              );
+            }
+            
+            const svgViewBox = usePixelViewBox 
+              ? `0 0 ${squareSize} ${squareSize}` 
+              : `0 0 ${templateWidth} ${templateHeight}`;
             
             return (
-              <div
+              <svg
                 key={layer.id}
                 className={styles.pixelLayerCanvas}
                 style={{
                   position: 'absolute',
-                  left: `${leftPercent}%`,
-                  top: `${topPercent}%`,
-                  width: `${sizePercentW}%`,
-                  height: `${sizePercentH}%`,
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
                   pointerEvents: 'none',
                 }}
+                viewBox={svgViewBox}
+                preserveAspectRatio="xMidYMid meet"
               >
-                {/* ピクセルを描画 */}
-                {Array.from({ length: layer.gridSize * layer.gridSize }).map((_, idx) => {
-                  const colorIndex = layer.pixels[idx];
-                  if (colorIndex === 0) return null; // 透明はスキップ
-                  const x = idx % layer.gridSize;
-                  const y = Math.floor(idx / layer.gridSize);
-                  const color = layer.palette[colorIndex - 1] || '#000000';
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        position: 'absolute',
-                        left: `${x * cellWidthPercent}%`,
-                        top: `${y * cellHeightPercent}%`,
-                        width: `${cellWidthPercent}%`,
-                        height: `${cellHeightPercent}%`,
-                        backgroundColor: color,
-                      }}
-                    />
-                  );
-                })}
-              </div>
+                {pixelRects}
+              </svg>
             );
           })}
           
@@ -472,37 +559,44 @@ export function DrawingCanvas({
           {gridMode && showGrid && activePixelLayer && (() => {
             const layerGridSize = activePixelLayer.gridSize;
             
-            // グリッドモード時はキャンバス全体を使用（CSSで正方形になっている）
-            const leftPercent = 0;
-            const topPercent = 0;
-            const sizePercentW = 100;
-            const sizePercentH = 100;
+            // viewBoxを解析
+            const viewBox = selectedTemplate.viewBox || '0 0 400 300';
+            const [, , vbWidth, vbHeight] = viewBox.split(/\s+/).map(Number);
+            const templateWidth = vbWidth || 400;
+            const templateHeight = vbHeight || 300;
             
-            // SVGでグリッド線を描画
+            // ドット絵の正方形領域を計算
+            const squareSize = Math.min(templateWidth, templateHeight);
+            const pixelSize = squareSize / layerGridSize;
+            
+            // SVGでグリッド線を描画（ドット絵領域だけを表示するのでオフセット不要）
             const gridLines: React.ReactNode[] = [];
             for (let i = 0; i <= layerGridSize; i++) {
-              const pos = (i / layerGridSize) * 100;
+              const pos = i * pixelSize;
               // 縦線
               gridLines.push(
                 <line
                   key={`v-${i}`}
-                  x1={`${pos}%`}
-                  y1="0%"
-                  x2={`${pos}%`}
-                  y2="100%"
+                  x1={pos}
+                  y1={0}
+                  x2={pos}
+                  y2={squareSize}
                   stroke="rgba(128, 128, 128, 0.4)"
                   strokeWidth="1"
                   vectorEffect="non-scaling-stroke"
                 />
               );
+            }
+            for (let i = 0; i <= layerGridSize; i++) {
+              const pos = i * pixelSize;
               // 横線
               gridLines.push(
                 <line
                   key={`h-${i}`}
-                  x1="0%"
-                  y1={`${pos}%`}
-                  x2="100%"
-                  y2={`${pos}%`}
+                  x1={0}
+                  y1={pos}
+                  x2={squareSize}
+                  y2={pos}
                   stroke="rgba(128, 128, 128, 0.4)"
                   strokeWidth="1"
                   vectorEffect="non-scaling-stroke"
@@ -515,13 +609,14 @@ export function DrawingCanvas({
                 className={styles.pixelGridOverlay}
                 style={{
                   position: 'absolute',
-                  left: `${leftPercent}%`,
-                  top: `${topPercent}%`,
-                  width: `${sizePercentW}%`,
-                  height: `${sizePercentH}%`,
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
                   pointerEvents: 'none',
                 }}
-                preserveAspectRatio="none"
+                viewBox={`0 0 ${squareSize} ${squareSize}`}
+                preserveAspectRatio="xMidYMid meet"
               >
                 {gridLines}
               </svg>
@@ -532,19 +627,17 @@ export function DrawingCanvas({
           {gridMode && activePixelLayer && (() => {
             const layerGridSize = activePixelLayer.gridSize;
             
-            // グリッドモード時はキャンバス全体を使用（CSSで正方形になっている）
-            const leftPercent = 0;
-            const topPercent = 0;
-            const sizePercentW = 100;
-            const sizePercentH = 100;
-            
-            // DOM座標からピクセルグリッド座標に変換（レイヤーのgridSizeを使用）
+            // DOM座標からピクセルグリッド座標に変換
+            // グリッドモード時は正方形のドット絵領域だけが表示されている
             const getGridCoords = (e: React.PointerEvent<HTMLDivElement>) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const localX = e.clientX - rect.left;
               const localY = e.clientY - rect.top;
+              
+              // 正方形のviewBoxなので、シンプルな変換
               const gridX = Math.floor((localX / rect.width) * layerGridSize);
               const gridY = Math.floor((localY / rect.height) * layerGridSize);
+              
               return { gridX, gridY };
             };
             
@@ -553,15 +646,18 @@ export function DrawingCanvas({
                 className={styles.pixelDrawOverlay}
                 style={{
                   position: 'absolute',
-                  left: `${leftPercent}%`,
-                  top: `${topPercent}%`,
-                  width: `${sizePercentW}%`,
-                  height: `${sizePercentH}%`,
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
                   cursor: tool === 'pixelFill' ? 'crosshair' : 'default',
                 }}
                 onPointerDown={(e) => {
                   e.preventDefault();
                   const { gridX, gridY } = getGridCoords(e);
+                  
+                  // 範囲外チェック
+                  if (gridX < 0 || gridX >= layerGridSize || gridY < 0 || gridY >= layerGridSize) return;
                   
                   if (tool === 'pixelFill') {
                     fillPixels(gridX, gridY);
@@ -574,6 +670,10 @@ export function DrawingCanvas({
                   if (e.buttons !== 1 || tool === 'pixelFill') return;
                   e.preventDefault();
                   const { gridX, gridY } = getGridCoords(e);
+                  
+                  // 範囲外チェック
+                  if (gridX < 0 || gridX >= layerGridSize || gridY < 0 || gridY >= layerGridSize) return;
+                  
                   paintPixel(gridX, gridY);
                 }}
                 onPointerUp={() => {

@@ -164,15 +164,29 @@ export function useAuth() {
           // nsecログインの場合、セッションストレージにパスワードがあれば再認証不要
           const hasSessionPassword = passwordRef.current !== null;
           const needsReauth = (parsed.isNsecLogin || false) && !hasSessionPassword;
-          setAuthState({
-            isLoggedIn: true,
-            pubkey: parsed.pubkey,
-            npub: parsed.npub,
-            isNip07: false,
-            isNsecLogin: parsed.isNsecLogin || false,
-            isEntranceKey: parsed.isEntranceKey,
-            needsReauth,
-          });
+          
+          // 再認証が必要な場合はログアウト状態にする（UIの一貫性のため）
+          if (needsReauth) {
+            setAuthState({
+              isLoggedIn: false,
+              pubkey: parsed.pubkey, // 再ログイン用に保持
+              npub: parsed.npub,
+              isNip07: false,
+              isNsecLogin: parsed.isNsecLogin || false,
+              isEntranceKey: parsed.isEntranceKey,
+              needsReauth: true,
+            });
+          } else {
+            setAuthState({
+              isLoggedIn: true,
+              pubkey: parsed.pubkey,
+              npub: parsed.npub,
+              isNip07: false,
+              isNsecLogin: parsed.isNsecLogin || false,
+              isEntranceKey: parsed.isEntranceKey,
+              needsReauth: false,
+            });
+          }
         }
       } catch {
         localStorage.removeItem(AUTH_STORAGE_KEY);

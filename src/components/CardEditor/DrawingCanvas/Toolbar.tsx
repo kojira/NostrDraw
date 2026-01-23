@@ -24,6 +24,9 @@ interface ToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   customColors: string[];
+  // 背景色
+  backgroundColor?: string;
+  onBackgroundColorChange?: (color: string) => void;
   // パレット管理
   palettes?: Palette[];
   activePaletteId?: string;
@@ -64,6 +67,8 @@ export function Toolbar({
   canUndo,
   canRedo,
   customColors,
+  backgroundColor = '#ffffff',
+  onBackgroundColorChange,
   palettes = [],
   activePaletteId,
   onPaletteChange,
@@ -98,6 +103,8 @@ export function Toolbar({
   const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
   const [editingPaletteName, setEditingPaletteName] = useState('');
   const [pickerColor, setPickerColor] = useState(color);
+  const [showBgColorPicker, setShowBgColorPicker] = useState(false);
+  const [bgPickerColor, setBgPickerColor] = useState(backgroundColor);
 
   const handleCreatePalette = () => {
     if (newPaletteName.trim() && onCreatePalette) {
@@ -199,6 +206,104 @@ export function Toolbar({
           <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>grid_on</span>
         </button>
       </div>
+
+      {/* 背景色選択 */}
+      {onBackgroundColorChange && (
+        <div className={styles.toolGroup}>
+          <span className={styles.bgLabel}>背景:</span>
+          <button
+            className={`${styles.colorButton} ${styles.bgColorButton} ${backgroundColor === '#ffffff' ? styles.active : ''}`}
+            style={{ backgroundColor: '#ffffff', border: '1px solid #ccc' }}
+            onClick={() => onBackgroundColorChange('#ffffff')}
+            title="白"
+          />
+          <button
+            className={`${styles.colorButton} ${styles.bgColorButton} ${backgroundColor === '#000000' ? styles.active : ''}`}
+            style={{ backgroundColor: '#000000' }}
+            onClick={() => onBackgroundColorChange('#000000')}
+            title="黒"
+          />
+          <div className={styles.bgColorPickerWrapper}>
+            <button
+              className={`${styles.colorButton} ${styles.bgColorButton} ${showBgColorPicker ? styles.active : ''}`}
+              style={{ 
+                background: `linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b5de5)`,
+              }}
+              onClick={() => setShowBgColorPicker(!showBgColorPicker)}
+              title="その他の色"
+            >
+              <span style={{ fontSize: '10px' }}>▼</span>
+            </button>
+            {showBgColorPicker && (
+              <div className={styles.bgColorPickerPanel}>
+                <div className={styles.bgColorSection}>
+                  <span className={styles.bgColorSectionLabel}>プリセット</span>
+                  <div className={styles.bgColorPresets}>
+                    {[
+                      // 淡い色
+                      '#f5f5dc', '#ffe4e1', '#e0ffff', '#f0fff0',
+                      // 鮮やかな色
+                      '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
+                      // 濃い色
+                      '#2d3436', '#6c5ce7', '#e17055', '#00b894',
+                    ].map((c) => (
+                      <button
+                        key={c}
+                        className={`${styles.colorButton} ${backgroundColor === c ? styles.active : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => {
+                          onBackgroundColorChange(c);
+                          setShowBgColorPicker(false);
+                        }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {customColors.length > 0 && (
+                  <div className={styles.bgColorSection}>
+                    <span className={styles.bgColorSectionLabel}>マイパレット</span>
+                    <div className={styles.bgColorPresets}>
+                      {customColors.map((c) => (
+                        <button
+                          key={c}
+                          className={`${styles.colorButton} ${backgroundColor === c ? styles.active : ''}`}
+                          style={{ backgroundColor: c }}
+                          onClick={() => {
+                            onBackgroundColorChange(c);
+                            setShowBgColorPicker(false);
+                          }}
+                          title={c}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className={styles.bgColorSection}>
+                  <span className={styles.bgColorSectionLabel}>カスタム</span>
+                  <div className={styles.bgColorCustom}>
+                    <input
+                      type="color"
+                      value={bgPickerColor}
+                      onChange={(e) => setBgPickerColor(e.target.value)}
+                      className={styles.colorInputSmall}
+                    />
+                    <button
+                      className={styles.bgColorApplyButton}
+                      onClick={() => {
+                        onBackgroundColorChange(bgPickerColor);
+                        setShowBgColorPicker(false);
+                      }}
+                    >
+                      適用
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* グリッドモードUI */}
       {gridMode && (

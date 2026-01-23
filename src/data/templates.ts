@@ -3,7 +3,9 @@
 export interface Template {
   id: string;
   name: string;
-  svg: string; // viewBox="0 0 400 300" 想定
+  svg: string;
+  viewBox?: string; // SVGの座標系（デフォルト: "0 0 400 300"）
+  backgroundColor?: string; // 背景色（デフォルト: 白 "#ffffff"、透明にしたい場合は "transparent" を指定）
 }
 
 export interface Stamp {
@@ -15,11 +17,14 @@ export interface Stamp {
 }
 
 // ベーステンプレート
+// 注意: SVGには背景rectを含めない。背景色はbackgroundColorで管理する。
 export const TEMPLATES: Template[] = [
   {
     id: 'blank',
     name: '白紙',
-    svg: `<rect width="400" height="300" fill="#ffffff"/>`,
+    svg: ``, // 背景のみなので空
+    viewBox: '0 0 300 300', // ドット絵用に正方形
+    backgroundColor: '#ffffff',
   },
   {
     id: 'ema',
@@ -31,7 +36,6 @@ export const TEMPLATES: Template[] = [
       <stop offset="100%" style="stop-color:#C4A574"/>
     </linearGradient>
   </defs>
-  <rect width="400" height="300" fill="#f5f5dc"/>
   <path d="M40 80 L200 30 L360 80 L360 250 Q200 270 40 250 Z" fill="url(#woodGrad)" stroke="#8B4513" stroke-width="4"/>
   <g stroke="#C4A574" stroke-width="0.5" opacity="0.5">
     <path d="M60 120 Q200 110 340 120"/>
@@ -42,12 +46,12 @@ export const TEMPLATES: Template[] = [
   <circle cx="200" cy="55" r="6" fill="#5D3A1A"/>
   <path d="M190 55 Q160 35 150 15 Q140 0 160 0 Q180 5 192 30" stroke="#e94560" stroke-width="4" fill="none"/>
   <path d="M210 55 Q240 35 250 15 Q260 0 240 0 Q220 5 208 30" stroke="#e94560" stroke-width="4" fill="none"/>`,
+    backgroundColor: '#f5f5dc',
   },
   {
     id: 'postcard',
     name: 'ハガキ',
-    svg: `<rect width="400" height="300" fill="#FFF8F0"/>
-  <rect x="5" y="5" width="390" height="290" fill="none" stroke="#d4a574" stroke-width="2"/>
+    svg: `<rect x="5" y="5" width="390" height="290" fill="none" stroke="#d4a574" stroke-width="2"/>
   <line x1="200" y1="20" x2="200" y2="280" stroke="#d4a574" stroke-width="1" stroke-dasharray="5,5"/>
   <rect x="300" y="20" width="80" height="50" fill="none" stroke="#e94560" stroke-width="2"/>
   <text x="340" y="50" font-family="serif" font-size="10" fill="#e94560" text-anchor="middle">切手</text>
@@ -58,12 +62,12 @@ export const TEMPLATES: Template[] = [
     <line x1="220" y1="200" x2="380" y2="200"/>
     <line x1="220" y1="240" x2="380" y2="240"/>
   </g>`,
+    backgroundColor: '#FFF8F0',
   },
   {
     id: 'washi',
     name: '和紙',
-    svg: `<rect width="400" height="300" fill="#FDF5E6"/>
-  <circle cx="350" cy="50" r="40" fill="#e94560" opacity="0.7"/>
+    svg: `<circle cx="350" cy="50" r="40" fill="#e94560" opacity="0.7"/>
   <g transform="translate(30, 250)">
     <circle cx="0" cy="0" r="12" fill="#e94560"/>
     <circle cx="0" cy="-15" r="6" fill="#FFB6C1"/>
@@ -82,12 +86,12 @@ export const TEMPLATES: Template[] = [
     <circle cx="-9.5" cy="-3" r="4" fill="#FFB6C1"/>
     <circle cx="0" cy="0" r="3" fill="#FFD700"/>
   </g>`,
+    backgroundColor: '#FDF5E6',
   },
   {
     id: 'newyear',
     name: '謹賀新年',
-    svg: `<rect width="400" height="300" fill="#FFF5F5"/>
-  <text x="200" y="50" font-family="serif" font-size="32" font-weight="bold" fill="#e94560" text-anchor="middle">謹賀新年</text>
+    svg: `<text x="200" y="50" font-family="serif" font-size="32" font-weight="bold" fill="#e94560" text-anchor="middle">謹賀新年</text>
   <text x="200" y="280" font-family="sans-serif" font-size="16" fill="#888" text-anchor="middle">2026</text>
   <g stroke="#e94560" stroke-width="2" fill="none" opacity="0.3">
     <path d="M10 70 Q50 60 90 70"/>
@@ -95,6 +99,7 @@ export const TEMPLATES: Template[] = [
     <path d="M10 250 Q50 260 90 250"/>
     <path d="M310 250 Q350 260 390 250"/>
   </g>`,
+    backgroundColor: '#FFF5F5',
   },
 ];
 
