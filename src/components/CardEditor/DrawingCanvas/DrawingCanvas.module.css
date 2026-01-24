@@ -243,7 +243,7 @@
   width: 28px;
   height: 28px;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -259,6 +259,20 @@
 
 .colorButton.customColor {
   position: relative;
+}
+
+/* パレット内の色ボタン（小さめ） */
+.colorButton.paletteColor {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.colorButton.paletteColor.active {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
 }
 
 /* カスタムカラーセクション */
@@ -295,13 +309,12 @@
 }
 
 .customColorGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
-  gap: 0.25rem;
-  padding: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 0.25rem;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  max-width: 200px;
+  border-radius: 4px;
 }
 
 .paletteHeader {
@@ -374,6 +387,19 @@
   height: 18px;
   border-radius: 50%;
   object-fit: cover;
+  margin-right: 0.35rem;
+  flex-shrink: 0;
+}
+
+.presetBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #4d96ff;
+  background: rgba(77, 150, 255, 0.15);
+  border-radius: 999px;
   margin-right: 0.35rem;
   flex-shrink: 0;
 }

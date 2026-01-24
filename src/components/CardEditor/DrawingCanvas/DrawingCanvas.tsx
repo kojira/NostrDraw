@@ -327,6 +327,7 @@ export function DrawingCanvas({
         canUndo={canUndo}
         canRedo={canRedo}
         customColors={customColors}
+        userPubkey={userPubkey}
         backgroundColor={backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
         palettes={palettes}
@@ -939,6 +940,7 @@ export function DrawingCanvas({
             </div>
             <PaletteGallery 
               signEvent={signEvent}
+              userPubkey={userPubkey}
               onFavoriteChange={() => {
                 // お気に入りが変更されたらパレットを再読み込み
                 syncFavoritePalettes();

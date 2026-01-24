@@ -247,7 +247,10 @@
     "confirmDeletePalette": "Are you sure you want to delete this palette?",
     "paletteDeleted": "Palette deleted",
     "sortByPopular": "Popular",
-    "sortByNewest": "Newest"
+    "sortByNewest": "Newest",
+    "presetPalettes": "Preset Palettes",
+    "userPalettes": "Community Palettes",
+    "preset": "Preset"
   },
   "timeline": {
     "follow": "Following",

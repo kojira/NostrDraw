@@ -459,6 +459,41 @@
   box-shadow: var(--shadow-md);
 }
 
+/* パレットセクション */
+.paletteSection {
+  margin-bottom: var(--space-8);
+}
+
+.paletteSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-4) 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-thin) solid var(--color-border);
+}
+
+/* プリセットパレットアイテム */
+.presetPaletteItem {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-bg-raised) 0%, rgba(77, 150, 255, 0.05) 100%);
+}
+
+.presetBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-primary);
+  background: rgba(77, 150, 255, 0.15);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
 /* パレットソートバー */
 .paletteSortBar {
   display: flex;
@@ -599,16 +634,27 @@
 }
 
 .paletteColors {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   margin-bottom: var(--space-3);
 }
 
 .paletteColorSwatch {
-  aspect-ratio: 1;
+  width: 20px;
+  height: 20px;
   border-radius: var(--radius-xs);
   border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+/* 色が多いパレット用の小さいスウォッチ */
+.paletteColorSwatchSmall {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .paletteAuthor {

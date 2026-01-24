@@ -1,9 +1,10 @@
 // ツールバーコンポーネント
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { ToolType, MessageBox, GridSize } from './types';
 import { COLORS } from './types';
 import styles from './DrawingCanvas.module.css';
+import { PRESET_PALETTES, getFavoritePaletteIds } from '../../../services/palette';
 
 // パレット型
 interface Palette {
@@ -13,6 +14,7 @@ interface Palette {
   authorPubkey?: string;
   authorPicture?: string;
   eventId?: string; // お気に入りからインポートした場合のイベントID
+  isPreset?: boolean; // プリセットパレットかどうか
 }
 
 interface ToolbarProps {
@@ -24,6 +26,8 @@ interface ToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   customColors: string[];
+  // ユーザー情報
+  userPubkey?: string | null;
   // 背景色
   backgroundColor?: string;
   onBackgroundColorChange?: (color: string) => void;
@@ -67,6 +71,7 @@ export function Toolbar({
   canUndo,
   canRedo,
   customColors,
+  userPubkey,
   backgroundColor = '#ffffff',
   onBackgroundColorChange,
   palettes = [],
@@ -105,6 +110,15 @@ export function Toolbar({
   const [pickerColor, setPickerColor] = useState(color);
   const [showBgColorPicker, setShowBgColorPicker] = useState(false);
   const [bgPickerColor, setBgPickerColor] = useState(backgroundColor);
+
+  // お気に入りのプリセットパレットを取得
+  const favoritePresetPalettes = useMemo(() => {
+    const favoriteIds = getFavoritePaletteIds(userPubkey || undefined);
+    return PRESET_PALETTES.filter(p => favoriteIds.includes(p.id)).map(p => ({
+      ...p,
+      isPreset: true,
+    }));
+  }, [showPaletteMenu, userPubkey]); // パレットメニューを開くたびに再取得
 
   const handleCreatePalette = () => {
     if (newPaletteName.trim() && onCreatePalette) {
@@ -246,6 +260,28 @@ export function Toolbar({
                       '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
                       // 濃い色
                       '#2d3436', '#6c5ce7', '#e17055', '#00b894',
+                    ].map((c) => (
+                      <button
+                        key={c}
+                        className={`${styles.colorButton} ${backgroundColor === c ? styles.active : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => {
+                          onBackgroundColorChange(c);
+                          setShowBgColorPicker(false);
+                        }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className={styles.bgColorSection}>
+                  <span className={styles.bgColorSectionLabel}>8bit パレット</span>
+                  <div className={styles.bgColorPresets}>
+                    {[
+                      // ファミコンパレットから代表的な背景色
+                      '#000000', '#7C7C7C', '#BCBCBC', '#F8F8F8',
+                      '#0000FC', '#3CBCFC', '#F83800', '#F87858',
+                      '#00B800', '#58D854', '#F8B800', '#F8D878',
                     ].map((c) => (
                       <button
                         key={c}
@@ -476,12 +512,28 @@ export function Toolbar({
                 ))}
                 
                 {/* お気に入りパレットがある場合は仕切り線を表示 */}
-                {palettes.some(p => p.eventId) && (
+                {(palettes.some(p => p.eventId) || favoritePresetPalettes.length > 0) && (
                   <div className={styles.paletteDivider}>
                     <span className="material-symbols-outlined" style={{ fontSize: '12px', fontVariationSettings: "'FILL' 1" }}>star</span>
                     <span>お気に入り</span>
                   </div>
                 )}
+                
+                {/* お気に入りのプリセットパレット */}
+                {favoritePresetPalettes.map((p) => (
+                  <div key={p.id} className={styles.paletteMenuItem}>
+                    <button
+                      className={`${styles.paletteSelectButton} ${p.id === activePaletteId ? styles.active : ''}`}
+                      onClick={() => {
+                        onPaletteChange(p.id);
+                        setShowPaletteMenu(false);
+                      }}
+                    >
+                      <span className={styles.presetBadge}>プリセット</span>
+                      {p.name} ({p.colors.length})
+                    </button>
+                  </div>
+                ))}
                 
                 {/* お気に入りパレット（eventIdがあるもの） */}
                 {palettes.filter(p => p.eventId).map((p) => (
@@ -604,7 +656,7 @@ export function Toolbar({
                 {customColors.map((c) => (
                   <button
                     key={c}
-                    className={`${styles.colorButton} ${styles.customColor} ${color === c ? styles.active : ''}`}
+                    className={`${styles.colorButton} ${styles.paletteColor} ${styles.customColor} ${color === c ? styles.active : ''}`}
                     style={{ backgroundColor: c }}
                     onClick={() => onColorChange(c)}
                     onContextMenu={(e) => {

@@ -20,7 +20,7 @@ import type {
 } from './types';
 import { CUSTOM_COLORS_STORAGE_KEY, MAX_CUSTOM_COLORS, MAX_LAYERS, MAX_HISTORY_SIZE, createDefaultLayer, createDefaultPixelLayer, DEFAULT_GRID_SIZE, getPixelScale } from './types';
 import { getOrAddPaletteIndex, pixelLayerToSvg } from '../../../utils/pixelFormat';
-import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, removeFavoritePalette, saveFavoritePalettesToNostr, getFavoritePaletteIds, type ColorPalette as NostrPalette } from '../../../services/palette';
+import { savePaletteToNostr, fetchPalettesFromNostr, syncFavoritePalettes as syncFavoritesFromService, fetchFavoritePaletteData, removeFavoritePalette, saveFavoritePalettesToNostr, getFavoritePaletteIds, PRESET_PALETTES, isPresetPalette, type ColorPalette as NostrPalette } from '../../../services/palette';
 import { fetchProfile } from '../../../services/profile';
 
 // ローカルストレージのキー
@@ -512,15 +512,40 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
     }
   }, [userPubkey, loadPalettesForUser, getActiveKey]);
 
-  // アクティブパレットの色
+  // アクティブパレットの色（プリセットパレットもサポート）
   const customColors = useMemo(() => {
+    // まずローカルパレットから検索
     const palette = palettes.find(p => p.id === activePaletteId);
-    return palette?.colors || [];
+    if (palette) return palette.colors;
+    
+    // プリセットパレットから検索
+    if (isPresetPalette(activePaletteId)) {
+      const presetPalette = PRESET_PALETTES.find(p => p.id === activePaletteId);
+      if (presetPalette) return presetPalette.colors;
+    }
+    
+    return [];
   }, [palettes, activePaletteId]);
 
-  // アクティブパレット
+  // アクティブパレット（プリセットパレットもサポート）
   const activePalette = useMemo(() => {
-    return palettes.find(p => p.id === activePaletteId) || defaultPalette;
+    // まずローカルパレットから検索
+    const palette = palettes.find(p => p.id === activePaletteId);
+    if (palette) return palette;
+    
+    // プリセットパレットから検索
+    if (isPresetPalette(activePaletteId)) {
+      const presetPalette = PRESET_PALETTES.find(p => p.id === activePaletteId);
+      if (presetPalette) {
+        return {
+          id: presetPalette.id,
+          name: presetPalette.name,
+          colors: presetPalette.colors,
+        };
+      }
+    }
+    
+    return defaultPalette;
   }, [palettes, activePaletteId]);
 
   // パレットを保存
@@ -693,6 +718,7 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
   }, [userPubkey, syncPalettesFromCloud]);
 
   // お気に入りパレットを同期してローカルパレットに追加
+  // ※プリセットパレットはToolbarのお気に入りセクションで表示するため、ここでは追加しない
   const syncFavoritePalettes = useCallback(async () => {
     if (!userPubkey) return;
     
@@ -706,8 +732,12 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       if (favoritePalettes.length === 0) return;
       
       // 作者のプロフィールを取得してアバター画像を追加
+      // プリセットパレットはマイパレットに追加しない（お気に入りセクションで表示）
       const palettesWithPictures: LocalPalette[] = [];
       for (const fav of favoritePalettes) {
+        // プリセットパレットはスキップ
+        if (isPresetPalette(fav.id)) continue;
+        
         let authorPicture: string | undefined;
         if (fav.pubkey) {
           const profile = await fetchProfile(fav.pubkey);
@@ -723,19 +753,21 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       }
       
       // ローカルパレットにマージ（既存のお気に入りは更新、新しいものは追加）
-      setPalettes(prev => {
-        const merged = [...prev];
-        for (const favPalette of palettesWithPictures) {
-          const existingIndex = merged.findIndex(p => p.id === favPalette.id);
-          if (existingIndex >= 0) {
-            merged[existingIndex] = favPalette;
-          } else {
-            merged.push(favPalette);
+      if (palettesWithPictures.length > 0) {
+        setPalettes(prev => {
+          const merged = [...prev];
+          for (const favPalette of palettesWithPictures) {
+            const existingIndex = merged.findIndex(p => p.id === favPalette.id);
+            if (existingIndex >= 0) {
+              merged[existingIndex] = favPalette;
+            } else {
+              merged.push(favPalette);
+            }
           }
-        }
-        savePalettes(merged);
-        return merged;
-      });
+          savePalettes(merged);
+          return merged;
+        });
+      }
     } catch (error) {
       console.error('Failed to sync favorite palettes:', error);
     }
