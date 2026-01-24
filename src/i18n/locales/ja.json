@@ -250,20 +250,40 @@
     "sortByNewest": "新着順",
     "presetPalettes": "プリセットパレット",
     "userPalettes": "みんなのパレット",
-    "preset": "プリセット"
+    "preset": "プリセット",
+    "noTagResults": "選択したタグの投稿が見つかりません"
   },
   "timeline": {
     "follow": "フォロー",
     "global": "グローバル",
+    "tags": "タグ",
     "loading": "読み込み中...",
     "loadingMore": "読み込み中...",
     "noMorePosts": "これ以上の投稿はありません",
     "loginToSeeFollow": "フォロー中のユーザーの投稿を見るにはログインしてください",
+    "loginToSeeTags": "タグをフォローするにはログインしてください",
     "noFollowPosts": "フォロー中のユーザーの投稿がありません",
+    "noTagPosts": "フォロー中のタグの投稿がありません",
     "noPosts": "投稿がありません",
     "createPost": "投稿する",
     "share": "シェア",
     "copied": "コピーしました！"
+  },
+  "tags": {
+    "categoryTags": "カテゴリタグ",
+    "placeholder": "タグを追加...",
+    "presets": "プリセット",
+    "inheritFromParent": "元の作品のタグを引き継ぐ",
+    "inherited": "継承",
+    "remove": "削除",
+    "follow": "フォロー",
+    "unfollow": "フォロー解除",
+    "clickToFilter": "クリックでフィルター",
+    "popular": "人気のタグ",
+    "noPopular": "人気タグはありません",
+    "following": "フォロー中のタグ",
+    "filter": "タグ",
+    "add": "追加"
   },
   "notifications": {
     "title": "通知",

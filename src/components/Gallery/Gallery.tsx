@@ -1,8 +1,9 @@
 // ギャラリーページ - 公開投稿の一覧表示
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
+import { PRESET_TAGS } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
 import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
@@ -78,6 +79,8 @@ export function Gallery({
   const [period, setPeriod] = useState<PeriodType>(initialPeriod as PeriodType || 'week');
   const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
   const [authorFilter, setAuthorFilter] = useState<string>(initialAuthor || '');
+  const [tagFilters, setTagFilters] = useState<string[]>([]);
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [cards, setCards] = useState<(NostrDrawPost | NostrDrawPostWithReactions)[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -390,6 +393,18 @@ export function Gallery({
   const getProfilePicture = (pubkey: string) => {
     return profiles.get(pubkey)?.picture;
   };
+
+  // タグでフィルタリングされたカード
+  const filteredCards = useMemo(() => {
+    if (tagFilters.length === 0) {
+      return cards;
+    }
+    return cards.filter(card => {
+      if (!card.tags || card.tags.length === 0) return false;
+      // いずれかのフィルタータグがカードのタグに含まれていればtrue
+      return tagFilters.some(filterTag => card.tags?.includes(filterTag));
+    });
+  }, [cards, tagFilters]);
 
   const handleSelectCard = (card: NostrDrawPost) => {
     setSelectedCard(card);
@@ -777,6 +792,48 @@ export function Gallery({
             )}
           </div>
         )}
+        
+        {/* タグフィルター */}
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>{t('tags.filter', 'タグ')}:</label>
+          <div className={styles.tagFilterContainer}>
+            {tagFilters.map(tag => (
+              <span key={tag} className={styles.tagFilterChip}>
+                {tag}
+                <button 
+                  onClick={() => setTagFilters(prev => prev.filter(t => t !== tag))}
+                  className={styles.tagFilterRemove}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <div className={styles.tagFilterDropdownWrapper}>
+              <button 
+                className={styles.addTagFilterButton}
+                onClick={() => setShowTagDropdown(!showTagDropdown)}
+              >
+                + {t('tags.add', '追加')}
+              </button>
+              {showTagDropdown && (
+                <div className={styles.tagFilterDropdown}>
+                  {PRESET_TAGS.filter(tag => !tagFilters.includes(tag)).map(tag => (
+                    <button
+                      key={tag}
+                      className={styles.tagFilterOption}
+                      onClick={() => {
+                        setTagFilters(prev => [...prev, tag]);
+                        setShowTagDropdown(false);
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* コンテンツ */}
@@ -963,14 +1020,19 @@ export function Gallery({
               <div className={styles.error}>{error}</div>
             )}
 
-            {!isLoading && !error && cards.length === 0 && (
-              <div className={styles.empty}>{t('gallery.noResults')}</div>
+            {!isLoading && !error && filteredCards.length === 0 && (
+              <div className={styles.empty}>
+                {tagFilters.length > 0 
+                  ? t('gallery.noTagResults', '選択したタグの投稿が見つかりません')
+                  : t('gallery.noResults')
+                }
+              </div>
             )}
 
-            {cards.length > 0 && (
+            {filteredCards.length > 0 && (
               <>
                 <div className={styles.grid}>
-              {cards.map((card) => {
+              {filteredCards.map((card) => {
                 const picture = getProfilePicture(card.pubkey);
                 const name = getProfileName(card.pubkey);
                 const reactionCount = getReactionCount(card);

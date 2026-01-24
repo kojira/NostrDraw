@@ -124,6 +124,7 @@ export interface PostData {
   canvasSize: { width: number; height: number };
   templateId: string | null;
   isExtend: boolean;     // 描き足しかどうか
+  categoryTags?: string[]; // カテゴリタグ
 }
 
 // パレット型

@@ -1,0 +1,124 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.container.compact {
+  gap: 0.25rem;
+}
+
+.icon {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.125rem 0.5rem;
+  background: rgba(100, 100, 120, 0.2);
+  color: var(--text-primary, #333);
+  border: 1px solid rgba(150, 150, 170, 0.4);
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.tag::before {
+  content: '#';
+  opacity: 0.6;
+}
+
+.tag.clickable {
+  cursor: pointer;
+}
+
+.tag.clickable:hover {
+  background: var(--primary-light, #e3f2fd);
+  color: var(--primary, #1976d2);
+  border-color: var(--primary, #1976d2);
+}
+
+.tag.followed {
+  background: var(--primary, #1976d2);
+  color: #fff;
+  border-color: var(--primary, #1976d2);
+}
+
+.tag.followed::before {
+  opacity: 0.8;
+}
+
+.followButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  margin-left: 0.125rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.625rem;
+  line-height: 1;
+  opacity: 0.7;
+  border-radius: 50%;
+}
+
+.followButton:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.more {
+  padding: 0.125rem 0.375rem;
+  background: var(--bg-tertiary, #e0e0e0);
+  color: var(--text-secondary, #666);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+/* サイズバリエーション */
+.small .icon {
+  font-size: 0.75rem;
+}
+
+.small .tag {
+  font-size: 0.625rem;
+  padding: 0.0625rem 0.375rem;
+}
+
+.small .tag::before {
+  font-size: 0.5rem;
+}
+
+.small .followButton {
+  width: 0.75rem;
+  height: 0.75rem;
+  font-size: 0.5rem;
+}
+
+.large .icon {
+  font-size: 1rem;
+}
+
+.large .tag {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.large .followButton {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.75rem;
+}

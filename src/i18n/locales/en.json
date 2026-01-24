@@ -250,20 +250,40 @@
     "sortByNewest": "Newest",
     "presetPalettes": "Preset Palettes",
     "userPalettes": "Community Palettes",
-    "preset": "Preset"
+    "preset": "Preset",
+    "noTagResults": "No posts found with selected tags"
   },
   "timeline": {
     "follow": "Following",
     "global": "Global",
+    "tags": "Tags",
     "loading": "Loading...",
     "loadingMore": "Loading more...",
     "noMorePosts": "No more posts",
     "loginToSeeFollow": "Login to see posts from users you follow",
+    "loginToSeeTags": "Login to follow tags",
     "noFollowPosts": "No posts from users you follow",
+    "noTagPosts": "No posts with followed tags",
     "noPosts": "No posts yet",
     "createPost": "Create Post",
     "share": "Share",
     "copied": "Copied!"
+  },
+  "tags": {
+    "categoryTags": "Category Tags",
+    "placeholder": "Add tags...",
+    "presets": "Presets",
+    "inheritFromParent": "Inherit tags from original",
+    "inherited": "Inherited",
+    "remove": "Remove",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "clickToFilter": "Click to filter",
+    "popular": "Popular Tags",
+    "noPopular": "No popular tags",
+    "following": "Following Tags",
+    "filter": "Tags",
+    "add": "Add"
   },
   "notifications": {
     "title": "Notifications",

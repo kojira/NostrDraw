@@ -5,10 +5,12 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard } from '../../../services/card';
+import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard, updateCardTags } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
+import { TagInput } from '../../common/TagInput';
+import { TagDisplay } from '../../common/TagDisplay';
 import { fetchEvents } from '../../../services/relay';
 import { NOSTRDRAW_KIND } from '../../../types';
 import styles from './CardFlip.module.css';
@@ -22,7 +24,12 @@ interface CardFlipProps {
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onExtend?: (card: NostrDrawPost) => void; // 描き足しボタンのコールバック
   onNavigateToCard?: (card: NostrDrawPost) => void; // 親子カードへのナビゲーション
+  onCardUpdated?: (oldId: string, newId: string, updatedTags: string[]) => void; // カード更新時のコールバック
   usePortal?: boolean; // デフォルトtrue: createPortalでbodyに表示、false: 親コンポーネント内に表示
+  // タグフォロー機能
+  followedTags?: string[];
+  onFollowTag?: (tag: string) => void;
+  onUnfollowTag?: (tag: string) => void;
 }
 
 // SVGからviewBoxを解析してアスペクト比を計算
@@ -58,7 +65,11 @@ export const CardFlip = memo(function CardFlip({
   signEvent,
   onExtend,
   onNavigateToCard,
+  onCardUpdated,
   usePortal = true,
+  followedTags = [],
+  onFollowTag,
+  onUnfollowTag,
 }: CardFlipProps) {
   const { t } = useTranslation();
   // 宛先がない場合は最初から裏面（絵柄面）を表示
@@ -116,6 +127,12 @@ export const CardFlip = memo(function CardFlip({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   
+  // タグ編集機能用の状態
+  const [showTagEditor, setShowTagEditor] = useState(false);
+  const [editingTags, setEditingTags] = useState<string[]>(card.tags || []);
+  const [isSavingTags, setIsSavingTags] = useState(false);
+  const [currentTags, setCurrentTags] = useState<string[]>(card.tags || []);
+  
   // 自分の投稿かどうか
   const isOwner = userPubkey && userPubkey === card.pubkey;
   
@@ -153,6 +170,38 @@ export const CardFlip = memo(function CardFlip({
       setIsDeleting(false);
     }
   }, [card.id, signEvent, isOwner, onClose]);
+
+  // タグを保存
+  const handleSaveTags = useCallback(async () => {
+    if (!signEvent || !isOwner) return;
+    
+    setIsSavingTags(true);
+    try {
+      const result = await updateCardTags(card.id, editingTags, signEvent);
+      if (result.success) {
+        setCurrentTags(editingTags);
+        setShowTagEditor(false);
+        // 親コンポーネントに更新を通知
+        if (result.newEventId && onCardUpdated) {
+          onCardUpdated(card.id, result.newEventId, editingTags);
+        }
+      } else {
+        alert(result.error || 'タグの保存に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to save tags:', error);
+      alert('タグの保存に失敗しました');
+    } finally {
+      setIsSavingTags(false);
+    }
+  }, [card.id, editingTags, signEvent, isOwner, onCardUpdated]);
+
+  // タグ編集モーダルを開く
+  const openTagEditor = useCallback(() => {
+    setEditingTags(currentTags);
+    setShowTagEditor(true);
+    setShowMoreMenu(false);
+  }, [currentTags]);
 
   // イベントJSONを取得
   const loadEventJson = useCallback(async () => {
@@ -651,15 +700,31 @@ export const CardFlip = memo(function CardFlip({
                 {isLoadingEvent ? (
                   <Spinner size="sm" />
                 ) : (
-                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M320-240 80-480l240-240 57 57-184 184 183 183-56 56Zm320 0-57-57 184-184-183-183 56-56 240 240-240 240Z"/>
-                  </svg>
-                )}
-                <span>JSONを確認</span>
-              </button>
-              
-              {/* 削除ボタン（自分の投稿のみ） */}
-              {isOwner && signEvent && (
+                              <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                                    <path d="M320-240 80-480l240-240 57 57-184 184 183 183-56 56Zm320 0-57-57 184-184-183-183 56-56 240 240-240 240Z"/>
+                                  </svg>
+                                )}
+                                <span>JSONを確認</span>
+                              </button>
+                              
+                              {/* タグ編集ボタン（自分の投稿のみ） */}
+                              {isOwner && signEvent && (
+                                <button
+                                  className={styles.menuItem}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openTagEditor();
+                                  }}
+                                >
+                                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                                    <path d="M840-480 666-234q-11 16-28.5 25t-37.5 9H200q-33 0-56.5-23.5T120-280v-400q0-33 23.5-56.5T200-760h400q20 0 37.5 9t28.5 25l174 246Zm-98 0L600-680H200v400h400l142-200Zm-542 0v200-400 200Z"/>
+                                  </svg>
+                                  <span>タグを編集</span>
+                                </button>
+                              )}
+                              
+                              {/* 削除ボタン（自分の投稿のみ） */}
+                              {isOwner && signEvent && (
                 <button
                   className={`${styles.menuItem} ${styles.deleteMenuItem}`}
                   onClick={(e) => {
@@ -689,6 +754,25 @@ export const CardFlip = memo(function CardFlip({
           </div>
         )}
         </div>
+        
+        {/* タグ表示 */}
+        {currentTags.length > 0 && (
+          <div className={styles.cardTags}>
+            <TagDisplay
+              tags={currentTags}
+              size="medium"
+              followedTags={followedTags}
+              showFollowButton={!!onFollowTag && !!onUnfollowTag}
+              onFollowToggle={(tag, isFollowed) => {
+                if (isFollowed) {
+                  onUnfollowTag?.(tag);
+                } else {
+                  onFollowTag?.(tag);
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* ツリーナビゲーション（すべての祖先と子孫） */}
@@ -926,6 +1010,8 @@ export const CardFlip = memo(function CardFlip({
         </div>
       )}
 
+      {/* タグ編集モーダルはcreatePortalで別途レンダリング */}
+
       {/* 削除確認モーダル */}
       {showDeleteConfirm && (
         <div className={styles.deleteConfirmModal} onClick={(e) => e.stopPropagation()}>
@@ -971,7 +1057,56 @@ export const CardFlip = memo(function CardFlip({
     </div>
   );
 
-  return usePortal ? createPortal(cardContent, document.body) : cardContent;
+  // タグ編集モーダル（CardFlipのイベントハンドリングから完全に分離）
+  const tagEditorModal = showTagEditor && createPortal(
+    <div 
+      className={styles.tagEditorModal} 
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className={styles.tagEditorContent}>
+        <h3>🏷️ タグを編集</h3>
+        <TagInput
+          selectedTags={editingTags}
+          onChange={setEditingTags}
+          disabled={isSavingTags}
+          placeholder={t('tags.placeholder', 'タグを追加...')}
+        />
+        <div className={styles.tagEditorButtons}>
+          <button
+            type="button"
+            className={styles.cancelButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTagEditor(false);
+            }}
+            disabled={isSavingTags}
+          >
+            キャンセル
+          </button>
+          <button
+            type="button"
+            className={styles.saveButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSaveTags();
+            }}
+            disabled={isSavingTags}
+          >
+            {isSavingTags ? <Spinner size="sm" /> : '保存'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+
+  return (
+    <>
+      {usePortal ? createPortal(cardContent, document.body) : cardContent}
+      {tagEditorModal}
+    </>
+  );
 }, (prevProps, nextProps) => {
   // card.idが同じなら再レンダリングしない
   return prevProps.card.id === nextProps.card.id &&

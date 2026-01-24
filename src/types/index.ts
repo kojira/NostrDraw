@@ -18,12 +18,12 @@ export interface NostrDrawPost {
   message: string;
   layoutId: LayoutType;
   createdAt: number;
-  year: number;
   allowExtend?: boolean; // 描き足し許可
   parentEventId?: string | null; // 描き足し元のイベントID（直接の親）
   parentPubkey?: string | null; // 描き足し元の投稿者
   rootEventId?: string | null; // スレッドのルートイベントID（最初の親）
   isDiff?: boolean; // 差分保存されているかどうか（trueの場合は親SVGとの合成が必要）
+  tags?: string[]; // カテゴリタグ（tタグの値）
 }
 
 export type LayoutType = 'vertical' | 'horizontal' | 'fullscreen' | 'classic';
@@ -64,6 +64,12 @@ export const DEFAULT_RELAYS: RelayConfig[] = [
 // 30000-39999はAddressable Events (NIP-33)
 export const NOSTRDRAW_KIND = 31898;
 
+// タグフォローリスト用kind（NIP-33形式）
+export const TAG_FOLLOW_KIND = 30899;
+
+// タグフォローリストのdタグ値
+export const TAG_FOLLOW_D_TAG = 'nostrdraw-tag-follows';
+
 // アプリ識別タグ（フィルタリング用）
 export const NOSTRDRAW_CLIENT_TAG = 'nostrdraw';
 
@@ -85,5 +91,47 @@ export interface AuthState {
 export interface ImageUploadConfig {
   type: 'nostr.build' | 'custom';
   customUrl?: string;
+}
+
+// カテゴリタグ関連
+export const PRESET_TAGS_JA = [
+  '風景', '人物', 'キャラクター', '動物',
+  '食べ物', '乗り物', '建物', '自然',
+  'ファンタジー', 'SF', 'ホラー', 'かわいい',
+  'ドット絵', 'イラスト', '模様', 'ロゴ',
+  '季節', '記念日', 'ゲーム', 'アニメ'
+] as const;
+
+export const PRESET_TAGS_EN = [
+  'landscape', 'portrait', 'character', 'animal',
+  'food', 'vehicle', 'building', 'nature',
+  'fantasy', 'sci-fi', 'horror', 'cute',
+  'pixel-art', 'illustration', 'pattern', 'logo',
+  'seasonal', 'anniversary', 'game', 'anime'
+] as const;
+
+// デフォルト（互換性のため）
+export const PRESET_TAGS = PRESET_TAGS_JA;
+
+export type PresetTagJa = typeof PRESET_TAGS_JA[number];
+export type PresetTagEn = typeof PRESET_TAGS_EN[number];
+export type PresetTag = PresetTagJa | PresetTagEn;
+
+// 言語に応じたプリセットタグを取得
+export function getPresetTags(language: string): readonly string[] {
+  return language === 'en' ? PRESET_TAGS_EN : PRESET_TAGS_JA;
+}
+
+// タグの統計情報
+export interface TagStats {
+  tag: string;
+  count: number;
+}
+
+// タグフォロー状態
+export interface TagFollowState {
+  followedTags: string[];
+  isLoading: boolean;
+  error: string | null;
 }
 

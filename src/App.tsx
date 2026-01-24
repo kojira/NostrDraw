@@ -24,6 +24,9 @@ import { HelpPage } from './components/Help';
 import { WelcomeModal, useWelcomeModal } from './components/Onboarding';
 import { useRouter } from './hooks/useRouter';
 import { useNostr } from './hooks/useNostr';
+import { useTagFollow } from './hooks/useTagFollow';
+import { useTagTimeline } from './hooks/useTagTimeline';
+import { usePopularTags } from './hooks/usePopularTags';
 import './App.css';
 
 // テーマをローカルストレージに保存するキー
@@ -113,6 +116,42 @@ function App() {
     loadMore: loadMoreFollowCards,
   } = useFollowCards(followeePubkeys, authState.pubkey);
 
+  // タグフォロー機能
+  const {
+    followedTags,
+    isLoading: isLoadingTagFollow,
+    followTagAction,
+    unfollowTagAction,
+    refresh: refreshTagFollow,
+  } = useTagFollow({
+    pubkey: authState.pubkey || undefined,
+    signEvent: (authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined,
+  });
+
+  // タグタイムライン
+  const {
+    cards: tagCards,
+    isLoading: tagCardsLoading,
+    hasMore: tagCardsHasMore,
+    error: tagCardsError,
+    refresh: refreshTagCards,
+    loadMore: loadMoreTagCards,
+  } = useTagTimeline({
+    tags: followedTags,
+    enabled: authState.isLoggedIn && followedTags.length > 0,
+  });
+
+  // 人気タグ
+  const {
+    tags: popularTags,
+    isLoading: isLoadingPopularTags,
+    refresh: refreshPopularTags,
+  } = usePopularTags({
+    days: 7,
+    limit: 20,
+    enabled: authState.isLoggedIn,
+  });
+
   const {
     state: editorState,
     setSvg,
@@ -126,6 +165,7 @@ function App() {
   const [allowExtend, setAllowExtend] = useState(true); // 描き足しを許可
   const [postToTimeline, setPostToTimeline] = useState(true); // kind 1にも投稿
   const [extendingCard, setExtendingCard] = useState<NostrDrawPost | null>(null); // 描き足し元のカード
+  const [categoryTags, setCategoryTags] = useState<string[]>([]); // カテゴリタグ
   
   // カード詳細表示（タイムラインクリック、URLパラメータ共通）
   const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
@@ -301,15 +341,19 @@ function App() {
                     onAllowExtendChange={setAllowExtend}
                     postToTimeline={postToTimeline}
                     onPostToTimelineChange={setPostToTimeline}
+                    categoryTags={categoryTags}
+                    onCategoryTagsChange={setCategoryTags}
                     isPosting={isSending}
                     postSuccess={!!lastSentEventId}
                     onNewPost={() => {
                       handleCloseSendSuccess();
                       setExtendingCard(null); // 描き足し元をクリア
+                      setCategoryTags([]); // カテゴリタグをクリア
                     }}
                     onGoHome={() => {
                       handleCloseSendSuccess();
                       setExtendingCard(null); // 描き足し元をクリア
+                      setCategoryTags([]); // カテゴリタグをクリア
                       goHome();
                     }}
                     onPost={async (data) => {
@@ -326,7 +370,6 @@ function App() {
                           canvasSize: data.canvasSize,
                           templateId: data.templateId,
                           message: data.message,
-                          year: new Date().getFullYear() + 1,
                           layoutId: 'vertical',
                           recipientPubkey: null,
                           allowExtend,
@@ -338,6 +381,7 @@ function App() {
                           // 2. 親にrootEventIdがなく、親自身がルートの場合、親のidがルート
                           rootEventId: extendingCard?.rootEventId || extendingCard?.id || null,
                           isExtend: data.isExtend, // 描き足しかどうか
+                          categoryTags: data.categoryTags, // カテゴリタグ
                           // 画像アップロード失敗時の確認コールバック
                           onImageUploadFailed: async (error) => {
                             return window.confirm(
@@ -755,6 +799,16 @@ function App() {
               setSelectedCard(null);
             }}
             onNavigateToCard={setSelectedCard}
+            onCardUpdated={(_oldId, newId, updatedTags) => {
+              // 選択中のカードのタグを更新
+              setSelectedCard(prev => prev ? { ...prev, id: newId, tags: updatedTags } : null);
+              // タイムラインをリフレッシュして最新のデータを取得
+              refreshRecent();
+              refreshFollowCards();
+            }}
+            followedTags={followedTags}
+            onFollowTag={followTagAction}
+            onUnfollowTag={unfollowTagAction}
           />
         ) : (
           <div className="cardLoadingOverlay">
@@ -770,18 +824,36 @@ function App() {
           <Timeline
             followCards={followCards}
             globalCards={recentCards}
+            tagCards={tagCards}
             isLoadingFollow={followCardsLoading}
             isLoadingGlobal={recentLoading}
+            isLoadingTags={tagCardsLoading || isLoadingTagFollow}
             isLoadingMoreFollow={followCardsLoadingMore}
             isLoadingMoreGlobal={recentLoadingMore}
+            isLoadingMoreTags={false}
             hasMoreFollow={followCardsHasMore}
             hasMoreGlobal={recentHasMore}
+            hasMoreTags={tagCardsHasMore}
             errorFollow={followCardsError}
             errorGlobal={recentError}
+            errorTags={tagCardsError}
             onRefreshFollow={refreshFollowCards}
             onRefreshGlobal={refreshRecent}
+            onRefreshTags={() => { refreshTagFollow(); refreshTagCards(); refreshPopularTags(); }}
             onLoadMoreFollow={loadMoreFollowCards}
             onLoadMoreGlobal={loadMoreRecent}
+            onLoadMoreTags={loadMoreTagCards}
+            followedTags={followedTags}
+            onFollowTag={followTagAction}
+            onUnfollowTag={unfollowTagAction}
+            popularTags={popularTags}
+            isLoadingPopularTags={isLoadingPopularTags}
+            onTagClick={(tag) => {
+              // タグをクリック -> タグをフォローしてタグタブに切り替え
+              if (!followedTags.includes(tag)) {
+                followTagAction(tag);
+              }
+            }}
             userPubkey={authState.pubkey}
             signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
             onUserClick={goToUser}

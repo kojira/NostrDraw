@@ -1,0 +1,157 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inheritToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+}
+
+.inheritToggle input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.inheritedTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 0.5rem;
+}
+
+.inheritedLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666);
+  margin-right: 0.25rem;
+}
+
+.inheritedTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  background: var(--primary-light, #e3f2fd);
+  color: var(--primary, #1976d2);
+  border-radius: 1rem;
+  font-size: 0.75rem;
+}
+
+.inputArea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 0.5rem;
+  background: var(--bg-primary, #fff);
+  min-height: 2.5rem;
+}
+
+.inputArea:focus-within {
+  border-color: var(--primary, #1976d2);
+  box-shadow: 0 0 0 2px var(--primary-light, rgba(25, 118, 210, 0.2));
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  background: var(--primary, #1976d2);
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.removeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.removeButton:hover {
+  opacity: 1;
+}
+
+.removeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.input {
+  flex: 1;
+  min-width: 100px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  padding: 0.25rem;
+}
+
+.input::placeholder {
+  color: var(--text-secondary, #999);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+.presets {
+  padding: 0.5rem;
+  background: var(--bg-secondary, #f9f9f9);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 0.5rem;
+}
+
+.presetsLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666);
+  margin-bottom: 0.375rem;
+}
+
+.presetTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.presetTag {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 0.25rem;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presetTag:hover {
+  border-color: var(--primary, #1976d2);
+  background: var(--primary-light, #e3f2fd);
+  color: var(--primary, #1976d2);
+}
+
+.presetTag:active {
+  transform: scale(0.95);
+}

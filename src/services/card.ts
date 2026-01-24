@@ -276,6 +276,7 @@ export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
     let parentEventId: string | null = null;
     let parentPubkey: string | null = null;
     let rootEventId: string | null = null;
+    const categoryTags: string[] = [];
     
     for (const tag of event.tags) {
       if (tag[0] === 'p') {
@@ -289,13 +290,13 @@ export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
       } else if (tag[0] === 'parent_p') {
         // 描き足し元の投稿者
         parentPubkey = tag[1];
+      } else if (tag[0] === 't' && tag[1]) {
+        // カテゴリタグ
+        categoryTags.push(tag[1]);
       } else if (tag[0] && tag[1]) {
         tags.set(tag[0], tag[1]);
       }
     }
-
-    const dTag = tags.get('d') || '';
-    const year = parseInt(dTag.split('-')[0]) || new Date().getFullYear();
 
     // contentからSVG、メッセージ、レイアウト、描き足し許可を取得
     let message = '';
@@ -351,12 +352,12 @@ export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
       message,
       layoutId,
       createdAt: event.created_at,
-      year,
       allowExtend,
       parentEventId,
       parentPubkey,
       rootEventId,
       isDiff,
+      tags: categoryTags.length > 0 ? categoryTags : undefined,
     };
   } catch {
     return null;
@@ -693,6 +694,125 @@ export function subscribeToCardsByAuthors(
   );
 }
 
+// ストリーミングでタグ別カードを取得（タグタイムライン用）
+export function subscribeToCardsByTags(
+  tags: string[],
+  onCard: (card: NostrDrawPost) => void,
+  onEose?: () => void,
+  limit: number = 50
+): () => void {
+  if (tags.length === 0) {
+    // 空の場合は即座にEOSEを呼んで終了
+    onEose?.();
+    return () => {};
+  }
+  
+  // キャッシュ済みのイベントIDを追跡（重複防止）
+  const seenIds = new Set<string>();
+  
+  // タグごとにキャッシュからイベントを取得
+  for (const tag of tags) {
+    const cachedEvents = getCachedEventsByFilter({
+      kinds: [NOSTRDRAW_KIND],
+      '#t': [tag],
+      limit,
+    });
+    
+    for (const event of cachedEvents) {
+      if (seenIds.has(event.id)) continue;
+      const card = parseNostrDrawPost(event);
+      // 宛先なし（公開）のカードのみ
+      if (card && !card.recipientPubkey) {
+        seenIds.add(card.id);
+        onCard(card);
+      }
+    }
+  }
+  
+  // リレーからのストリーミングを開始（タグごとにサブスクリプション）
+  const unsubscribers: (() => void)[] = [];
+  let completedCount = 0;
+  
+  for (const tag of tags) {
+    const unsubscribe = subscribeToEvents(
+      {
+        kinds: [NOSTRDRAW_KIND],
+        '#t': [tag],
+        limit,
+      },
+      (event) => {
+        // 既にキャッシュから返却済みならスキップ
+        if (seenIds.has(event.id)) return;
+        seenIds.add(event.id);
+        
+        // キャッシュに追加
+        cacheEvent(event);
+        
+        const card = parseNostrDrawPost(event);
+        // 宛先なし（公開）のカードのみ
+        if (card && !card.recipientPubkey) {
+          onCard(card);
+        }
+      },
+      () => {
+        completedCount++;
+        // 全てのタグのサブスクリプションが完了したらonEoseを呼ぶ
+        if (completedCount >= tags.length) {
+          onEose?.();
+        }
+      }
+    );
+    unsubscribers.push(unsubscribe);
+  }
+  
+  return () => {
+    for (const unsubscribe of unsubscribers) {
+      unsubscribe();
+    }
+  };
+}
+
+// 無限スクロール用：古いカードを追加取得（タグタイムライン用）
+export async function fetchMoreCardsByTags(
+  tags: string[],
+  until: number,
+  limit: number = 20,
+  excludeIds: Set<string> = new Set()
+): Promise<NostrDrawPost[]> {
+  if (tags.length === 0) return [];
+
+  const allCards: NostrDrawPost[] = [];
+  const seenIds = new Set<string>();
+
+  // タグごとにイベントを取得
+  for (const tag of tags) {
+    const events = await fetchEvents({
+      kinds: [NOSTRDRAW_KIND],
+      '#t': [tag],
+      until,
+      limit,
+    });
+
+    // キャッシュに追加
+    cacheEvents(events);
+
+    for (const event of events) {
+      // 既に取得済みならスキップ
+      if (excludeIds.has(event.id) || seenIds.has(event.id)) continue;
+      seenIds.add(event.id);
+      
+      const card = parseNostrDrawPost(event);
+      // 宛先なし（公開）のカードのみ
+      if (card && !card.recipientPubkey) {
+        allCards.push(card);
+      }
+    }
+  }
+
+  // 新しい順にソート
+  return allCards.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 // 無限スクロール用：古いカードを追加取得（公開ギャラリー用）
 export async function fetchMorePublicGalleryCards(
   until: number,
@@ -910,13 +1030,13 @@ export interface SendCardParams {
   templateId?: string | null; // テンプレートID
   message: string;
   layoutId: LayoutType;
-  year?: number;
   allowExtend?: boolean; // 描き足し許可
   parentEventId?: string | null; // 描き足し元のイベントID（直接の親）
   parentPubkey?: string | null; // 描き足し元の投稿者
   rootEventId?: string | null; // スレッドのルートイベントID（最初の親）
   isPublic?: boolean; // kind 1にも投稿するか
   isExtend?: boolean; // 描き足しかどうか
+  categoryTags?: string[]; // カテゴリタグ（NIP-12形式のtタグ）
   onImageUploadFailed?: (error: string) => Promise<boolean>; // 画像アップロード失敗時の確認コールバック（trueで続行）
 }
 
@@ -924,13 +1044,21 @@ export async function sendCard(
   params: SendCardParams,
   signEvent: (event: EventTemplate) => Promise<Event>
 ): Promise<Event> {
-  const year = params.year || new Date().getFullYear();
   const timestamp = Math.floor(Date.now() / 1000);
   
-  // 宛先がある場合はrecipient付きのdTag、ない場合はタイムスタンプベース
+  // 人間が読める日時形式でdTagを生成 (例: public-20260123-153045)
+  const now = new Date();
+  const dateStr = now.getFullYear().toString() +
+    (now.getMonth() + 1).toString().padStart(2, '0') +
+    now.getDate().toString().padStart(2, '0');
+  const timeStr = now.getHours().toString().padStart(2, '0') +
+    now.getMinutes().toString().padStart(2, '0') +
+    now.getSeconds().toString().padStart(2, '0');
+  
+  // 宛先がある場合はrecipient付きのdTag、ない場合は日時ベース
   const dTag = params.recipientPubkey 
-    ? `${year}-${params.recipientPubkey}` 
-    : `${year}-public-${timestamp}`;
+    ? `to-${params.recipientPubkey.slice(0, 8)}-${dateStr}` 
+    : `public-${dateStr}-${timeStr}`;
 
   // タグを構築（検索・フィルタリングに必要な情報のみ）
   const tags: string[][] = [
@@ -960,6 +1088,13 @@ export async function sendCard(
     tags.push(['parent_p', params.parentPubkey]);
   }
 
+  // カテゴリタグ（NIP-12形式）
+  if (params.categoryTags && params.categoryTags.length > 0) {
+    for (const tag of params.categoryTags) {
+      tags.push(['t', tag]);
+    }
+  }
+
   // 描き足しの場合は差分SVGを使用、新規の場合は完全SVGを使用
   const svgToSave = params.isExtend && params.diffSvg ? params.diffSvg : params.svg;
   
@@ -986,7 +1121,6 @@ export async function sendCard(
         : { svg: svgToSave }
       ),
       layoutId: params.layoutId,
-      year,
       version: NOSTRDRAW_VERSION,
       isPublic: !params.recipientPubkey, // 宛先なしの場合はpublicフラグ
       allowExtend: params.allowExtend,
@@ -1058,10 +1192,22 @@ export async function sendCard(
       kind1Tags.push(['p', params.parentPubkey]);
     }
     
+    // カテゴリタグ（NIP-12形式）- 他のNostrクライアントでハッシュタグとして表示される
+    if (params.categoryTags && params.categoryTags.length > 0) {
+      for (const tag of params.categoryTags) {
+        kind1Tags.push(['t', tag]);
+      }
+    }
+    
+    // ハッシュタグ文字列を生成
+    const hashtagString = params.categoryTags && params.categoryTags.length > 0
+      ? '\n\n' + params.categoryTags.map(tag => `#${tag}`).join(' ')
+      : '';
+    
     // コンテンツを構築（画像URLを含める）
     let kind1Content = params.message 
-      ? `${params.message}\n\n${viewUrl}`
-      : `NostrDrawで絵を投稿しました！\n\n${viewUrl}`;
+      ? `${params.message}${hashtagString}\n\n${viewUrl}`
+      : `NostrDrawで絵を投稿しました！${hashtagString}\n\n${viewUrl}`;
     
     // 画像URLをコンテンツに追加（クライアントで表示されやすい）
     if (imageUrl) {
@@ -1088,6 +1234,62 @@ export function signEventWithPrivateKey(
   privateKey: Uint8Array
 ): Event {
   return finalizeEvent(eventTemplate, privateKey);
+}
+
+// 投稿のタグを更新（既存イベントを再発行）
+export async function updateCardTags(
+  eventId: string,
+  newTags: string[],
+  signEvent: (event: EventTemplate) => Promise<Event>
+): Promise<{ success: boolean; error?: string; newEventId?: string }> {
+  try {
+    // 元のイベントを取得
+    const events = await fetchEvents({
+      ids: [eventId],
+      kinds: [NOSTRDRAW_KIND],
+    });
+    
+    if (events.length === 0) {
+      return { success: false, error: 'イベントが見つかりません' };
+    }
+    
+    const originalEvent = events[0];
+    const timestamp = Math.floor(Date.now() / 1000);
+    
+    // 元のタグを複製し、tタグを削除
+    const updatedTags: string[][] = originalEvent.tags.filter(
+      tag => tag[0] !== 't'
+    );
+    
+    // 新しいtタグを追加
+    for (const tag of newTags) {
+      updatedTags.push(['t', tag]);
+    }
+    
+    // 新しいイベントを作成（contentは同じ）
+    const eventTemplate: EventTemplate = {
+      kind: NOSTRDRAW_KIND,
+      created_at: timestamp,
+      tags: updatedTags,
+      content: originalEvent.content,
+    };
+    
+    const signedEvent = await signEvent(eventTemplate);
+    await publishEvent(signedEvent);
+    
+    // NIP-33 Addressable Event: 古いイベントをキャッシュから削除し、新しいイベントを追加
+    const { removeEventFromCache, cacheEvent: addToCache } = await import('./eventCache');
+    removeEventFromCache(eventId);
+    addToCache(signedEvent);
+    
+    return { success: true, newEventId: signedEvent.id };
+  } catch (error) {
+    console.error('[updateCardTags] Failed to update tags:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラー',
+    };
+  }
 }
 
 // 投稿を削除（NIP-09 Event Deletion）

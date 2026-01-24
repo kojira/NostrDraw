@@ -1,8 +1,9 @@
 // お絵かきエディタコンポーネント
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DrawingCanvas } from './DrawingCanvas';
+import { TagInput } from '../common/TagInput';
 import { fetchUserEmojiLists, fetchPopularEmojiPacks, fetchBookmarkedEmojiPacks, type CustomEmoji } from '../../services/emoji';
 import { ETO_IMAGES } from '../../data/etoGallery';
 import type { NostrDrawPost } from '../../types';
@@ -21,6 +22,8 @@ interface CardEditorProps {
   onAllowExtendChange?: (allow: boolean) => void;
   postToTimeline?: boolean;
   onPostToTimelineChange?: (post: boolean) => void;
+  categoryTags?: string[]; // カテゴリタグ
+  onCategoryTagsChange?: (tags: string[]) => void;
   onPost?: (data: PostData) => Promise<void>; // 投稿処理
   isPosting?: boolean; // 投稿中フラグ
   postSuccess?: boolean; // 投稿成功フラグ
@@ -39,6 +42,8 @@ export function CardEditor({
   onAllowExtendChange,
   postToTimeline = true,
   onPostToTimelineChange,
+  categoryTags = [],
+  onCategoryTagsChange,
   onPost,
   isPosting = false,
   postSuccess = false,
@@ -48,6 +53,10 @@ export function CardEditor({
   const { t } = useTranslation();
   const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
   const [isLoadingEmojis, setIsLoadingEmojis] = useState(false);
+  
+  // 描き足し時の親タグ継承
+  const inheritedTags = extendingCard?.tags || [];
+  const [useInheritedTags, setUseInheritedTags] = useState(inheritedTags.length > 0);
 
   // カスタム絵文字を取得
   useEffect(() => {
@@ -104,6 +113,21 @@ export function CardEditor({
     onSvgChange(svgData);
     onMessageChange(embeddedMessage);
   };
+  
+  // タグを含めた投稿処理
+  const handlePost = useCallback(async (data: PostData) => {
+    if (!onPost) return;
+    
+    // タグをマージ（継承タグ + 選択タグ）
+    const allTags = useInheritedTags
+      ? [...inheritedTags, ...categoryTags.filter(t => !inheritedTags.includes(t))]
+      : categoryTags;
+    
+    await onPost({
+      ...data,
+      categoryTags: allTags.length > 0 ? allTags : undefined,
+    });
+  }, [onPost, categoryTags, inheritedTags, useInheritedTags]);
 
   return (
     <div className={styles.cardEditor}>
@@ -113,7 +137,7 @@ export function CardEditor({
           width={800}
           height={600}
           onSave={handleDrawingSave}
-          onPost={onPost}
+          onPost={handlePost}
           isPosting={isPosting}
           postSuccess={postSuccess}
           onNewPost={onNewPost}
@@ -147,6 +171,19 @@ export function CardEditor({
           />
           <span>{t('send.postToTimeline')}</span>
         </label>
+        
+        {/* カテゴリタグ */}
+        <div className={styles.tagSection}>
+          <h4 className={styles.tagSectionTitle}>🏷️ {t('tags.categoryTags', 'カテゴリタグ')}</h4>
+          <TagInput
+            selectedTags={categoryTags}
+            onChange={onCategoryTagsChange || (() => {})}
+            inheritedTags={inheritedTags}
+            useInheritedTags={useInheritedTags}
+            onInheritedTagsToggle={inheritedTags.length > 0 ? setUseInheritedTags : undefined}
+            disabled={isPosting}
+          />
+        </div>
       </div>
     </div>
   );

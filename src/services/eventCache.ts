@@ -339,6 +339,22 @@ export function getCachedEventsByFilter(filter: Filter): Event[] {
       : tagMatches;
   }
   
+  // #tタグフィルタ（カテゴリタグ）
+  if (filter['#t'] && filter['#t'].length > 0) {
+    const tagMatches = new Set<string>();
+    for (const value of filter['#t']) {
+      const ids = tagIndex.get(`t:${value}`);
+      if (ids) {
+        for (const id of ids) {
+          tagMatches.add(id);
+        }
+      }
+    }
+    candidateIds = candidateIds
+      ? new Set([...candidateIds].filter(id => tagMatches.has(id)))
+      : tagMatches;
+  }
+  
   // 候補がない場合は全イベントを対象
   if (candidateIds === null) {
     candidateIds = new Set(eventCache.keys());

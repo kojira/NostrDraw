@@ -566,3 +566,121 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
+
+/* タグセクション（タグタブ上部） */
+.tagsSection {
+  padding: var(--space-4);
+  background: var(--color-bg-raised);
+  border-bottom: var(--border-thin) solid var(--color-border);
+}
+
+.tagSectionTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.popularTags {
+  margin-bottom: var(--space-4);
+}
+
+.followedTagsSection {
+  padding-top: var(--space-3);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tagItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background: rgba(100, 100, 120, 0.15);
+  border: 1px solid rgba(150, 150, 170, 0.4);
+  border-radius: 1rem;
+  color: var(--text-primary, #333);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tagItem::before {
+  content: '#';
+  opacity: 0.6;
+  font-size: 0.75rem;
+}
+
+.tagItem:hover {
+  background: var(--primary-light, #e3f2fd);
+  border-color: var(--primary, #1976d2);
+  color: var(--primary, #1976d2);
+}
+
+.tagItem.followed {
+  background: var(--primary, #1976d2);
+  border-color: var(--primary, #1976d2);
+  color: #fff;
+}
+
+.tagItem.followed::before {
+  opacity: 0.8;
+}
+
+.tagCount {
+  font-size: 0.6875rem;
+  color: inherit;
+  opacity: 0.7;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.5rem;
+  margin-left: 0.125rem;
+}
+
+.tagItem.followed .tagCount {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tagFollowBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  opacity: 0.8;
+  margin-left: 0.25rem;
+}
+
+.tagFollowBtn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.tagItem.followed .tagFollowBtn {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tagItem.followed .tagFollowBtn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.noTags {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+
+/* カード内のタグ表示 */
+.cardTags {
+  padding-top: var(--space-1);
+}

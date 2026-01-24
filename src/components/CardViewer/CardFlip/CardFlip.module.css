@@ -1325,6 +1325,68 @@
   fill: #ff6b6b;
 }
 
+/* カードタグ表示 */
+.cardTags {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* タグ編集モーダル */
+.tagEditorModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20, 20, 30, 0.98);
+  border: 2px solid rgba(100, 150, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100001;
+  padding: 24px;
+  min-width: 360px;
+  max-width: 90%;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.tagEditorContent h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.125rem;
+  color: #fff;
+}
+
+.tagEditorButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.saveButton {
+  padding: 8px 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  transform: translateY(-1px);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* 削除確認モーダル */
 .deleteConfirmModal {
   position: fixed;
@@ -1693,6 +1755,21 @@
 
 :global(.light-theme) .deleteMenuItem svg {
   fill: #dc2626;
+}
+
+:global(.light-theme) .cardTags {
+  background: rgba(0, 0, 0, 0.02);
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+:global(.light-theme) .tagEditorModal {
+  background: rgba(255, 255, 255, 0.98);
+  border: 2px solid rgba(100, 100, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+:global(.light-theme) .tagEditorContent h3 {
+  color: #1a1a2e;
 }
 
 :global(.light-theme) .deleteConfirmModal {
