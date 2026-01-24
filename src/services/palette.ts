@@ -84,6 +84,345 @@ export const PRESET_PALETTES: ColorPalette[] = [
     updatedAt: 0,
     isDefault: false,
   },
+  {
+    id: 'preset-pastel',
+    name: 'パステルカラー',
+    colors: [
+      // ピンク系
+      '#FFB5E8', '#FF9CEE', '#FFCCF9', '#FCC2FF',
+      // パープル/ラベンダー系
+      '#DCD3FF', '#B28DFF', '#C5A3FF', '#E7C6FF',
+      // ブルー系
+      '#AFF8DB', '#85E3FF', '#ACE7FF', '#6EB5FF',
+      // グリーン/ミント系
+      '#BFFCC6', '#DBFFD6', '#C4FAF8', '#A8E6CF',
+      // イエロー/オレンジ系
+      '#FFF5BA', '#FFABAB', '#FFDAC1', '#FCF7BB',
+      // その他パステル
+      '#F6A6FF', '#97A2FF', '#A79AFF', '#FFFFD1',
+      // ニュートラル
+      '#FFFFFF', '#F0F0F0', '#E8E8E8', '#D0D0D0',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-beach',
+    name: 'ビーチサイド',
+    colors: [
+      // 海・水系
+      '#0077B6', '#00B4D8', '#90E0EF', '#CAF0F8',
+      '#48CAE4', '#023E8A', '#0096C7', '#ADE8F4',
+      // 砂浜・サンド系
+      '#F4A261', '#E9C46A', '#FFDA9E', '#FFF1C9',
+      '#DEB887', '#F5DEB3', '#FAEBD7', '#FFE4C4',
+      // サンセット系
+      '#E76F51', '#F4845F', '#F9A875', '#FFCB77',
+      // トロピカル系
+      '#2A9D8F', '#40B89A', '#52B788', '#74C69D',
+      // アクセント
+      '#FF6B6B', '#FF8FA3', '#FFFFFF', '#264653',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-winter',
+    name: '冬景色',
+    colors: [
+      // 雪・氷系
+      '#FFFFFF', '#F8F9FA', '#E9ECEF', '#DEE2E6',
+      '#CED4DA', '#ADB5BD', '#6C757D', '#495057',
+      // 冬空・ブルー系
+      '#A8DADC', '#7EC8E3', '#457B9D', '#1D3557',
+      '#B8D4E3', '#89CFF0', '#5DADE2', '#3498DB',
+      // 冬の緑（常緑樹）
+      '#1B4332', '#2D6A4F', '#40916C', '#52B788',
+      // 冬のアクセント（ベリー、赤い実）
+      '#9B2335', '#BE3144', '#DC3545', '#E85D75',
+      // ゴールド（クリスマス、暖かみ）
+      '#B8860B', '#DAA520', '#FFD700', '#F0E68C',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-parfait',
+    name: 'パフェ',
+    colors: [
+      // ホイップクリーム・バニラ
+      '#FFFEF0', '#FFF8E7', '#FFEFD5', '#FFE4B5',
+      // いちご・ベリー系
+      '#FF6B6B', '#E84A5F', '#FF4D6D', '#C9184A',
+      '#FF8FA3', '#FFB3C1', '#FFCCD5', '#FFC0CB',
+      // チョコレート系
+      '#5D4037', '#6D4C41', '#795548', '#8D6E63',
+      '#3E2723', '#4E342E', '#A1887F', '#D7CCC8',
+      // フルーツ（マンゴー、ピーチ、キウイ）
+      '#FFB347', '#FFCC5C', '#FFD93D', '#96CEB4',
+      '#88D8B0', '#FFDAB9', '#FFCBA4', '#FF9A8B',
+      // ブルーベリー・グレープ
+      '#4A4E69', '#7B68EE', '#9370DB', '#6B5B95',
+      // ミント・抹茶
+      '#98FB98', '#90EE90', '#8FBC8F', '#7CB342',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-rpg',
+    name: 'RPG',
+    colors: [
+      // 炎属性（ファイア）
+      '#FF4500', '#FF6347', '#FF8C00', '#FFA500',
+      '#DC143C', '#B22222', '#8B0000', '#FFD700',
+      // 氷属性（アイス）
+      '#00BFFF', '#87CEEB', '#ADD8E6', '#E0FFFF',
+      '#4169E1', '#1E90FF', '#00CED1', '#AFEEEE',
+      // 雷属性（サンダー）
+      '#FFD700', '#FFFF00', '#F0E68C', '#BDB76B',
+      // 毒・闇属性
+      '#9400D3', '#8B008B', '#800080', '#4B0082',
+      '#32CD32', '#228B22', '#006400', '#00FF00',
+      // 回復・聖属性
+      '#FFB6C1', '#FFC0CB', '#98FB98', '#90EE90',
+      '#FFFACD', '#FAFAD2', '#F5F5DC', '#FFFFFF',
+      // メタル・鎧
+      '#708090', '#778899', '#B0C4DE', '#C0C0C0',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-portrait',
+    name: '人物・肖像',
+    colors: [
+      // 肌色（ライト）
+      '#FFECD2', '#FFE4C4', '#FFDAB9', '#FFD5B8',
+      '#F5DEB3', '#FFC9A8', '#E8BEAC', '#DEB887',
+      // 肌色（ミディアム〜ダーク）
+      '#D2A679', '#C19A6B', '#A67B5B', '#8D6E63',
+      '#6B4423', '#5D4037', '#4E342E', '#3E2723',
+      // 頬・唇（ピンク〜レッド）
+      '#FFB6C1', '#FF9999', '#E8909C', '#DC6E6E',
+      '#CD5C5C', '#C05050', '#A52A2A', '#8B0000',
+      // 髪色（ブロンド〜ブラウン〜ブラック）
+      '#FFF8DC', '#F5DEB3', '#D2B48C', '#A0522D',
+      '#8B4513', '#654321', '#3D2314', '#1C1C1C',
+      // 目の色
+      '#4169E1', '#2E8B57', '#8B4513', '#556B2F',
+      // ハイライト・影
+      '#FFFFFF', '#F0F0F0', '#808080', '#000000',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-cyberpunk',
+    name: 'サイバーパンク',
+    colors: [
+      // ネオンピンク・マゼンタ
+      '#FF00FF', '#FF1493', '#FF69B4', '#FF007F',
+      '#E500A4', '#BC13FE', '#FF10F0', '#FF6EC7',
+      // ネオンブルー・シアン
+      '#00FFFF', '#00BFFF', '#00CED1', '#40E0D0',
+      '#00F5FF', '#08F7FE', '#01CDFE', '#0FF0FC',
+      // ネオングリーン
+      '#00FF00', '#39FF14', '#7FFF00', '#ADFF2F',
+      // パープル・バイオレット
+      '#9400D3', '#8A2BE2', '#9932CC', '#BA55D3',
+      // ダーク背景
+      '#0D0221', '#0F0A1E', '#1A1A2E', '#16213E',
+      '#000000', '#0F0F0F', '#1C1C1C', '#2D2D2D',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-japanese',
+    name: '和風・伝統色',
+    colors: [
+      // 赤系（朱・紅・茜）
+      '#E60033', '#C53D43', '#B7282E', '#A22041',
+      '#E83929', '#CB4042', '#9E3D3F', '#8E354A',
+      // 青系（藍・紺・瑠璃）
+      '#165E83', '#264348', '#223A70', '#0D5661',
+      '#007BBB', '#2E4B71', '#192F60', '#003F8E',
+      // 緑系（若草・萌黄・松葉）
+      '#98D98E', '#A8D8B9', '#6B7B4C', '#3B7960',
+      '#00896C', '#69B076', '#5DAC81', '#028760',
+      // 黄・金系
+      '#E6B422', '#EDAE00', '#C89932', '#FFD700',
+      // 紫系
+      '#884898', '#7058A3', '#674598', '#5A4498',
+      // 白・黒・灰
+      '#FFFFFB', '#E8E8E8', '#727171', '#2B2B2B',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-halloween',
+    name: 'ハロウィン',
+    colors: [
+      // オレンジ（かぼちゃ）
+      '#FF6600', '#FF8C00', '#FFA500', '#FF7518',
+      '#E65C00', '#CC5500', '#FF9933', '#FFB347',
+      // 黒（コウモリ・夜）
+      '#000000', '#1A1A1A', '#2D2D2D', '#1C1C1C',
+      '#0D0D0D', '#262626', '#333333', '#404040',
+      // 紫（魔女・魔法）
+      '#663399', '#800080', '#9932CC', '#8B008B',
+      '#6A0DAD', '#7B68EE', '#9370DB', '#BA55D3',
+      // 緑（毒・モンスター）
+      '#00FF00', '#32CD32', '#228B22', '#6B8E23',
+      // 血の赤
+      '#8B0000', '#B22222', '#DC143C', '#FF0000',
+      // 骨・ゴースト
+      '#FFFAF0', '#F5F5DC', '#FAF0E6', '#FFFFFF',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-galaxy',
+    name: '宇宙・ギャラクシー',
+    colors: [
+      // 深い宇宙（ダークブルー・パープル）
+      '#0B0B2B', '#1A1A40', '#0D1B2A', '#16213E',
+      '#1B1464', '#240046', '#3C096C', '#10002B',
+      // 星雲（パープル・ピンク）
+      '#7B2CBF', '#9D4EDD', '#C77DFF', '#E0AAFF',
+      '#9B5DE5', '#F15BB5', '#FF99C8', '#E056FD',
+      // 星の光
+      '#FFFFFF', '#FFFACD', '#FFD700', '#FFA500',
+      '#F0E68C', '#FAFAD2', '#FFFAF0', '#F8F8FF',
+      // ブルー星雲
+      '#00B4D8', '#0096C7', '#48CAE4', '#90E0EF',
+      // グリーン星雲
+      '#2DC653', '#57CC99', '#80ED99', '#B7E4C7',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-forest',
+    name: '自然・フォレスト',
+    colors: [
+      // 木の葉（緑のグラデーション）
+      '#228B22', '#2E8B57', '#3CB371', '#90EE90',
+      '#006400', '#008000', '#32CD32', '#98FB98',
+      '#556B2F', '#6B8E23', '#9ACD32', '#7CFC00',
+      // 木の幹・土（ブラウン系）
+      '#8B4513', '#A0522D', '#6B4423', '#D2691E',
+      '#5D4037', '#795548', '#8D6E63', '#A1887F',
+      // 花・アクセント
+      '#FFD700', '#FF6347', '#FF69B4', '#DDA0DD',
+      // 空・水
+      '#87CEEB', '#ADD8E6', '#E0FFFF', '#F0FFFF',
+      // 岩
+      '#808080', '#696969', '#A9A9A9', '#778899',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-retro',
+    name: 'レトロポップ',
+    colors: [
+      // 60s-70s ビビッド
+      '#FF6F61', '#FFD700', '#32CD32', '#00CED1',
+      '#FF1493', '#FF4500', '#8A2BE2', '#00FF7F',
+      // オレンジ・イエロー
+      '#FF8C00', '#FFA07A', '#FFFF00', '#F0E68C',
+      '#FF7F50', '#FFD93D', '#FFEAA7', '#FDCB6E',
+      // ブラウン・アース
+      '#D2691E', '#CD853F', '#DEB887', '#F5DEB3',
+      // ターコイズ・ティール
+      '#40E0D0', '#48D1CC', '#20B2AA', '#008B8B',
+      // レトロピンク・レッド
+      '#FF69B4', '#DB7093', '#C71585', '#DC143C',
+      // クリーム・オフホワイト
+      '#FFFDD0', '#FFF8DC', '#FAEBD7', '#FAF0E6',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-grayscale',
+    name: 'モノクロ',
+    colors: [
+      // 完全なグレースケール（16段階）
+      '#FFFFFF', '#F0F0F0', '#E0E0E0', '#D0D0D0',
+      '#C0C0C0', '#B0B0B0', '#A0A0A0', '#909090',
+      '#808080', '#707070', '#606060', '#505050',
+      '#404040', '#303030', '#202020', '#101010',
+      '#000000', '#0A0A0A', '#141414', '#1E1E1E',
+      '#282828', '#323232', '#3C3C3C', '#464646',
+      // セピア調
+      '#704214', '#8B7355', '#A0826D', '#BC987E',
+      '#D7B899', '#E8D4B8', '#F5EBE0', '#FAF0E6',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-candy',
+    name: 'キャンディポップ',
+    colors: [
+      // ピンク・マゼンタ
+      '#FF69B4', '#FF1493', '#FF85A2', '#FFB6C1',
+      '#FF007F', '#FF3399', '#FF66B2', '#FF99CC',
+      // ブルー・シアン
+      '#00BFFF', '#1E90FF', '#87CEFA', '#ADD8E6',
+      '#00CED1', '#40E0D0', '#7FFFD4', '#AFEEEE',
+      // グリーン・イエロー
+      '#7CFC00', '#00FF7F', '#98FB98', '#90EE90',
+      '#FFFF00', '#FFD700', '#FFA500', '#FFDAB9',
+      // パープル
+      '#EE82EE', '#DA70D6', '#DDA0DD', '#E6E6FA',
+      // ホワイト
+      '#FFFFFF', '#FFFAFA', '#FFF5EE', '#FFFAF0',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
+  {
+    id: 'preset-sunset',
+    name: '夕焼け・サンセット',
+    colors: [
+      // オレンジ・イエロー（太陽）
+      '#FF4500', '#FF6347', '#FF7F50', '#FFA07A',
+      '#FF8C00', '#FFA500', '#FFD700', '#FFFF00',
+      // ピンク・マゼンタ（空）
+      '#FF69B4', '#FF1493', '#DB7093', '#FFB6C1',
+      '#E75480', '#FF6B6B', '#FF8E8E', '#FFB3B3',
+      // パープル・バイオレット（夕暮れ）
+      '#9400D3', '#8B008B', '#800080', '#9932CC',
+      '#663399', '#7B68EE', '#9370DB', '#BA55D3',
+      // ブルー（夜への移行）
+      '#4169E1', '#6495ED', '#87CEEB', '#1E3A5F',
+      // シルエット
+      '#2F2F2F', '#1A1A1A', '#000000', '#0D0D0D',
+    ],
+    createdAt: 0,
+    updatedAt: 0,
+    isDefault: false,
+  },
 ];
 
 // プリセットパレットIDかどうかを判定
