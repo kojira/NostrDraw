@@ -93,10 +93,54 @@ async function embedExternalImages(svgString: string): Promise<string> {
   return result;
 }
 
+// SVGからviewBoxを解析してサイズを取得
+function getSvgDimensions(svgString: string): { width: number; height: number } {
+  // viewBox属性を解析
+  const viewBoxMatch = svgString.match(/viewBox=["']([^"']+)["']/);
+  if (viewBoxMatch) {
+    const parts = viewBoxMatch[1].split(/[\s,]+/).map(Number);
+    if (parts.length >= 4) {
+      const vbWidth = parts[2];
+      const vbHeight = parts[3];
+      if (vbWidth > 0 && vbHeight > 0) {
+        // 最大800pxを基準にアスペクト比を維持
+        const maxSize = 800;
+        if (vbWidth >= vbHeight) {
+          return { width: maxSize, height: Math.round(maxSize * vbHeight / vbWidth) };
+        } else {
+          return { width: Math.round(maxSize * vbWidth / vbHeight), height: maxSize };
+        }
+      }
+    }
+  }
+  
+  // width/height属性を解析
+  const widthMatch = svgString.match(/width=["'](\d+)/);
+  const heightMatch = svgString.match(/height=["'](\d+)/);
+  if (widthMatch && heightMatch) {
+    const w = parseInt(widthMatch[1], 10);
+    const h = parseInt(heightMatch[1], 10);
+    if (w > 0 && h > 0) {
+      const maxSize = 800;
+      if (w >= h) {
+        return { width: maxSize, height: Math.round(maxSize * h / w) };
+      } else {
+        return { width: Math.round(maxSize * w / h), height: maxSize };
+      }
+    }
+  }
+  
+  // デフォルト（正方形）
+  return { width: 800, height: 800 };
+}
+
 // SVG文字列をPNG Blobに変換するヘルパー関数
-async function svgToPngBlob(svgString: string, width: number = 800, height: number = 600): Promise<Blob | null> {
+async function svgToPngBlob(svgString: string): Promise<Blob | null> {
   // まず外部画像をbase64に埋め込み
   const embeddedSvg = await embedExternalImages(svgString);
+  
+  // SVGからアスペクト比を維持したサイズを取得
+  const { width, height } = getSvgDimensions(embeddedSvg);
   
   return new Promise((resolve) => {
     try {
@@ -968,7 +1012,7 @@ export async function sendCard(
     
     try {
       console.log('[sendCard] Converting SVG to PNG for upload...');
-      const pngBlob = await svgToPngBlob(params.svg, 800, 600);
+      const pngBlob = await svgToPngBlob(params.svg);
       if (pngBlob) {
         console.log('[sendCard] Uploading image to NIP-96 server...');
         const uploadResult = await uploadWithNip96(pngBlob, signEvent);

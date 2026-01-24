@@ -1416,18 +1416,29 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
         ? `<rect width="${templateWidth}" height="${templateHeight}" fill="${backgroundColor}"/>`
         : '';
       
+      // ストローク/スタンプ/テキストは800x600座標系なので、スケーリングが必要
+      let scaledLayerElements = layerElements;
+      if (layerElements && (templateWidth !== width || templateHeight !== height)) {
+        const scaleX = templateWidth / width;
+        const scaleY = templateHeight / height;
+        scaledLayerElements = `<g transform="scale(${scaleX}, ${scaleY})">${layerElements}</g>`;
+      }
+      
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
   ${bgRect}
   ${selectedTemplate.svg}
   ${pixelElements}
-  ${layerElements}
+  ${scaledLayerElements}
 </svg>`;
     }
     
     // ストロークがあるかどうかチェック
     const hasStrokes = layers.some(layer => layer.visible && layer.strokes.length > 0);
     const hasStamps = layers.some(layer => layer.visible && layer.placedStamps.length > 0);
-    const hasTextBoxes = layers.some(layer => layer.visible && layer.textBoxes.length > 0);
+    // テキストが実際に入力されているかをチェック（空のテキストボックスは除外）
+    const hasTextBoxes = layers.some(layer => 
+      layer.visible && layer.textBoxes.some(tb => tb.text.trim().length > 0)
+    );
     const hasNonPixelContent = hasStrokes || hasStamps || hasTextBoxes;
     
     // ドット絵だけの場合はテンプレートのviewBoxを使用
@@ -1476,8 +1487,6 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
 
   // 差分SVGを生成（テンプレートを含まない）- 描き足し保存用
   const generateDiffSvg = useCallback((): string => {
-    const layerElements = layersToSvgElements();
-    
     // 描き足し元の場合は元のviewBoxサイズでピクセルレイヤーを生成
     const isExtendBase = selectedTemplate.id === 'extend-base';
     const viewBox = selectedTemplate.viewBox || '0 0 400 300';
@@ -1495,9 +1504,18 @@ export function useDrawingCanvas({ width, height, initialMessage: _initialMessag
       .filter(Boolean)
       .join('\n  ');
     
+    // ストローク/スタンプ/テキストは800x600座標系なので、描き足し時はスケーリングが必要
+    const layerElements = layersToSvgElements();
+    let scaledLayerElements = layerElements;
+    if (isExtendBase && layerElements && (targetWidth !== width || targetHeight !== height)) {
+      const scaleX = targetWidth / width;
+      const scaleY = targetHeight / height;
+      scaledLayerElements = `<g transform="scale(${scaleX}, ${scaleY})">${layerElements}</g>`;
+    }
+    
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetWidth} ${targetHeight}">
   ${pixelElements}
-  ${layerElements}
+  ${scaledLayerElements}
 </svg>`;
   }, [layersToSvgElements, pixelLayers, selectedTemplate, width, height]);
 

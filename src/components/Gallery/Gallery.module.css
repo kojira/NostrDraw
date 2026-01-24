@@ -225,7 +225,7 @@
 
 .thumbnail {
   width: 100%;
-  aspect-ratio: 4/3;
+  aspect-ratio: 1 / 1;
   background: #fff;
   display: flex;
   align-items: center;
