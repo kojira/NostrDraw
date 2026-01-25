@@ -1,0 +1,56 @@
+{
+  "name": "@nostrdraw/core",
+  "version": "0.1.0",
+  "description": "Core library for NostrDraw - encode, decode, validate, and build Nostr drawing events",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "nostr",
+    "drawing",
+    "svg",
+    "nip-33"
+  ],
+  "author": "kojira",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kojira/NostrDraw.git",
+    "directory": "packages/core"
+  },
+  "dependencies": {
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "nostr-tools": "^2.10.4",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "peerDependencies": {
+    "nostr-tools": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "nostr-tools": {
+      "optional": true
+    }
+  }
+}
