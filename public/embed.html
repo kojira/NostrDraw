@@ -137,11 +137,14 @@
       return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
     }
 
-    // Check if string is valid Base64
+    // Check if string is valid Base64 (allows unpadded base64)
     function isBase64(str) {
       if (!str || str.length === 0) return false;
-      const base64Regex = /^[A-Za-z0-9+/=]+$/;
-      return base64Regex.test(str) && str.length % 4 === 0;
+      // Allow standard base64 characters, padding is optional
+      const base64Regex = /^[A-Za-z0-9+/]+={0,2}$/;
+      // Reject if it looks like plain text (contains common non-base64 patterns)
+      if (/^<|^\s*\{|^\s*\[/.test(str)) return false;
+      return base64Regex.test(str);
     }
 
     // Validate URL to prevent XSS attacks from malicious URLs
