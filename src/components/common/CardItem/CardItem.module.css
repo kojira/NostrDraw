@@ -475,22 +475,21 @@
 }
 
 .tileImage {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .tileSvg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
 
 .tileSvg svg {
   width: 100%;
   height: 100%;
+  display: block;
 }
 
 .tileOverlay {

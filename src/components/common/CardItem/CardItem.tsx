@@ -17,11 +17,23 @@ import styles from './CardItem.module.css';
 // SVGを安全にレンダリングするためのコンポーネント
 // dangerouslySetInnerHTMLを使用してフォントを正しく表示
 // ※ Timeline.tsxと完全に同じ実装
-function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
+function SvgRenderer({ svg, className, cover }: { svg: string; className?: string; cover?: boolean }) {
+  // タイル表示用: SVGにpreserveAspectRatio="xMidYMid slice"を追加して画像をカバー
+  let processedSvg = svg;
+  if (cover) {
+    processedSvg = svg.replace(
+      /<svg([^>]*)>/i,
+      (match, attrs) => {
+        // 既存のpreserveAspectRatioを削除して新しいものを追加
+        const cleanAttrs = attrs.replace(/preserveAspectRatio="[^"]*"/gi, '');
+        return `<svg${cleanAttrs} preserveAspectRatio="xMidYMid slice">`;
+      }
+    );
+  }
   return (
     <div 
       className={className}
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: processedSvg }}
     />
   );
 }
@@ -178,12 +190,12 @@ export function CardItem({
           {(() => {
             if (card.isDiff && card.parentEventId) {
               if (mergedSvg) {
-                return <SvgRenderer svg={mergedSvg} className={styles.tileSvg} />;
+                return <SvgRenderer svg={mergedSvg} className={styles.tileSvg} cover />;
               }
               return <Spinner size="sm" />;
             }
             return card.svg ? (
-              <SvgRenderer svg={card.svg} className={styles.tileSvg} />
+              <SvgRenderer svg={card.svg} className={styles.tileSvg} cover />
             ) : (
               <span className={styles.placeholderEmoji}>🎨</span>
             );
