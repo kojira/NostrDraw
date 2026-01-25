@@ -45,6 +45,7 @@ export {
 export {
   parseNostrDrawContent,
   extractSvg,
+  isBinaryFormat,
   parseNostrDrawEvent,
   parsePaletteEvent,
   parsePostTagsEvent,
@@ -67,6 +68,7 @@ export {
   validateNostrDrawEvent,
   validateSvg,
   isNostrDrawEvent,
+  hasNostrDrawKind,
 } from './validate';
 
 // Merging

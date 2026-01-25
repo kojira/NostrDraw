@@ -7,6 +7,7 @@ import { parseNostrDrawContent, extractSvg } from './parse';
 import { getCompressedSize } from './compress';
 import {
   NOSTRDRAW_KIND,
+  NOSTRDRAW_CLIENT_TAG,
   MAX_SVG_SIZE_BYTES,
   MAX_COMPRESSED_SIZE_BYTES,
   MAX_TAGS,
@@ -167,14 +168,27 @@ export function validateSvg(svg: string): ValidationResult {
 
 /**
  * Check if event is a valid NostrDraw event (quick check)
+ * Checks kind, client tag, and content
  */
 export function isNostrDrawEvent(event: NostrEvent): boolean {
   if (event.kind !== NOSTRDRAW_KIND) return false;
   
+  // Check for client tag (identifies NostrDraw events)
+  const clientTag = event.tags.find(tag => tag[0] === 'client' && tag[1] === NOSTRDRAW_CLIENT_TAG);
+  if (!clientTag) return false;
+  
   try {
     const content = parseNostrDrawContent(event.content);
-    return !!(content.svg || content.svgCompressed);
+    // Accept SVG or layerData (binary format)
+    return !!(content.svg || content.svgCompressed || content.layerData);
   } catch {
     return false;
   }
+}
+
+/**
+ * Check if event has NostrDraw kind (less strict check, for filtering)
+ */
+export function hasNostrDrawKind(event: NostrEvent): boolean {
+  return event.kind === NOSTRDRAW_KIND;
 }

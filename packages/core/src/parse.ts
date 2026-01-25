@@ -19,9 +19,18 @@ export function parseNostrDrawContent(content: string): NostrDrawContent {
 
 /**
  * Extract SVG from event content (handles both compressed and raw)
+ * Note: Binary layer format (layerData + binary+gzip+base64) is not supported in core.
+ *       Use app-level decodeBinaryToLayers for that format.
  */
 export function extractSvg(content: NostrDrawContent): string | null {
-  if (content.svgCompressed && content.compression === 'gzip+base64') {
+  // Binary layer format is not supported in core library
+  // This requires app-level decodeBinaryToLayers and layersToSvg
+  if (content.layerData && content.compression === 'binary+gzip+base64') {
+    console.warn('Binary layer format detected - requires app-level decoding');
+    return null;
+  }
+  
+  if (content.svgCompressed && (content.compression === 'gzip+base64' || !content.compression)) {
     try {
       return decompressSvg(content.svgCompressed);
     } catch (error) {
@@ -43,6 +52,13 @@ export function extractSvg(content: NostrDrawContent): string | null {
   }
   
   return null;
+}
+
+/**
+ * Check if content uses binary layer format
+ */
+export function isBinaryFormat(content: NostrDrawContent): boolean {
+  return !!(content.layerData && content.compression === 'binary+gzip+base64');
 }
 
 /**
@@ -92,15 +108,31 @@ export function parseNostrDrawEvent(event: NostrEvent): NostrDrawPost | null {
     parentEventId = content.parentEventId;
   }
   
+  // Extract fallback values from tags (backward compatibility with old format)
+  let message = content.message || '';
+  let layoutId = content.layoutId || 'vertical';
+  let allowExtend = content.allowExtend === true; // Default to false (must be explicitly true)
+  
+  // Tag fallback for very old events (pre-JSON content format)
+  for (const tag of event.tags) {
+    if (tag[0] === 'message' && tag[1] && !message) {
+      message = tag[1];
+    } else if (tag[0] === 'layout' && tag[1] && !content.layoutId) {
+      layoutId = tag[1] as typeof layoutId;
+    } else if (tag[0] === 'allow_extend' && tag[1] === 'true' && content.allowExtend === undefined) {
+      allowExtend = true;
+    }
+  }
+  
   return {
     id: event.id,
     pubkey: event.pubkey,
     recipientPubkey,
     svg,
-    message: content.message || '',
-    layoutId: content.layoutId || 'vertical',
+    message,
+    layoutId,
     createdAt: event.created_at,
-    allowExtend: content.allowExtend ?? true,
+    allowExtend,
     parentEventId,
     parentPubkey,
     rootEventId: rootEventId || parentEventId,

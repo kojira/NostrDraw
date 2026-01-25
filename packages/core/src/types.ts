@@ -26,7 +26,7 @@ export interface NostrDrawPost {
 export interface NostrDrawContent {
   svg?: string;
   svgCompressed?: string;
-  compression?: 'gzip+base64';
+  compression?: 'gzip+base64' | 'binary+gzip+base64';
   message?: string;
   layoutId?: LayoutType;
   version?: string;
@@ -34,6 +34,8 @@ export interface NostrDrawContent {
   allowExtend?: boolean;
   parentEventId?: string | null;
   isDiff?: boolean;
+  // Binary layer format (version 20260116+)
+  layerData?: string;
 }
 
 // Parameters for building an event

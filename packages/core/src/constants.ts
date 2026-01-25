@@ -12,7 +12,8 @@ export const TAG_FOLLOW_KIND = 30899;
 export const NOSTRDRAW_CLIENT_TAG = 'nostrdraw';
 
 // Current version (YYYYMMDD format)
-export const NOSTRDRAW_VERSION = '20260125';
+// 20260116: Layer support, binary format
+export const NOSTRDRAW_VERSION = '20260116';
 
 // Tag follow d-tag
 export const TAG_FOLLOW_D_TAG = 'nostrdraw-tag-follows';
