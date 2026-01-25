@@ -11,6 +11,8 @@ import {
   fetchMorePublicGalleryCards,
   fetchMoreCardsByAuthors,
   mergePostTags,
+  fetchReactionCounts,
+  hasUserReacted,
   type SendCardParams,
   type NostrDrawPostWithReactions,
 } from '../services/card';
@@ -90,75 +92,48 @@ export function useSentCards(pubkey: string | null) {
   };
 }
 
-// リアクション数を取得して更新するヘルパー（ストリーミング対応）
-// リアクション1つ受信するごとにUIが更新される
-function streamAndUpdateReactions(
+// リアクション数を取得して更新するヘルパー（Promiseベース）
+// 一度だけリアクション数を取得して更新
+async function fetchAndUpdateReactions(
   cards: NostrDrawPost[],
   userPubkey: string | null | undefined,
-  setCards: React.Dispatch<React.SetStateAction<NostrDrawPostWithReactions[]>>,
-  unsubscribeRef: React.MutableRefObject<(() => void) | null>
-): void {
+  setCards: React.Dispatch<React.SetStateAction<NostrDrawPostWithReactions[]>>
+): Promise<void> {
   if (cards.length === 0) return;
   
-  // 既存の購読をクリーンアップ
-  if (unsubscribeRef.current) {
-    unsubscribeRef.current();
-    unsubscribeRef.current = null;
-  }
-  
-  console.log('[streamAndUpdateReactions] starting for', cards.length, 'cards');
+  console.log('[fetchAndUpdateReactions] starting for', cards.length, 'cards');
   const cardIds = cards.map(c => c.id);
   const userReactedSet = new Set<string>();
   
   // ユーザーのリアクション状態を取得
   if (userPubkey) {
-    import('../services/card').then(({ hasUserReacted }) => {
-      Promise.all(
-        cardIds.map(async (cardId) => {
-          const reacted = await hasUserReacted(cardId, userPubkey);
-          if (reacted) {
-            userReactedSet.add(cardId);
-          }
-        })
-      ).then(() => {
-        // ユーザーリアクション状態が取得できたらカードを更新
-        if (userReactedSet.size > 0) {
-          console.log('[streamAndUpdateReactions] userReacted updated, size:', userReactedSet.size);
-          setCards(prevCards => prevCards.map(card => ({
-            ...card,
-            userReacted: userReactedSet.has(card.id) || card.userReacted,
-          })));
+    await Promise.all(
+      cardIds.map(async (cardId) => {
+        const reacted = await hasUserReacted(cardId, userPubkey);
+        if (reacted) {
+          userReactedSet.add(cardId);
         }
-      });
-    });
+      })
+    );
   }
   
-  // リアクション数をストリーミングで取得
-  import('../services/card').then(({ streamReactionCounts }) => {
-    console.log('[streamAndUpdateReactions] calling streamReactionCounts');
-    const unsub = streamReactionCounts(
-      cardIds,
-      (reactions) => {
-        console.log('[streamAndUpdateReactions] onUpdate called, reactions size:', reactions.size);
-        // 関数形式でsetCardsを呼び出し、最新のカード一覧を参照する
-        setCards(prevCards => {
-          const updatedCards = prevCards.map(card => ({
-            ...card,
-            reactionCount: reactions.get(card.id) || card.reactionCount,
-            userReacted: userReactedSet.has(card.id) || card.userReacted,
-          }));
-          const totalReactions = updatedCards.reduce((sum, c) => sum + c.reactionCount, 0);
-          console.log('[streamAndUpdateReactions] updating cards, total reactions:', totalReactions);
-          return updatedCards;
-        });
-      }
-    );
-    // refに保存して後でクリーンアップできるようにする
-    unsubscribeRef.current = unsub;
+  // リアクション数を一度だけ取得
+  console.log('[fetchAndUpdateReactions] fetching reaction counts');
+  const reactions = await fetchReactionCounts(cardIds);
+  console.log('[fetchAndUpdateReactions] got reactions:', reactions.size);
+  
+  // カードを更新
+  setCards(prevCards => {
+    const updatedCards = prevCards.map(card => ({
+      ...card,
+      reactionCount: reactions.get(card.id) || card.reactionCount,
+      userReacted: userReactedSet.has(card.id) || card.userReacted,
+    }));
+    return updatedCards;
   });
 }
 
-// 公開ギャラリー（みんなの作品・新着）を取得 - ストリーミング対応
+// 公開ギャラリー（みんなの作品・新着）を取得
 export function usePublicGalleryCards(userPubkey?: string | null) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -168,9 +143,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const reactionUnsubscribeRef = useRef<(() => void) | null>(null);
   const userPubkeyRef = useRef(userPubkey);
-  const reactionsStartedRef = useRef(false);
   
   // userPubkeyの変更を追跡
   useEffect(() => {
@@ -182,9 +155,6 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
-    if (reactionUnsubscribeRef.current) {
-      reactionUnsubscribeRef.current();
-    }
     
     setIsLoading(true);
     setError(null);
@@ -192,10 +162,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
     setHasMore(true);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
-    reactionsStartedRef.current = false;
 
-    let cardBatchTimeout: ReturnType<typeof setTimeout> | null = null;
-    
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
@@ -208,9 +175,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
       
       // 関数形式でsetCardsを呼び出し、既存のリアクション数を保持する
       setCards(prevCards => {
-        // 既存のカードのリアクション数をMapで保持
         const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
-        // allCardsRef.currentをソートして新しいカード一覧を作成
         const sortedCards = [...allCardsRef.current]
           .sort((a, b) => b.createdAt - a.createdAt)
           .map(c => ({
@@ -220,23 +185,6 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
           }));
         return sortedCards;
       });
-      
-      // カードが追加されたら、少し待ってからリアクション取得開始
-      if (!reactionsStartedRef.current) {
-        if (cardBatchTimeout) clearTimeout(cardBatchTimeout);
-        cardBatchTimeout = setTimeout(() => {
-          if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
-            reactionsStartedRef.current = true;
-            // ストリーミングでリアクション取得（1つずつUIに反映）
-            streamAndUpdateReactions(
-              allCardsRef.current,
-              userPubkeyRef.current,
-              setCards,
-              reactionUnsubscribeRef
-            );
-          }
-        }, 50);
-      }
     };
 
     const handleEose = async () => {
@@ -261,15 +209,9 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
         }
       }
       
-      // EOSE後、まだリアクション取得が開始されていなければ開始
-      if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
-        reactionsStartedRef.current = true;
-        streamAndUpdateReactions(
-          allCardsRef.current,
-          userPubkeyRef.current,
-          setCards,
-          reactionUnsubscribeRef
-        );
+      // EOSE後にリアクション数を一度だけ取得
+      if (allCardsRef.current.length > 0) {
+        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
       }
       setIsLoading(false);
     };
@@ -289,7 +231,6 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
     setIsLoadingMore(true);
     
     try {
-      // 最も古いカードのcreatedAtを取得
       const oldestCard = allCardsRef.current.reduce((oldest, card) => 
         card.createdAt < oldest.createdAt ? card : oldest
       );
@@ -303,19 +244,13 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
       if (moreCards.length === 0) {
         setHasMore(false);
       } else {
-        // 追加されたカードをrefに追加
         for (const card of moreCards) {
           seenIdsRef.current.add(card.id);
           allCardsRef.current.push(card);
         }
         
-        // 既存のリアクション購読を解除して再開始
-        streamAndUpdateReactions(
-          allCardsRef.current,
-          userPubkeyRef.current,
-          setCards,
-          reactionUnsubscribeRef
-        );
+        // 追加カードのリアクション数を取得
+        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
       }
     } catch (err) {
       console.error('追加読み込みエラー:', err);
@@ -330,9 +265,6 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
-      }
-      if (reactionUnsubscribeRef.current) {
-        reactionUnsubscribeRef.current();
       }
     };
   }, [loadCards]);
@@ -349,7 +281,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
   };
 }
 
-// 人気投稿（過去N日間でリアクション多い順）を取得 - ストリーミング対応
+// 人気投稿（過去N日間でリアクション多い順）を取得
 export function usePopularCards(days: number = 3) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -357,8 +289,6 @@ export function usePopularCards(days: number = 3) {
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const reactionUnsubscribeRef = useRef<(() => void) | null>(null);
-  const reactionsStartedRef = useRef(false);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -366,20 +296,14 @@ export function usePopularCards(days: number = 3) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
-    if (reactionUnsubscribeRef.current) {
-      reactionUnsubscribeRef.current();
-      reactionUnsubscribeRef.current = null;
-    }
     
     setIsLoading(true);
     setError(null);
     setCards([]);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
-    reactionsStartedRef.current = false;
 
     const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
-    let cardBatchTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
@@ -393,51 +317,6 @@ export function usePopularCards(days: number = 3) {
       if (card.createdAt < sinceTimestamp) return;
       
       allCardsRef.current.push(card);
-      
-      // 関数形式でsetCardsを呼び出し、既存のリアクション数を保持する
-      setCards(prevCards => {
-        const reactionMap = new Map(prevCards.map(c => [c.id, c.reactionCount]));
-        const sortedCards = [...allCardsRef.current]
-          .map(c => ({
-            ...c,
-            reactionCount: reactionMap.get(c.id) ?? 0,
-          }))
-          .sort((a, b) => b.reactionCount - a.reactionCount || b.createdAt - a.createdAt)
-          .slice(0, 20);
-        return sortedCards;
-      });
-      
-      // カードが追加されたら、少し待ってからリアクション取得開始
-      if (!reactionsStartedRef.current) {
-        if (cardBatchTimeout) clearTimeout(cardBatchTimeout);
-        cardBatchTimeout = setTimeout(() => {
-          if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
-            reactionsStartedRef.current = true;
-            startReactionStream();
-          }
-        }, 50);
-      }
-    };
-    
-    // リアクション数をストリーミングで取得（人気順にソート）
-    const startReactionStream = () => {
-      import('../services/card').then(({ streamReactionCounts }) => {
-        reactionUnsubscribeRef.current = streamReactionCounts(
-          allCardsRef.current.map(c => c.id),
-          (reactions) => {
-            setCards(() => {
-              const sortedCards = [...allCardsRef.current]
-                .map(c => ({
-                  ...c,
-                  reactionCount: reactions.get(c.id) || 0,
-                }))
-                .sort((a, b) => b.reactionCount - a.reactionCount || b.createdAt - a.createdAt)
-                .slice(0, 20);
-              return sortedCards;
-            });
-          }
-        );
-      });
     };
 
     const handleEose = async () => {
@@ -451,10 +330,21 @@ export function usePopularCards(days: number = 3) {
         }
       }
       
-      // EOSE後、まだリアクション取得が開始されていなければ開始
-      if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
-        reactionsStartedRef.current = true;
-        startReactionStream();
+      // EOSE後にリアクション数を一度だけ取得して人気順にソート
+      if (allCardsRef.current.length > 0) {
+        const cardIds = allCardsRef.current.map(c => c.id);
+        const reactions = await fetchReactionCounts(cardIds);
+        
+        const sortedCards = [...allCardsRef.current]
+          .map(c => ({
+            ...c,
+            reactionCount: reactions.get(c.id) || 0,
+            userReacted: false,
+          }))
+          .sort((a, b) => b.reactionCount - a.reactionCount || b.createdAt - a.createdAt)
+          .slice(0, 20);
+        
+        setCards(sortedCards);
       }
       setIsLoading(false);
     };
@@ -474,9 +364,6 @@ export function usePopularCards(days: number = 3) {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
-      if (reactionUnsubscribeRef.current) {
-        reactionUnsubscribeRef.current();
-      }
     };
   }, [loadCards]);
 
@@ -489,7 +376,7 @@ export function usePopularCards(days: number = 3) {
   };
 }
 
-// フォロー中のユーザーの投稿を取得 - ストリーミング対応
+// フォロー中のユーザーの投稿を取得
 export function useFollowCards(followees: string[], userPubkey?: string | null) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -499,10 +386,8 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const reactionUnsubscribeRef = useRef<(() => void) | null>(null);
   const followeesRef = useRef<string[]>(followees);
   const userPubkeyRef = useRef(userPubkey);
-  const reactionsStartedRef = useRef(false);
 
   // followeesの変更を追跡
   useEffect(() => {
@@ -519,10 +404,6 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
-    }
-    if (reactionUnsubscribeRef.current) {
-      reactionUnsubscribeRef.current();
-      reactionUnsubscribeRef.current = null;
     }
     
     // フォロイー + 自分自身のpubkeyを含める
@@ -542,9 +423,6 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
     setHasMore(true);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
-    reactionsStartedRef.current = false;
-
-    let cardBatchTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
@@ -555,9 +433,7 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       
       // 関数形式でsetCardsを呼び出し、既存のリアクション数を保持する
       setCards(prevCards => {
-        // 既存のカードのリアクション数をMapで保持
         const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
-        // allCardsRef.currentをソートして新しいカード一覧を作成
         const sortedCards = [...allCardsRef.current]
           .sort((a, b) => b.createdAt - a.createdAt)
           .map(c => ({
@@ -567,22 +443,6 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
           }));
         return sortedCards;
       });
-      
-      // カードが追加されたら、少し待ってからリアクション取得開始
-      if (!reactionsStartedRef.current) {
-        if (cardBatchTimeout) clearTimeout(cardBatchTimeout);
-        cardBatchTimeout = setTimeout(() => {
-          if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
-            reactionsStartedRef.current = true;
-            streamAndUpdateReactions(
-              allCardsRef.current,
-              userPubkeyRef.current,
-              setCards,
-              reactionUnsubscribeRef
-            );
-          }
-        }, 50);
-      }
     };
 
     const handleEose = async () => {
@@ -607,15 +467,9 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
         }
       }
       
-      // EOSE後、まだリアクション取得が開始されていなければ開始
-      if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
-        reactionsStartedRef.current = true;
-        streamAndUpdateReactions(
-          allCardsRef.current,
-          userPubkeyRef.current,
-          setCards,
-          reactionUnsubscribeRef
-        );
+      // EOSE後にリアクション数を一度だけ取得
+      if (allCardsRef.current.length > 0) {
+        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
       }
       setIsLoading(false);
     };
@@ -640,7 +494,6 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
     setIsLoadingMore(true);
     
     try {
-      // 最も古いカードのcreatedAtを取得
       const oldestCard = allCardsRef.current.reduce((oldest, card) => 
         card.createdAt < oldest.createdAt ? card : oldest
       );
@@ -655,19 +508,13 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       if (moreCards.length === 0) {
         setHasMore(false);
       } else {
-        // 追加されたカードをrefに追加
         for (const card of moreCards) {
           seenIdsRef.current.add(card.id);
           allCardsRef.current.push(card);
         }
         
-        // 既存のリアクション購読を解除して再開始
-        streamAndUpdateReactions(
-          allCardsRef.current,
-          userPubkeyRef.current,
-          setCards,
-          reactionUnsubscribeRef
-        );
+        // 追加カードのリアクション数を取得
+        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
       }
     } catch (err) {
       console.error('追加読み込みエラー:', err);
@@ -682,9 +529,6 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
-      }
-      if (reactionUnsubscribeRef.current) {
-        reactionUnsubscribeRef.current();
       }
     };
   }, [loadCards]);

@@ -6,7 +6,7 @@ import type { NostrDrawPost, NostrProfile } from '../../types';
 import { PRESET_TAGS } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
-import { streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg, mergePostTags } from '../../services/card';
+import { fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg, mergePostTags } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr, saveFavoritePalettesToNostr, getFavoritePaletteIds, fetchPalettePopularityCounts, PRESET_PALETTES, isPresetPalette } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
@@ -84,9 +84,6 @@ export function Gallery({
   // 差分保存されたカードの合成済みSVGを管理
   const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
   const fetchingDiffRef = useRef<Set<string>>(new Set());
-  
-  // streamReactionCountsのクリーンアップ用
-  const reactionUnsubscribeRef = useRef<(() => void) | null>(null);
 
   // パレット関連の状態
   const [palettes, setPalettes] = useState<ColorPalette[]>([]);
@@ -164,12 +161,6 @@ export function Gallery({
 
   // ストリーミングでカードを取得（リアルタイム表示）
   useEffect(() => {
-    // 既存のリアクション購読をクリーンアップ
-    if (reactionUnsubscribeRef.current) {
-      reactionUnsubscribeRef.current();
-      reactionUnsubscribeRef.current = null;
-    }
-    
     setIsLoading(true);
     setError(null);
     setCards([]);
@@ -236,35 +227,25 @@ export function Gallery({
       
       const currentLimit = displayLimitRef.current;
       
-      // EOSE後にリアクション数をストリーミングで取得してソート
+      // EOSE後にリアクション数を一度だけ取得してソート
       if (activeTab === 'popular' && allReceivedCardsRef.current.length > 0) {
         const cardIds = allReceivedCardsRef.current.map(c => c.id);
         
-        // 既存のリアクション購読をクリーンアップ
-        if (reactionUnsubscribeRef.current) {
-          reactionUnsubscribeRef.current();
-          reactionUnsubscribeRef.current = null;
-        }
+        // リアクション数を一度だけ取得
+        const reactions = await fetchReactionCounts(cardIds);
+        reactionCountsRef.current = reactions;
         
-        // ストリーミングでリアクション数を取得（1件ずつUIに反映）
-        reactionUnsubscribeRef.current = streamReactionCounts(
-          cardIds,
-          (reactions) => {
-            reactionCountsRef.current = reactions;
-            
-            // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
-            const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
-              const aCount = reactions.get(a.id) || 0;
-              const bCount = reactions.get(b.id) || 0;
-              if (aCount !== bCount) {
-                return bCount - aCount;
-              }
-              return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-            }).slice(0, currentLimit);
-            
-            setCards(sortedByReaction);
+        // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
+        const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
+          const aCount = reactions.get(a.id) || 0;
+          const bCount = reactions.get(b.id) || 0;
+          if (aCount !== bCount) {
+            return bCount - aCount;
           }
-        );
+          return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+        }).slice(0, currentLimit);
+        
+        setCards(sortedByReaction);
       } else if (activeTab === 'recent' && allReceivedCardsRef.current.length > 0) {
         // 新着タブの場合、日付でソートして表示
         const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
@@ -288,10 +269,6 @@ export function Gallery({
     // クリーンアップ
     return () => {
       unsubscribe();
-      if (reactionUnsubscribeRef.current) {
-        reactionUnsubscribeRef.current();
-        reactionUnsubscribeRef.current = null;
-      }
     };
   }, [activeTab, period, sortOrder, authorFilter, periodToDays]);
 
@@ -451,40 +428,25 @@ export function Gallery({
         
         // ソートして表示更新
         if (activeTab === 'popular') {
-          // 人気タブの場合は新しいカードのリアクション数もストリーミングで取得
+          // 人気タブの場合は新しいカードのリアクション数を取得
           const newCardIds = publicCards.map(c => c.id);
           if (newCardIds.length > 0) {
-            streamReactionCounts(
-              newCardIds,
-              (newReactions) => {
-                newReactions.forEach((count, id) => {
-                  reactionCountsRef.current.set(id, count);
-                });
-                
-                const reactions = reactionCountsRef.current;
-                const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
-                  const aCount = reactions.get(a.id) || 0;
-                  const bCount = reactions.get(b.id) || 0;
-                  if (aCount !== bCount) {
-                    return bCount - aCount;
-                  }
-                  return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-                }).slice(0, newLimit);
-                setCards(sortedCards);
-              }
-            );
-          } else {
-            const reactions = reactionCountsRef.current;
-            const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
-              const aCount = reactions.get(a.id) || 0;
-              const bCount = reactions.get(b.id) || 0;
-              if (aCount !== bCount) {
-                return bCount - aCount;
-              }
-              return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-            }).slice(0, newLimit);
-            setCards(sortedCards);
+            const newReactions = await fetchReactionCounts(newCardIds);
+            newReactions.forEach((count, id) => {
+              reactionCountsRef.current.set(id, count);
+            });
           }
+          
+          const reactions = reactionCountsRef.current;
+          const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
+            const aCount = reactions.get(a.id) || 0;
+            const bCount = reactions.get(b.id) || 0;
+            if (aCount !== bCount) {
+              return bCount - aCount;
+            }
+            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+          }).slice(0, newLimit);
+          setCards(sortedCards);
         } else {
           const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
             sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
