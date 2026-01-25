@@ -36,6 +36,7 @@ export {
 export {
   compressSvg,
   decompressSvg,
+  optimizeSvg,
   isCompressed,
   getCompressedSize,
 } from './compress';

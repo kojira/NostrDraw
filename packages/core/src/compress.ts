@@ -1,17 +1,45 @@
 /**
  * SVG Compression/Decompression utilities
- * Uses gzip + base64 encoding
+ * Uses deflate + base64 encoding (compatible with existing NostrDraw app)
  */
 
 import pako from 'pako';
 
 /**
- * Compress SVG string to gzip+base64 format
+ * Optimize SVG for smaller size
+ * - Round decimals to 2 digits
+ * - Remove unnecessary whitespace
+ */
+export function optimizeSvg(svg: string): string {
+  let optimized = svg;
+  
+  // Round decimals to 2 digits
+  optimized = optimized.replace(/(\d+\.\d{2})\d+/g, '$1');
+  
+  // Remove whitespace between tags
+  optimized = optimized.replace(/>\s+</g, '><');
+  
+  // Collapse multiple spaces to one
+  optimized = optimized.replace(/\s+/g, ' ');
+  
+  // Simplify 0.00 -> 0
+  optimized = optimized.replace(/([^0-9])0\.00([^0-9])/g, '$10$2');
+  
+  // Shorten redundant attribute values
+  optimized = optimized.replace(/stroke-width="(\d+)\.00"/g, 'stroke-width="$1"');
+  
+  return optimized.trim();
+}
+
+/**
+ * Compress SVG string to deflate+base64 format
+ * (Compatible with existing NostrDraw app)
  */
 export function compressSvg(svg: string): string {
+  const optimized = optimizeSvg(svg);
   const encoder = new TextEncoder();
-  const data = encoder.encode(svg);
-  const compressed = pako.gzip(data);
+  const data = encoder.encode(optimized);
+  const compressed = pako.deflate(data, { level: 9 });
   
   // Convert to base64
   let binary = '';
@@ -22,7 +50,8 @@ export function compressSvg(svg: string): string {
 }
 
 /**
- * Decompress gzip+base64 encoded SVG
+ * Decompress base64 encoded compressed SVG
+ * Supports both deflate and gzip formats for backward compatibility
  */
 export function decompressSvg(compressed: string): string {
   // Base64 decode
@@ -32,18 +61,23 @@ export function decompressSvg(compressed: string): string {
     bytes[i] = binary.charCodeAt(i);
   }
   
-  // Gzip decompress
-  const decompressed = pako.ungzip(bytes);
+  // pako.inflate handles both deflate and gzip formats
+  const decompressed = pako.inflate(bytes);
   const decoder = new TextDecoder();
   return decoder.decode(decompressed);
 }
 
 /**
- * Check if content is compressed (gzip+base64)
+ * Check if content appears to be compressed
+ * Note: deflate format doesn't have a reliable magic header like gzip
  */
 export function isCompressed(content: string): boolean {
-  // gzip magic bytes in base64: H4sI
-  return content.startsWith('H4sI');
+  // Try to detect by checking if it's valid base64 and not valid SVG
+  if (content.startsWith('<svg') || content.startsWith('<?xml')) {
+    return false;
+  }
+  // Check if it looks like base64
+  return /^[A-Za-z0-9+/]+=*$/.test(content.replace(/\s/g, ''));
 }
 
 /**
