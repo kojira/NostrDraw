@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NostrDraw Embed</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .loading {
+      color: #666;
+      font-family: sans-serif;
+      font-size: 14px;
+    }
+    .error {
+      color: #c00;
+      font-family: sans-serif;
+      font-size: 14px;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .card img, .card svg {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="container">
+    <div class="loading">Loading...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+  <script>
+    const DEFAULT_RELAYS = [
+      'wss://relay.nostr.band',
+      'wss://nos.lol',
+      'wss://relay.damus.io',
+      'wss://nostr.mutinywallet.com',
+    ];
+
+    const NOSTRDRAW_KIND = 31898;
+
+    // URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('id') || params.get('event');
+    const relayParam = params.get('relay');
+    const relays = relayParam ? [relayParam] : DEFAULT_RELAYS;
+
+    // Decompress SVG
+    function decompressSvg(compressedData) {
+      try {
+        // Try deflate+base64 first (current format)
+        const binaryStr = atob(compressedData);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const decompressed = pako.inflate(bytes, { to: 'string' });
+        return decompressed;
+      } catch (e) {
+        // Try gzip+base64 (legacy format)
+        try {
+          const binaryStr = atob(compressedData);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          const decompressed = pako.ungzip(bytes, { to: 'string' });
+          return decompressed;
+        } catch (e2) {
+          console.error('Decompression failed:', e2);
+          return null;
+        }
+      }
+    }
+
+    // Parse NostrDraw event
+    function parseNostrDrawEvent(event) {
+      const contentType = event.tags.find(t => t[0] === 'content-type')?.[1] || 'image/svg+xml';
+      const encoding = event.tags.find(t => t[0] === 'encoding')?.[1] || 'deflate+base64';
+      const imageUrl = event.tags.find(t => t[0] === 'image')?.[1];
+      
+      let svg = null;
+      
+      if (encoding === 'deflate+base64' || encoding === 'binary+gzip+base64') {
+        svg = decompressSvg(event.content);
+      } else if (contentType === 'image/svg+xml') {
+        svg = event.content;
+      }
+      
+      return { svg, imageUrl, event };
+    }
+
+    // Fetch event from relays
+    async function fetchEvent(eventId, relays) {
+      for (const relay of relays) {
+        try {
+          const result = await fetchFromRelay(relay, eventId);
+          if (result) return result;
+        } catch (e) {
+          console.warn(`Failed to fetch from ${relay}:`, e);
+        }
+      }
+      return null;
+    }
+
+    function fetchFromRelay(relayUrl, eventId) {
+      return new Promise((resolve, reject) => {
+        const ws = new WebSocket(relayUrl);
+        const subId = 'embed-' + Math.random().toString(36).slice(2);
+        let resolved = false;
+        
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            ws.close();
+            resolve(null);
+          }
+        }, 5000);
+        
+        ws.onopen = () => {
+          // Try fetching by event ID (could be kind 31898 replaceable event)
+          ws.send(JSON.stringify(['REQ', subId, { ids: [eventId] }]));
+          // Also try fetching by d tag for replaceable events
+          ws.send(JSON.stringify(['REQ', subId + '-d', { kinds: [NOSTRDRAW_KIND], '#d': [eventId] }]));
+        };
+        
+        ws.onmessage = (msg) => {
+          try {
+            const data = JSON.parse(msg.data);
+            if (data[0] === 'EVENT' && data[2]) {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                ws.close();
+                resolve(data[2]);
+              }
+            } else if (data[0] === 'EOSE') {
+              // Continue waiting for other subscription
+            }
+          } catch (e) {
+            console.error('Parse error:', e);
+          }
+        };
+        
+        ws.onerror = (e) => {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            reject(e);
+          }
+        };
+      });
+    }
+
+    // Render
+    async function render() {
+      const container = document.getElementById('container');
+      
+      if (!eventId) {
+        container.innerHTML = '<div class="error">No event ID specified.<br>Usage: ?id=EVENT_ID</div>';
+        return;
+      }
+      
+      try {
+        const event = await fetchEvent(eventId, relays);
+        
+        if (!event) {
+          container.innerHTML = '<div class="error">Event not found</div>';
+          return;
+        }
+        
+        const { svg, imageUrl } = parseNostrDrawEvent(event);
+        
+        const cardLink = document.createElement('a');
+        cardLink.href = `https://kojira.github.io/NostrDraw/?view=${eventId}`;
+        cardLink.target = '_blank';
+        cardLink.className = 'card';
+        
+        if (svg) {
+          // Display SVG inline
+          const wrapper = document.createElement('div');
+          wrapper.innerHTML = svg;
+          const svgEl = wrapper.querySelector('svg');
+          if (svgEl) {
+            svgEl.style.maxWidth = '100%';
+            svgEl.style.maxHeight = '100%';
+            cardLink.appendChild(svgEl);
+          }
+        } else if (imageUrl) {
+          // Fall back to image URL
+          const img = document.createElement('img');
+          img.src = imageUrl;
+          img.alt = 'NostrDraw Card';
+          cardLink.appendChild(img);
+        } else {
+          container.innerHTML = '<div class="error">Could not display card</div>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        container.appendChild(cardLink);
+        
+      } catch (e) {
+        console.error('Render error:', e);
+        container.innerHTML = `<div class="error">Error: ${e.message}</div>`;
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
