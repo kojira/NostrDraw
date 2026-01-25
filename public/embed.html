@@ -419,7 +419,7 @@
         
         // Create image link
         const cardLink = document.createElement('a');
-        cardLink.href = `https://kojira.github.io/NostrDraw/?view=${eventId}`;
+        cardLink.href = `https://kojira.github.io/NostrDraw/?view=${encodeURIComponent(eventId)}`;
         cardLink.target = '_blank';
         cardLink.className = 'card-image';
         
@@ -458,7 +458,7 @@
         
         // Create footer
         const footer = document.createElement('a');
-        footer.href = `https://kojira.github.io/NostrDraw/?view=${eventId}`;
+        footer.href = `https://kojira.github.io/NostrDraw/?view=${encodeURIComponent(eventId)}`;
         footer.target = '_blank';
         footer.className = 'card-footer';
         
