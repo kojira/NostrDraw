@@ -14,12 +14,14 @@ interface NotificationsProps {
   userPubkey: string;
   signEvent?: (event: EventTemplate) => Promise<Event>;
   onNavigateToUser?: (npub: string) => void;
+  onMarkAsRead?: () => void;
 }
 
 export function Notifications({
   userPubkey,
   signEvent,
   onNavigateToUser,
+  onMarkAsRead,
 }: NotificationsProps) {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -75,6 +77,13 @@ export function Notifications({
       isMounted = false;
     };
   }, [userPubkey, updateProfiles]);
+
+  // 画面表示時に既読にする
+  useEffect(() => {
+    if (onMarkAsRead) {
+      onMarkAsRead();
+    }
+  }, [onMarkAsRead]);
 
   // 日時フォーマット
   const formatDate = (timestamp: number) => {

@@ -27,6 +27,7 @@ import { useNostr } from './hooks/useNostr';
 import { useTagFollow } from './hooks/useTagFollow';
 import { useTagTimeline } from './hooks/useTagTimeline';
 import { usePopularTags } from './hooks/usePopularTags';
+import { useUnreadCount } from './hooks/useUnreadCount';
 import './App.css';
 
 // テーマをローカルストレージに保存するキー
@@ -125,6 +126,15 @@ function App() {
     refresh: refreshTagFollow,
   } = useTagFollow({
     pubkey: authState.pubkey || undefined,
+    signEvent: (authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined,
+  });
+
+  // 未読通知数
+  const {
+    unreadCount,
+    markAsRead,
+  } = useUnreadCount({
+    userPubkey: authState.pubkey,
     signEvent: (authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined,
   });
 
@@ -299,6 +309,7 @@ function App() {
           currentPage="home"
           onNavigate={handleNavigation}
           userPubkey={authState.pubkey}
+          unreadCount={unreadCount}
         />
         <div className="createPage">
           <header className="createHeader">
@@ -421,6 +432,7 @@ function App() {
             currentPage="notifications"
             onNavigate={handleNavigation}
             userPubkey={authState.pubkey}
+            unreadCount={unreadCount}
           />
           <div className="mainContent">
             <header className="header">
@@ -477,12 +489,14 @@ function App() {
           currentPage="notifications"
           onNavigate={handleNavigation}
           userPubkey={authState.pubkey}
+          unreadCount={unreadCount}
         />
         <div className="mainContent fullWidth">
           <Notifications
             userPubkey={authState.pubkey}
             signEvent={(authState.isNip07 || (authState.isNsecLogin && !authState.needsReauth)) ? signEvent : undefined}
             onNavigateToUser={(npub) => goToUser(npub)}
+            onMarkAsRead={markAsRead}
           />
         </div>
       </div>
@@ -497,6 +511,7 @@ function App() {
           currentPage="settings"
           onNavigate={handleNavigation}
           userPubkey={authState.pubkey}
+          unreadCount={unreadCount}
         />
         <div className="mainContent fullWidth">
           <header className="header">
@@ -544,6 +559,7 @@ function App() {
           currentPage="help"
           onNavigate={handleNavigation}
           userPubkey={authState.pubkey}
+          unreadCount={unreadCount}
         />
         <div className="mainContent fullWidth">
           <HelpPage onNavigate={handleNavigation} />
@@ -560,6 +576,7 @@ function App() {
           currentPage="gallery"
           onNavigate={handleNavigation}
           userPubkey={authState.pubkey}
+          unreadCount={unreadCount}
         />
         <header className="header">
           <div className="headerTop">
@@ -639,6 +656,7 @@ function App() {
           currentPage="user"
           onNavigate={handleNavigation}
           userPubkey={authState.pubkey}
+          unreadCount={unreadCount}
         />
         <header className="header">
           <div className="headerTop">
@@ -746,6 +764,7 @@ function App() {
         currentPage="home"
         onNavigate={handleNavigation}
         userPubkey={authState.pubkey}
+        unreadCount={unreadCount}
       />
 
       <header className="header">

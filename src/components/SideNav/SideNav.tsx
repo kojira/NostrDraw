@@ -7,16 +7,17 @@ interface SideNavProps {
   currentPage: string;
   onNavigate: (page: string) => void;
   userPubkey?: string | null;
+  unreadCount?: number;
 }
 
-export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
+export function SideNav({ currentPage, onNavigate, userPubkey, unreadCount = 0 }: SideNavProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
     { id: 'home', icon: 'home', label: t('nav.home', 'ホーム') },
     { id: 'gallery', icon: 'gallery_thumbnail', label: t('nav.gallery', 'ギャラリー') },
-    { id: 'notifications', icon: 'notifications', label: t('nav.notifications', '通知') },
+    { id: 'notifications', icon: 'notifications', label: t('nav.notifications', '通知'), badge: unreadCount },
     { id: 'profile', icon: 'person', label: t('nav.profile', 'プロフィール'), requiresAuth: true },
     { id: 'settings', icon: 'settings', label: t('nav.settings', '設定') },
     { id: 'help', icon: 'help', label: t('nav.help', 'ヘルプ') },
@@ -63,7 +64,14 @@ export function SideNav({ currentPage, onNavigate, userPubkey }: SideNavProps) {
                   disabled={isDisabled}
                   title={item.label}
                 >
-                  <Icon name={item.icon} size="lg" className={styles.navIcon} />
+                  <span className={styles.iconWrapper}>
+                    <Icon name={item.icon} size="lg" className={styles.navIcon} />
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className={styles.badge}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </span>
                 </button>
               </li>
             );
