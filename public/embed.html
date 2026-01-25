@@ -144,6 +144,57 @@
       return base64Regex.test(str) && str.length % 4 === 0;
     }
 
+    // Sanitize SVG to prevent XSS attacks
+    function sanitizeSvg(svgString) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgString, 'image/svg+xml');
+      
+      // Check for parse errors
+      const parseError = doc.querySelector('parsererror');
+      if (parseError) {
+        console.error('SVG parse error');
+        return null;
+      }
+      
+      const svg = doc.querySelector('svg');
+      if (!svg) return null;
+      
+      // Remove dangerous elements
+      const dangerousElements = ['script', 'foreignObject', 'iframe', 'object', 'embed'];
+      dangerousElements.forEach(tag => {
+        svg.querySelectorAll(tag).forEach(el => el.remove());
+      });
+      
+      // Remove event handlers and dangerous attributes from all elements
+      const dangerousAttrs = [
+        'onload', 'onerror', 'onclick', 'onmouseover', 'onmouseout', 'onmousedown',
+        'onmouseup', 'onmousemove', 'onfocus', 'onblur', 'onchange', 'onsubmit',
+        'onkeydown', 'onkeyup', 'onkeypress', 'onscroll', 'onwheel', 'ondrag',
+        'ondrop', 'onanimationstart', 'onanimationend', 'ontransitionend'
+      ];
+      
+      const allElements = svg.querySelectorAll('*');
+      allElements.forEach(el => {
+        dangerousAttrs.forEach(attr => {
+          el.removeAttribute(attr);
+        });
+        // Remove javascript: URLs
+        ['href', 'xlink:href'].forEach(attr => {
+          const val = el.getAttribute(attr);
+          if (val && val.toLowerCase().trim().startsWith('javascript:')) {
+            el.removeAttribute(attr);
+          }
+        });
+      });
+      
+      // Also check the svg element itself
+      dangerousAttrs.forEach(attr => {
+        svg.removeAttribute(attr);
+      });
+      
+      return svg;
+    }
+
     // Decompress SVG
     function decompressSvg(compressedData) {
       if (!compressedData || !isBase64(compressedData)) {
@@ -373,9 +424,8 @@
         cardLink.className = 'card-image';
         
         if (svg) {
-          const svgWrapper = document.createElement('div');
-          svgWrapper.innerHTML = svg;
-          const svgEl = svgWrapper.querySelector('svg');
+          // Sanitize SVG to prevent XSS attacks
+          const svgEl = sanitizeSvg(svg);
           if (svgEl) {
             if (!svgEl.getAttribute('width')) {
               svgEl.setAttribute('width', '100%');
@@ -390,7 +440,9 @@
             svgEl.style.display = 'block';
             cardLink.appendChild(svgEl);
           } else {
-            cardLink.innerHTML = svg;
+            // If sanitization fails, show error instead of raw content
+            container.innerHTML = '<div class="error">Invalid SVG content</div>';
+            return;
           }
         } else if (imageUrl) {
           const img = document.createElement('img');
