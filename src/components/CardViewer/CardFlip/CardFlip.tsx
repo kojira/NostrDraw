@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
 import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard, updateCardTags, fetchPostTags } from '../../../services/card';
+import { BASE_URL } from '../../../config';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -111,6 +112,9 @@ export const CardFlip = memo(function CardFlip({
   
   // シェアボタン用の状態
   const [isCopied, setIsCopied] = useState(false);
+  
+  // 埋め込みコードコピー用の状態
+  const [isEmbedCopied, setIsEmbedCopied] = useState(false);
 
   // イベントJSON表示用の状態
   const [showEventJson, setShowEventJson] = useState(false);
@@ -528,6 +532,27 @@ export const CardFlip = memo(function CardFlip({
     }
   }, [getPermalink]);
 
+  // 埋め込みコードをコピー
+  const handleCopyEmbedCode = useCallback(async () => {
+    const embedUrl = `${BASE_URL}/embed.html?id=${encodeURIComponent(card.id)}`;
+    const embedCode = `<iframe
+  src="${embedUrl}"
+  width="300"
+  height="300"
+  frameborder="0"
+  style="border-radius: 8px;"
+  loading="lazy"
+></iframe>`;
+    
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setIsEmbedCopied(true);
+      setTimeout(() => setIsEmbedCopied(false), 2000);
+    } catch (error) {
+      console.error('埋め込みコードのコピーに失敗:', error);
+    }
+  }, [card.id]);
+
   const getSenderName = () => {
     if (effectiveSenderProfile?.display_name) return effectiveSenderProfile.display_name;
     if (effectiveSenderProfile?.name) return effectiveSenderProfile.name;
@@ -739,6 +764,27 @@ export const CardFlip = memo(function CardFlip({
                                   </svg>
                                 )}
                                 <span>JSONを確認</span>
+                              </button>
+                              
+                              {/* 埋め込みコードを取得 */}
+                              <button
+                                className={styles.menuItem}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowMoreMenu(false);
+                                  handleCopyEmbedCode();
+                                }}
+                              >
+                                {isEmbedCopied ? (
+                                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                                    <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                                    <path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/>
+                                  </svg>
+                                )}
+                                <span>{isEmbedCopied ? 'コピーしました!' : '埋め込みコードを取得'}</span>
                               </button>
                               
                               {/* タグ編集ボタン（自分の投稿のみ） */}
