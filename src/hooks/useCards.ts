@@ -306,7 +306,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
 }
 
 // 人気投稿（過去N日間でリアクション多い順）を取得
-export function usePopularCards(days: number = 3, userPubkey?: string | null) {
+export function usePopularCards(days: number = 3, userPubkey?: string | null, authorPubkey?: string | null) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -344,8 +344,8 @@ export function usePopularCards(days: number = 3, userPubkey?: string | null) {
       // 公開カードのみ（宛先なし）
       if (card.recipientPubkey) return;
       
-      // 期間フィルタ
-      if (card.createdAt < sinceTimestamp) return;
+      // 期間フィルタ（著者指定時は緩める - 全期間）
+      if (!authorPubkey && card.createdAt < sinceTimestamp) return;
       
       allCardsRef.current.push(card);
     };
@@ -405,12 +405,17 @@ export function usePopularCards(days: number = 3, userPubkey?: string | null) {
     };
 
     try {
-      unsubscribeRef.current = subscribeToPublicGalleryCards(handleCard, handleEose, 100);
+      // 著者が指定されている場合はその著者の投稿のみを取得
+      if (authorPubkey) {
+        unsubscribeRef.current = subscribeToCardsByAuthors([authorPubkey], handleCard, handleEose, 100);
+      } else {
+        unsubscribeRef.current = subscribeToPublicGalleryCards(handleCard, handleEose, 100);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '人気作品の取得に失敗しました');
       setIsLoading(false);
     }
-  }, [days, userPubkey]);
+  }, [days, userPubkey, authorPubkey]);
 
   useEffect(() => {
     loadCards();

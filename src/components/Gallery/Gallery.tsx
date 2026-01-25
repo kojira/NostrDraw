@@ -68,12 +68,21 @@ export function Gallery({
     }
   }, []);
 
+  // 著者フィルタのpubkeyを計算（npubの場合は変換）
+  const authorPubkeyForFilter = useMemo(() => {
+    if (!authorFilter) return null;
+    if (authorFilter.startsWith('npub')) {
+      return npubToPubkey(authorFilter) || null;
+    }
+    return authorFilter;
+  }, [authorFilter]);
+
   // 共通hooksを使用（ロジックの共通化）
   const {
     cards: popularCards,
     isLoading: popularLoading,
     error: popularError,
-  } = usePopularCards(periodToDays(period), userPubkey);
+  } = usePopularCards(periodToDays(period), userPubkey, authorPubkeyForFilter);
 
   const {
     cards: recentCards,
@@ -96,18 +105,13 @@ export function Gallery({
       );
     }
     
-    // 著者フィルタ
-    if (authorFilter) {
-      let authorPubkey = authorFilter;
-      if (authorFilter.startsWith('npub')) {
-        const converted = npubToPubkey(authorFilter);
-        if (converted) authorPubkey = converted;
-      }
-      sorted = sorted.filter(card => card.pubkey === authorPubkey);
+    // 著者フィルタ（人気タブはusePopularCardsで既にフィルタ済み、新着タブのみクライアントでフィルタ）
+    if (authorPubkeyForFilter && activeTab !== 'popular') {
+      sorted = sorted.filter(card => card.pubkey === authorPubkeyForFilter);
     }
     
     return sorted;
-  }, [activeTab, popularCards, recentCards, sortOrder, authorFilter]);
+  }, [activeTab, popularCards, recentCards, sortOrder, authorPubkeyForFilter]);
 
   const isLoading = activeTab === 'popular' ? popularLoading : recentLoading;
   const isLoadingMore = activeTab === 'recent' ? recentLoadingMore : false;
