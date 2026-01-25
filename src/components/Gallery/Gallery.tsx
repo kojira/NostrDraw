@@ -737,7 +737,7 @@ export function Gallery({
                   onMergedSvgLoaded={(cardId, svg) => {
                     setMergedSvgs(prev => new Map(prev).set(cardId, svg));
                   }}
-                  variant="thumbnail"
+                  variant="post"
                   followedTags={tagFilters}
                   onTagClick={(tag) => {
                     // タグがフィルターになければ追加
