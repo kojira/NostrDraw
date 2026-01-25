@@ -84,6 +84,9 @@ export function Gallery({
   // 差分保存されたカードの合成済みSVGを管理
   const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
   const fetchingDiffRef = useRef<Set<string>>(new Set());
+  
+  // streamReactionCountsのクリーンアップ用
+  const reactionUnsubscribeRef = useRef<(() => void) | null>(null);
 
   // パレット関連の状態
   const [palettes, setPalettes] = useState<ColorPalette[]>([]);
@@ -161,6 +164,12 @@ export function Gallery({
 
   // ストリーミングでカードを取得（リアルタイム表示）
   useEffect(() => {
+    // 既存のリアクション購読をクリーンアップ
+    if (reactionUnsubscribeRef.current) {
+      reactionUnsubscribeRef.current();
+      reactionUnsubscribeRef.current = null;
+    }
+    
     setIsLoading(true);
     setError(null);
     setCards([]);
@@ -231,8 +240,14 @@ export function Gallery({
       if (activeTab === 'popular' && allReceivedCardsRef.current.length > 0) {
         const cardIds = allReceivedCardsRef.current.map(c => c.id);
         
+        // 既存のリアクション購読をクリーンアップ
+        if (reactionUnsubscribeRef.current) {
+          reactionUnsubscribeRef.current();
+          reactionUnsubscribeRef.current = null;
+        }
+        
         // ストリーミングでリアクション数を取得（1件ずつUIに反映）
-        streamReactionCounts(
+        reactionUnsubscribeRef.current = streamReactionCounts(
           cardIds,
           (reactions) => {
             reactionCountsRef.current = reactions;
@@ -273,6 +288,10 @@ export function Gallery({
     // クリーンアップ
     return () => {
       unsubscribe();
+      if (reactionUnsubscribeRef.current) {
+        reactionUnsubscribeRef.current();
+        reactionUnsubscribeRef.current = null;
+      }
     };
   }, [activeTab, period, sortOrder, authorFilter, periodToDays]);
 

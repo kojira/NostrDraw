@@ -95,14 +95,20 @@ export function useSentCards(pubkey: string | null) {
 function streamAndUpdateReactions(
   cards: NostrDrawPost[],
   userPubkey: string | null | undefined,
-  setCards: React.Dispatch<React.SetStateAction<NostrDrawPostWithReactions[]>>
-): () => void {
-  if (cards.length === 0) return () => {};
+  setCards: React.Dispatch<React.SetStateAction<NostrDrawPostWithReactions[]>>,
+  unsubscribeRef: React.MutableRefObject<(() => void) | null>
+): void {
+  if (cards.length === 0) return;
+  
+  // 既存の購読をクリーンアップ
+  if (unsubscribeRef.current) {
+    unsubscribeRef.current();
+    unsubscribeRef.current = null;
+  }
   
   console.log('[streamAndUpdateReactions] starting for', cards.length, 'cards');
   const cardIds = cards.map(c => c.id);
   const userReactedSet = new Set<string>();
-  let unsubscribe: (() => void) | null = null;
   
   // ユーザーのリアクション状態を取得
   if (userPubkey) {
@@ -130,7 +136,7 @@ function streamAndUpdateReactions(
   // リアクション数をストリーミングで取得
   import('../services/card').then(({ streamReactionCounts }) => {
     console.log('[streamAndUpdateReactions] calling streamReactionCounts');
-    unsubscribe = streamReactionCounts(
+    const unsub = streamReactionCounts(
       cardIds,
       (reactions) => {
         console.log('[streamAndUpdateReactions] onUpdate called, reactions size:', reactions.size);
@@ -147,13 +153,9 @@ function streamAndUpdateReactions(
         });
       }
     );
+    // refに保存して後でクリーンアップできるようにする
+    unsubscribeRef.current = unsub;
   });
-  
-  return () => {
-    if (unsubscribe) {
-      unsubscribe();
-    }
-  };
 }
 
 // 公開ギャラリー（みんなの作品・新着）を取得 - ストリーミング対応
@@ -226,10 +228,11 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
           if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
             reactionsStartedRef.current = true;
             // ストリーミングでリアクション取得（1つずつUIに反映）
-            reactionUnsubscribeRef.current = streamAndUpdateReactions(
+            streamAndUpdateReactions(
               allCardsRef.current,
               userPubkeyRef.current,
-              setCards
+              setCards,
+              reactionUnsubscribeRef
             );
           }
         }, 50);
@@ -261,10 +264,11 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
       // EOSE後、まだリアクション取得が開始されていなければ開始
       if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
         reactionsStartedRef.current = true;
-        reactionUnsubscribeRef.current = streamAndUpdateReactions(
+        streamAndUpdateReactions(
           allCardsRef.current,
           userPubkeyRef.current,
-          setCards
+          setCards,
+          reactionUnsubscribeRef
         );
       }
       setIsLoading(false);
@@ -306,13 +310,11 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
         }
         
         // 既存のリアクション購読を解除して再開始
-        if (reactionUnsubscribeRef.current) {
-          reactionUnsubscribeRef.current();
-        }
-        reactionUnsubscribeRef.current = streamAndUpdateReactions(
+        streamAndUpdateReactions(
           allCardsRef.current,
           userPubkeyRef.current,
-          setCards
+          setCards,
+          reactionUnsubscribeRef
         );
       }
     } catch (err) {
@@ -572,10 +574,11 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
         cardBatchTimeout = setTimeout(() => {
           if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
             reactionsStartedRef.current = true;
-            reactionUnsubscribeRef.current = streamAndUpdateReactions(
+            streamAndUpdateReactions(
               allCardsRef.current,
               userPubkeyRef.current,
-              setCards
+              setCards,
+              reactionUnsubscribeRef
             );
           }
         }, 50);
@@ -607,10 +610,11 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       // EOSE後、まだリアクション取得が開始されていなければ開始
       if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
         reactionsStartedRef.current = true;
-        reactionUnsubscribeRef.current = streamAndUpdateReactions(
+        streamAndUpdateReactions(
           allCardsRef.current,
           userPubkeyRef.current,
-          setCards
+          setCards,
+          reactionUnsubscribeRef
         );
       }
       setIsLoading(false);
@@ -658,13 +662,11 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
         }
         
         // 既存のリアクション購読を解除して再開始
-        if (reactionUnsubscribeRef.current) {
-          reactionUnsubscribeRef.current();
-        }
-        reactionUnsubscribeRef.current = streamAndUpdateReactions(
+        streamAndUpdateReactions(
           allCardsRef.current,
           userPubkeyRef.current,
-          setCards
+          setCards,
+          reactionUnsubscribeRef
         );
       }
     } catch (err) {
