@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build core package
+        run: pnpm --filter @nostrdraw/core build
+
       - name: Build
         run: pnpm build
 
