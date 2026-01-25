@@ -25,7 +25,7 @@ function SvgRenderer({ svg, className, cover }: { svg: string; className?: strin
     // overflow="hidden" でviewBox外をクリップ
     processedSvg = svg.replace(
       /<svg([^>]*)>/i,
-      (match, attrs) => {
+      (_match, attrs) => {
         let cleanAttrs = attrs
           .replace(/preserveAspectRatio="[^"]*"/gi, '')
           .replace(/overflow="[^"]*"/gi, '');
