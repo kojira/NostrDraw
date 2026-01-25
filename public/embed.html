@@ -144,6 +144,33 @@
       return base64Regex.test(str) && str.length % 4 === 0;
     }
 
+    // Validate URL to prevent XSS attacks from malicious URLs
+    function isValidImageUrl(url) {
+      if (!url || typeof url !== 'string') return false;
+      
+      const trimmedUrl = url.trim().toLowerCase();
+      
+      // Block dangerous schemes
+      const dangerousSchemes = ['javascript:', 'vbscript:', 'data:text/html', 'data:application'];
+      for (const scheme of dangerousSchemes) {
+        if (trimmedUrl.startsWith(scheme)) {
+          return false;
+        }
+      }
+      
+      // Allow only http, https, and safe data URLs (images only)
+      if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+        return true;
+      }
+      
+      // Allow data URLs for images only (not SVG to prevent embedded scripts)
+      if (trimmedUrl.startsWith('data:image/') && !trimmedUrl.startsWith('data:image/svg')) {
+        return true;
+      }
+      
+      return false;
+    }
+
     // Sanitize SVG to prevent XSS attacks
     function sanitizeSvg(svgString) {
       const parser = new DOMParser();
@@ -444,11 +471,15 @@
             container.innerHTML = '<div class="error">Invalid SVG content</div>';
             return;
           }
-        } else if (imageUrl) {
+        } else if (imageUrl && isValidImageUrl(imageUrl)) {
           const img = document.createElement('img');
           img.src = imageUrl;
           img.alt = 'NostrDraw Card';
           cardLink.appendChild(img);
+        } else if (imageUrl) {
+          // Invalid URL scheme
+          container.innerHTML = '<div class="error">Invalid image URL</div>';
+          return;
         } else {
           container.innerHTML = '<div class="error">Could not display card</div>';
           return;
@@ -463,7 +494,7 @@
         footer.className = 'card-footer';
         
         // Avatar
-        if (avatarUrl) {
+        if (avatarUrl && isValidImageUrl(avatarUrl)) {
           const avatar = document.createElement('img');
           avatar.src = avatarUrl;
           avatar.alt = displayName;
