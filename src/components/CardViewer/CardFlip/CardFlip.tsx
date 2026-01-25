@@ -535,14 +535,7 @@ export const CardFlip = memo(function CardFlip({
   // 埋め込みコードをコピー
   const handleCopyEmbedCode = useCallback(async () => {
     const embedUrl = `${BASE_URL}/embed.html?id=${encodeURIComponent(card.id)}`;
-    const embedCode = `<iframe
-  src="${embedUrl}"
-  width="300"
-  height="300"
-  frameborder="0"
-  style="border-radius: 8px;"
-  loading="lazy"
-></iframe>`;
+    const embedCode = `<iframe src="${embedUrl}" width="300" height="300" frameborder="0" style="border-radius: 8px;" loading="lazy"></iframe>`;
     
     try {
       await navigator.clipboard.writeText(embedCode);
