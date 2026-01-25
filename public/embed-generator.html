@@ -207,8 +207,8 @@
   </div>
 
   <script>
-    // Get base URL for embed
-    const baseUrl = window.location.href.replace('embed-generator.html', 'embed.html');
+    // Get base URL for embed (without query parameters)
+    const baseUrl = (window.location.origin + window.location.pathname).replace('embed-generator.html', 'embed.html');
     
     // Check URL params for pre-filled event ID
     const params = new URLSearchParams(window.location.search);
