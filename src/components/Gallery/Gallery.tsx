@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../types';
 import { PRESET_TAGS } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
-import type { NostrDrawPostWithReactions } from '../../services/card';
-import { fetchReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg, mergePostTags } from '../../services/card';
+import { getCardFullSvg } from '../../services/card';
+import { usePopularCards, usePublicGalleryCards } from '../../hooks/useCards';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr, saveFavoritePalettesToNostr, getFavoritePaletteIds, fetchPalettePopularityCounts, PRESET_PALETTES, isPresetPalette } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
@@ -51,35 +51,68 @@ export function Gallery({
   const [authorFilter, setAuthorFilter] = useState<string>(initialAuthor || '');
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const [cards, setCards] = useState<(NostrDrawPost | NostrDrawPostWithReactions)[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
   const [selectedCard, setSelectedCard] = useState<NostrDrawPost | null>(null);
   const [senderProfile, setSenderProfile] = useState<NostrProfile | null>(null);
-  const [displayLimit, setDisplayLimit] = useState(20);
-  const displayLimitRef = useRef(20); // コールバック内で最新の値を参照するためのref
-  
-  // 購読用の固定数（表示用と分離）
-  const FETCH_LIMIT = 100;
-  
-  // 全受信カードを保持（再購読なしで「もっと見る」を実現）
-  const allReceivedCardsRef = useRef<NostrDrawPost[]>([]);
-  const reactionCountsRef = useRef<Map<string, number>>(new Map());
-  
-  // EOSE完了フラグ（EOSE後はhandleCardでcardsを更新しない）
-  const eoseReceivedRef = useRef(false);
-  
-  // 重複チェック用のSet（refで保持）
-  const seenIdsRef = useRef<Set<string>>(new Set());
   
   // 無限スクロール用のref
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  
-  // 著者フィルタのpubkeyを保持
-  const authorPubkeyRef = useRef<string>('');
+
+  // 期間をdays数に変換
+  const periodToDays = useCallback((p: PeriodType): number => {
+    switch (p) {
+      case 'day': return 1;
+      case 'week': return 7;
+      case 'month': return 30;
+      default: return 365; // all
+    }
+  }, []);
+
+  // 共通hooksを使用（ロジックの共通化）
+  const {
+    cards: popularCards,
+    isLoading: popularLoading,
+    error: popularError,
+  } = usePopularCards(periodToDays(period));
+
+  const {
+    cards: recentCards,
+    isLoading: recentLoading,
+    isLoadingMore: recentLoadingMore,
+    hasMore: recentHasMore,
+    error: recentError,
+    loadMore: loadMoreRecent,
+  } = usePublicGalleryCards(userPubkey);
+
+  // アクティブタブに応じてカードを選択
+  const cards = useMemo(() => {
+    const sourceCards = activeTab === 'popular' ? popularCards : recentCards;
+    
+    // ソート順の適用（人気タブはリアクション順、新着タブは日付順がデフォルト）
+    let sorted = [...sourceCards];
+    if (activeTab === 'recent') {
+      sorted = sorted.sort((a, b) => 
+        sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+      );
+    }
+    
+    // 著者フィルタ
+    if (authorFilter) {
+      let authorPubkey = authorFilter;
+      if (authorFilter.startsWith('npub')) {
+        const converted = npubToPubkey(authorFilter);
+        if (converted) authorPubkey = converted;
+      }
+      sorted = sorted.filter(card => card.pubkey === authorPubkey);
+    }
+    
+    return sorted;
+  }, [activeTab, popularCards, recentCards, sortOrder, authorFilter]);
+
+  const isLoading = activeTab === 'popular' ? popularLoading : recentLoading;
+  const isLoadingMore = activeTab === 'recent' ? recentLoadingMore : false;
+  const hasMore = activeTab === 'recent' ? recentHasMore : false;
+  const error = activeTab === 'popular' ? popularError : recentError;
   
   // 差分保存されたカードの合成済みSVGを管理
   const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
@@ -93,16 +126,6 @@ export function Gallery({
   const [paletteSortOrder, setPaletteSortOrder] = useState<'popular' | 'newest'>('popular');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deletingPaletteId, setDeletingPaletteId] = useState<string | null>(null);
-
-  // 期間をdays数に変換
-  const periodToDays = useCallback((p: PeriodType): number => {
-    switch (p) {
-      case 'day': return 1;
-      case 'week': return 7;
-      case 'month': return 30;
-      default: return 365; // all
-    }
-  }, []);
 
   // パレットタブの場合、パレットを取得
   useEffect(() => {
@@ -153,136 +176,6 @@ export function Gallery({
     
     loadPalettes();
   }, [activeTab, authorFilter]);
-
-  // displayLimitが変わったらrefも更新
-  useEffect(() => {
-    displayLimitRef.current = displayLimit;
-  }, [displayLimit]);
-
-  // ストリーミングでカードを取得（リアルタイム表示）
-  useEffect(() => {
-    let cancelled = false;
-    
-    setIsLoading(true);
-    setError(null);
-    setCards([]);
-    setDisplayLimit(20); // フィルタ変更時は表示数をリセット
-    setHasMore(true); // 追加読み込み可能にリセット
-    displayLimitRef.current = 20;
-    allReceivedCardsRef.current = [];
-    reactionCountsRef.current = new Map();
-    eoseReceivedRef.current = false; // EOSE完了フラグをリセット
-    seenIdsRef.current = new Set(); // 重複チェック用のSetをリセット
-    
-    const days = periodToDays(period);
-    const since = period !== 'all' ? Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60) : 0;
-    
-    // 著者フィルタ用のpubkeyを計算
-    let authorPubkey = authorFilter;
-    if (authorFilter && authorFilter.startsWith('npub')) {
-      const converted = npubToPubkey(authorFilter);
-      if (converted) {
-        authorPubkey = converted;
-      }
-    }
-    authorPubkeyRef.current = authorPubkey;
-    
-    const handleCard = (card: NostrDrawPost) => {
-      if (cancelled) return;
-      
-      // 重複チェック
-      if (seenIdsRef.current.has(card.id)) return;
-      seenIdsRef.current.add(card.id);
-      
-      // 公開カードのみ
-      if (card.recipientPubkey) return;
-      
-      // 期間フィルタ
-      if (since > 0 && card.createdAt < since) return;
-      
-      allReceivedCardsRef.current.push(card);
-      
-      // EOSE完了後は表示を更新しない（「もっと見る」で増やした表示数を維持するため）
-      if (eoseReceivedRef.current) return;
-      
-      // 人気タブの場合はEOSE後にリアクション数でソートするため、EOSE前は表示を更新しない
-      if (activeTab === 'popular') return;
-      
-      // 新着タブの場合のみ、EOSE前にリアルタイムで表示を更新（ソートして最初の20件だけ表示）
-      const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
-        sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-      ).slice(0, 20); // 初期表示は20件
-      
-      setCards(sortedCards);
-    };
-    
-    const handleEose = async () => {
-      if (cancelled) return;
-      
-      eoseReceivedRef.current = true; // EOSE完了をマーク
-      
-      // 別kindで管理されているタグをマージ
-      if (allReceivedCardsRef.current.length > 0) {
-        try {
-          const mergedCards = await mergePostTags(allReceivedCardsRef.current);
-          if (cancelled) return;
-          allReceivedCardsRef.current = mergedCards;
-        } catch (err) {
-          console.error('[Gallery] Failed to merge tags:', err);
-        }
-      }
-      
-      if (cancelled) return;
-      
-      const currentLimit = displayLimitRef.current;
-      
-      // EOSE後にリアクション数を一度だけ取得してソート
-      if (activeTab === 'popular' && allReceivedCardsRef.current.length > 0) {
-        const cardIds = allReceivedCardsRef.current.map(c => c.id);
-        
-        // リアクション数を一度だけ取得
-        const reactions = await fetchReactionCounts(cardIds);
-        if (cancelled) return;
-        
-        reactionCountsRef.current = reactions;
-        
-        // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
-        const sortedByReaction = [...allReceivedCardsRef.current].sort((a, b) => {
-          const aCount = reactions.get(a.id) || 0;
-          const bCount = reactions.get(b.id) || 0;
-          if (aCount !== bCount) {
-            return bCount - aCount;
-          }
-          return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-        }).slice(0, currentLimit);
-        
-        setCards(sortedByReaction);
-      } else if (activeTab === 'recent' && allReceivedCardsRef.current.length > 0) {
-        // 新着タブの場合、日付でソートして表示
-        const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
-          sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-        ).slice(0, currentLimit);
-        setCards(sortedCards);
-      }
-      
-      setIsLoading(false);
-    };
-    
-    // ストリーミング購読を開始
-    let unsubscribe: () => void;
-    
-    if (authorPubkey) {
-      unsubscribe = subscribeToCardsByAuthor(authorPubkey, handleCard, handleEose, FETCH_LIMIT);
-    } else {
-      unsubscribe = subscribeToPublicGalleryCards(handleCard, handleEose, FETCH_LIMIT);
-    }
-    
-    // クリーンアップ
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [activeTab, period, sortOrder, authorFilter, periodToDays]);
 
   // プロフィールを取得
   useEffect(() => {
@@ -368,110 +261,12 @@ export function Gallery({
     setSelectedCard(card);
   }, []);
 
-  const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
-    
-    const newLimit = displayLimit + 20;
-    setDisplayLimit(newLimit);
-    
-    // 既に取得済みのカードで足りる場合はそれを表示
-    if (allReceivedCardsRef.current.length >= newLimit) {
-      if (activeTab === 'popular') {
-        const reactions = reactionCountsRef.current;
-        const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
-          const aCount = reactions.get(a.id) || 0;
-          const bCount = reactions.get(b.id) || 0;
-          if (aCount !== bCount) {
-            return bCount - aCount;
-          }
-          return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-        }).slice(0, newLimit);
-        setCards(sortedCards);
-      } else {
-        const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
-          sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-        ).slice(0, newLimit);
-        setCards(sortedCards);
-      }
-      return;
+  // 共通hooksのloadMoreを使用（新着タブのみ対応）
+  const handleLoadMore = useCallback(() => {
+    if (activeTab === 'recent') {
+      loadMoreRecent();
     }
-    
-    // 足りない場合はリレーから追加取得
-    setIsLoadingMore(true);
-    
-    try {
-      // 最も古いカードのcreatedAtを取得
-      const oldestCard = allReceivedCardsRef.current.reduce((oldest, card) => 
-        card.createdAt < oldest.createdAt ? card : oldest
-      , allReceivedCardsRef.current[0]);
-      
-      if (!oldestCard) {
-        setHasMore(false);
-        return;
-      }
-      
-      let moreCards: NostrDrawPost[];
-      if (authorPubkeyRef.current) {
-        moreCards = await fetchMoreCardsByAuthors(
-          [authorPubkeyRef.current],
-          oldestCard.createdAt,
-          30,
-          seenIdsRef.current
-        );
-      } else {
-        moreCards = await fetchMorePublicGalleryCards(
-          oldestCard.createdAt,
-          30,
-          seenIdsRef.current
-        );
-      }
-      
-      if (moreCards.length === 0) {
-        setHasMore(false);
-      } else {
-        // 公開カードのみフィルタ
-        const publicCards = moreCards.filter(card => !card.recipientPubkey);
-        
-        // 追加されたカードをrefに追加
-        for (const card of publicCards) {
-          seenIdsRef.current.add(card.id);
-          allReceivedCardsRef.current.push(card);
-        }
-        
-        // ソートして表示更新
-        if (activeTab === 'popular') {
-          // 人気タブの場合は新しいカードのリアクション数を取得
-          const newCardIds = publicCards.map(c => c.id);
-          if (newCardIds.length > 0) {
-            const newReactions = await fetchReactionCounts(newCardIds);
-            newReactions.forEach((count, id) => {
-              reactionCountsRef.current.set(id, count);
-            });
-          }
-          
-          const reactions = reactionCountsRef.current;
-          const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => {
-            const aCount = reactions.get(a.id) || 0;
-            const bCount = reactions.get(b.id) || 0;
-            if (aCount !== bCount) {
-              return bCount - aCount;
-            }
-            return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
-          }).slice(0, newLimit);
-          setCards(sortedCards);
-        } else {
-          const sortedCards = [...allReceivedCardsRef.current].sort((a, b) => 
-            sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
-          ).slice(0, newLimit);
-          setCards(sortedCards);
-        }
-      }
-    } catch (err) {
-      console.error('追加読み込みエラー:', err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [displayLimit, activeTab, sortOrder, isLoadingMore, hasMore]);
+  }, [activeTab, loadMoreRecent]);
 
   // 無限スクロール用のIntersection Observer
   useEffect(() => {
