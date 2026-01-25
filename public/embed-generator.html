@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NostrDraw Embed Generator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .size-inputs {
+      display: flex;
+      gap: 16px;
+    }
+    .size-inputs input {
+      flex: 1;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .preview-section {
+      margin-top: 30px;
+    }
+    .preview-section h2 {
+      color: #333;
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+    .preview-container {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+    .preview-container iframe {
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .code-section {
+      margin-top: 20px;
+    }
+    .code-section h2 {
+      color: #333;
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+    .code-container {
+      position: relative;
+    }
+    .code-block {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #444;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      width: auto;
+    }
+    .copy-btn:hover {
+      background: #555;
+      transform: none;
+      box-shadow: none;
+    }
+    .copy-btn.copied {
+      background: #4caf50;
+    }
+    .placeholder {
+      color: #999;
+      font-style: italic;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      color: white;
+      margin-top: 20px;
+      text-decoration: none;
+      opacity: 0.8;
+    }
+    .back-link:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>NostrDraw Embed Generator</h1>
+    
+    <div class="card">
+      <div class="form-group">
+        <label for="eventId">Event ID / Note ID</label>
+        <input type="text" id="eventId" placeholder="イベントIDまたはnote1...を入力">
+      </div>
+      
+      <div class="form-group">
+        <label>サイズ</label>
+        <div class="size-inputs">
+          <input type="text" id="width" value="300" placeholder="幅">
+          <input type="text" id="height" value="300" placeholder="高さ">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="relay">リレー（オプション）</label>
+        <input type="text" id="relay" placeholder="wss://relay.example.com（空欄でデフォルト）">
+      </div>
+      
+      <button onclick="generateEmbed()">プレビュー生成</button>
+      
+      <div class="preview-section" id="previewSection" style="display: none;">
+        <h2>プレビュー</h2>
+        <div class="preview-container" id="previewContainer">
+          <span class="placeholder">プレビューがここに表示されます</span>
+        </div>
+      </div>
+      
+      <div class="code-section" id="codeSection" style="display: none;">
+        <h2>埋め込みコード</h2>
+        <div class="code-container">
+          <button class="copy-btn" onclick="copyCode()">コピー</button>
+          <pre class="code-block" id="codeBlock"></pre>
+        </div>
+      </div>
+    </div>
+    
+    <a href="./" class="back-link">← NostrDrawに戻る</a>
+  </div>
+
+  <script>
+    // Get base URL for embed
+    const baseUrl = window.location.href.replace('embed-generator.html', 'embed.html');
+    
+    // Check URL params for pre-filled event ID
+    const params = new URLSearchParams(window.location.search);
+    const prefilledId = params.get('id') || params.get('event');
+    if (prefilledId) {
+      document.getElementById('eventId').value = prefilledId;
+      // Auto-generate on load
+      setTimeout(generateEmbed, 100);
+    }
+    
+    function generateEmbed() {
+      const eventId = document.getElementById('eventId').value.trim();
+      const width = document.getElementById('width').value.trim() || '300';
+      const height = document.getElementById('height').value.trim() || '300';
+      const relay = document.getElementById('relay').value.trim();
+      
+      if (!eventId) {
+        alert('Event IDを入力してください');
+        return;
+      }
+      
+      // Build embed URL
+      let embedUrl = `${baseUrl}?id=${encodeURIComponent(eventId)}`;
+      if (relay) {
+        embedUrl += `&relay=${encodeURIComponent(relay)}`;
+      }
+      
+      // Generate iframe code
+      const iframeCode = `<iframe
+  src="${embedUrl}"
+  width="${width}"
+  height="${height}"
+  frameborder="0"
+  style="border-radius: 8px;"
+  loading="lazy"
+></iframe>`;
+      
+      // Show preview
+      const previewSection = document.getElementById('previewSection');
+      const previewContainer = document.getElementById('previewContainer');
+      previewSection.style.display = 'block';
+      previewContainer.innerHTML = `<iframe src="${embedUrl}" width="${width}" height="${height}" frameborder="0" style="border-radius: 8px;"></iframe>`;
+      
+      // Show code
+      const codeSection = document.getElementById('codeSection');
+      const codeBlock = document.getElementById('codeBlock');
+      codeSection.style.display = 'block';
+      codeBlock.textContent = iframeCode;
+    }
+    
+    function copyCode() {
+      const codeBlock = document.getElementById('codeBlock');
+      const code = codeBlock.textContent;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'コピーしました!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'コピー';
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'コピーしました!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'コピー';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+    
+    // Allow Enter key to generate
+    document.getElementById('eventId').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        generateEmbed();
+      }
+    });
+  </script>
+</body>
+</html>
