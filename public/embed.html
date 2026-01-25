@@ -509,7 +509,11 @@
         
       } catch (e) {
         console.error('Render error:', e);
-        container.innerHTML = `<div class="error">Error: ${e.message}</div>`;
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.textContent = `Error: ${e.message}`;
+        container.innerHTML = '';
+        container.appendChild(errorDiv);
       }
     }
 

@@ -293,20 +293,36 @@
       }).catch(err => {
         console.error('Copy failed:', err);
         // Fallback
-        const textarea = document.createElement('textarea');
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        
-        const btn = document.querySelector('.copy-btn');
-        btn.textContent = 'コピーしました!';
-        btn.classList.add('copied');
-        setTimeout(() => {
-          btn.textContent = 'コピー';
-          btn.classList.remove('copied');
-        }, 2000);
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = code;
+          document.body.appendChild(textarea);
+          textarea.select();
+          const success = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          
+          const btn = document.querySelector('.copy-btn');
+          if (success) {
+            btn.textContent = 'コピーしました!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = 'コピー';
+              btn.classList.remove('copied');
+            }, 2000);
+          } else {
+            btn.textContent = 'コピー失敗';
+            setTimeout(() => {
+              btn.textContent = 'コピー';
+            }, 2000);
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback copy failed:', fallbackErr);
+          const btn = document.querySelector('.copy-btn');
+          btn.textContent = 'コピー失敗';
+          setTimeout(() => {
+            btn.textContent = 'コピー';
+          }, 2000);
+        }
       });
     }
     
