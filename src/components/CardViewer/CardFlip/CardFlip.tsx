@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard, updateCardTags, fetchPostTags } from '../../../services/card';
+import { sendReaction, hasUserReacted, fetchReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard, updateCardTags, fetchPostTags } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -309,15 +309,12 @@ export const CardFlip = memo(function CardFlip({
     }
   }, [animatedSvg, isInitialLoading]);
 
-  // リアクション状態を取得（ストリーミング）
+  // リアクション状態を取得（一度だけ）
   useEffect(() => {
-    // ストリーミングでリアクション数を取得
-    const unsubscribe = streamReactionCounts(
-      [card.id],
-      (counts) => {
-        setReactionCount(counts.get(card.id) || 0);
-      }
-    );
+    // リアクション数を一度だけ取得
+    fetchReactionCounts([card.id]).then(counts => {
+      setReactionCount(counts.get(card.id) || 0);
+    });
     
     // 自分がリアクション済みかチェック
     if (userPubkey) {
@@ -325,10 +322,6 @@ export const CardFlip = memo(function CardFlip({
         setHasReacted(reacted);
       });
     }
-    
-    return () => {
-      unsubscribe();
-    };
   }, [card.id, userPubkey]);
 
   // ツリー全体を取得（すべての祖先と子孫）
@@ -357,7 +350,7 @@ export const CardFlip = memo(function CardFlip({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id]);
 
-  // ツリーカードのプロファイルとリアクション数を取得（ストリーミング）
+  // ツリーカードのプロファイルとリアクション数を取得（一度だけ）
   useEffect(() => {
     const allTreeCards = [...ancestors, ...descendants];
     if (allTreeCards.length === 0) return;
@@ -368,18 +361,11 @@ export const CardFlip = memo(function CardFlip({
       setTreeProfiles(profiles);
     });
     
-    // ストリーミングでリアクション数を取得
+    // リアクション数を一度だけ取得
     const eventIds = allTreeCards.map(c => c.id);
-    const unsubscribe = streamReactionCounts(
-      eventIds,
-      (reactions) => {
-        setTreeReactions(new Map(reactions));
-      }
-    );
-    
-    return () => {
-      unsubscribe();
-    };
+    fetchReactionCounts(eventIds).then(reactions => {
+      setTreeReactions(new Map(reactions));
+    });
   }, [ancestors, descendants]);
 
   // ツリーカードの完全なSVGを取得（差分マージ）

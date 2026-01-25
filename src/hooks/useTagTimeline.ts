@@ -5,7 +5,7 @@ import type { NostrDrawPost } from '../types';
 import {
   subscribeToCardsByTags,
   fetchMoreCardsByTags,
-  streamReactionCounts,
+  fetchReactionCounts,
   mergePostTags,
   type NostrDrawPostWithReactions,
 } from '../services/card';
@@ -144,18 +144,13 @@ export function useTagTimeline({
     };
   }, [loadCards]);
 
-  // リアクションのストリーミング
+  // リアクション数の取得（一度だけ）
   useEffect(() => {
     if (cards.length === 0) return;
 
     const eventIds = cards.slice(0, displayCount).map(c => c.id);
-    const unsubscribe = streamReactionCounts(
-      eventIds,
-      updateReactions
-    );
-
-    return () => unsubscribe();
-  }, [cards, displayCount, updateReactions]);
+    fetchReactionCounts(eventIds).then(updateReactions);
+  }, [cards.length, displayCount]); // cards.lengthで依存を最小化
 
   // 追加読み込み
   const loadMore = useCallback(async () => {
