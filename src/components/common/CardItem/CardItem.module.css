@@ -263,3 +263,150 @@
 :global(.light-theme) .postImage {
   box-shadow: var(--shadow-sm);
 }
+
+/* ========================================
+   サムネイル表示（Gallery用）
+   ======================================== */
+
+.item {
+  background: var(--color-bg-raised);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-border);
+  transition: 
+    transform var(--duration-normal) var(--easing-default),
+    box-shadow var(--duration-normal) var(--easing-default);
+}
+
+.item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.thumbnail {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbnailImage svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.placeholderEmoji {
+  font-size: var(--text-4xl);
+  opacity: 0.5;
+}
+
+.info {
+  padding: var(--space-3);
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  padding: var(--space-1);
+  margin: calc(var(--space-1) * -1);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--easing-default);
+}
+
+.author:hover {
+  background: var(--color-bg-subtle);
+}
+
+.avatarSmall {
+  width: var(--size-avatar-sm);
+  height: var(--size-avatar-sm);
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.name {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.reactionButtonSmall {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: transparent;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  font-family: var(--font-family-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    border-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default);
+}
+
+.reactionButtonSmall:hover:not(:disabled) {
+  background: var(--color-error-muted);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.reactionButtonSmall:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.reactionButtonSmall.reacted {
+  background: var(--color-error-muted);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.date {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+.cardTagsSmall {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+/* ライトテーマ - サムネイル */
+:global(.light-theme) .thumbnail {
+  box-shadow: var(--shadow-sm);
+}
+
+:global(.light-theme) .item:hover {
+  box-shadow: var(--shadow-xl);
+}

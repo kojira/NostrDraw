@@ -26,6 +26,8 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
   );
 }
 
+export type CardItemVariant = 'post' | 'thumbnail';
+
 export interface CardItemProps {
   card: NostrDrawPost | NostrDrawPostWithReactions;
   profile?: NostrProfile | null;
@@ -42,6 +44,8 @@ export interface CardItemProps {
   // 合成済みSVG（差分カード用、外部で管理する場合）
   mergedSvg?: string;
   onMergedSvgLoaded?: (cardId: string, svg: string) => void;
+  // 表示バリエーション: 'post'=Timeline用フルカード, 'thumbnail'=Gallery用サムネイル
+  variant?: CardItemVariant;
 }
 
 export function CardItem({
@@ -58,6 +62,7 @@ export function CardItem({
   onUnfollowTag,
   mergedSvg: externalMergedSvg,
   onMergedSvgLoaded,
+  variant = 'post',
 }: CardItemProps) {
   const { t } = useTranslation();
   
@@ -161,7 +166,71 @@ export function CardItem({
   const reactionCount = getReactionCount();
   const userReacted = getUserReacted();
 
-  // Timeline.tsxのカード表示部分をそのままコピー
+  // サムネイル表示（Gallery用）
+  if (variant === 'thumbnail') {
+    return (
+      <div className={styles.item}>
+        <div 
+          className={styles.thumbnail}
+          onClick={() => onCardClick?.(card)}
+        >
+          {(() => {
+            // isDiffの場合は合成完了まで待機
+            if (card.isDiff && card.parentEventId) {
+              if (mergedSvg) {
+                return <SvgRenderer svg={mergedSvg} className={styles.thumbnailImage} />;
+              }
+              return <Spinner size="sm" />;
+            }
+            return card.svg ? (
+              <SvgRenderer svg={card.svg} className={styles.thumbnailImage} />
+            ) : (
+              <span className={styles.placeholderEmoji}>🎨</span>
+            );
+          })()}
+        </div>
+        <div className={styles.info}>
+          <div 
+            className={styles.author}
+            onClick={handleAuthorClick}
+          >
+            {picture && (
+              <img src={picture} alt="" className={styles.avatarSmall} />
+            )}
+            <span className={styles.name}>{name}</span>
+          </div>
+          <div className={styles.meta}>
+            <button
+              className={`${styles.reactionButtonSmall} ${userReacted ? styles.reacted : ''}`}
+              onClick={handleReaction}
+              disabled={!signEvent || !userPubkey || userReacted || isReacting}
+              title={userReacted ? t('reaction.liked') : t('reaction.like')}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', fontVariationSettings: userReacted ? "'FILL' 1" : "'FILL' 0", color: '#e94560' }}>favorite</span>
+              <span>{reactionCount + (localReacted && !('userReacted' in card && card.userReacted) ? 1 : 0)}</span>
+            </button>
+            <span className={styles.date}>{formatDate(card.createdAt)}</span>
+          </div>
+          {/* タグ表示 */}
+          {card.tags && card.tags.length > 0 && (
+            <div className={styles.cardTagsSmall}>
+              <TagDisplay
+                tags={card.tags}
+                followedTags={followedTags}
+                onTagClick={onTagClick}
+                showFollowButton={false}
+                size="small"
+                compact
+                maxDisplay={3}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // フルカード表示（Timeline用）
   return (
     <div className={styles.post}>
       {/* ヘッダー（著者情報） */}

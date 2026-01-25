@@ -6,31 +6,13 @@ import type { NostrDrawPost, NostrProfile } from '../../types';
 import { PRESET_TAGS } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
-import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg, mergePostTags } from '../../services/card';
+import { streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg, mergePostTags } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr, saveFavoritePalettesToNostr, getFavoritePaletteIds, fetchPalettePopularityCounts, PRESET_PALETTES, isPresetPalette } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
 import { Spinner } from '../common/Spinner';
+import { CardItem } from '../common/CardItem';
 import styles from './Gallery.module.css';
-
-// SVGを安全にレンダリングするためのコンポーネント
-function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
-  const hasExternalImage = svg.includes('<image') && svg.includes('href=');
-  
-  if (hasExternalImage) {
-    return (
-      <div 
-        className={className}
-        dangerouslySetInnerHTML={{ __html: svg }}
-        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-      />
-    );
-  }
-  
-  const encoded = btoa(unescape(encodeURIComponent(svg)));
-  const dataUri = `data:image/svg+xml;base64,${encoded}`;
-  return <img src={dataUri} alt="" className={className} />;
-}
 
 interface GalleryProps {
   initialTab?: string;
@@ -49,18 +31,6 @@ interface GalleryProps {
 type TabType = 'popular' | 'recent' | 'palettes';
 type PeriodType = 'all' | 'day' | 'week' | 'month';
 type SortOrderType = 'desc' | 'asc';
-
-// 日時フォーマット（2026/1/1 10:00:00 形式）
-const formatDate = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-};
 
 export function Gallery({
   initialTab = 'popular',
@@ -110,11 +80,6 @@ export function Gallery({
   
   // 著者フィルタのpubkeyを保持
   const authorPubkeyRef = useRef<string>('');
-  
-  // リアクション状態を管理
-  const [userReactions, setUserReactions] = useState<Set<string>>(new Set());
-  const [reactionCounts, setReactionCounts] = useState<Map<string, number>>(new Map());
-  const [reactingCards, setReactingCards] = useState<Set<string>>(new Set());
   
   // 差分保存されたカードの合成済みSVGを管理
   const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
@@ -283,7 +248,6 @@ export function Gallery({
             }).slice(0, currentLimit);
             
             setCards(sortedByReaction);
-            setReactionCounts(new Map(reactions));
           }
         );
       } else if (activeTab === 'recent' && allReceivedCardsRef.current.length > 0) {
@@ -349,35 +313,6 @@ export function Gallery({
     });
   }, [cards, mergedSvgs]);
 
-  // リアクション状態を取得（ストリーミング）
-  useEffect(() => {
-    if (cards.length === 0) return;
-    
-    const eventIds = cards.map(card => card.id);
-    
-    // ストリーミングでリアクション数を取得（1件ずつUIに反映）
-    const unsubscribe = streamReactionCounts(
-      eventIds,
-      (reactions) => {
-        setReactionCounts(new Map(reactions));
-      }
-    );
-    
-    // ユーザーがリアクション済みかチェック（バックグラウンドで）
-    if (userPubkey) {
-      eventIds.forEach(async (eventId) => {
-        const hasReacted = await hasUserReacted(eventId, userPubkey);
-        if (hasReacted) {
-          setUserReactions(prev => new Set(prev).add(eventId));
-        }
-      });
-    }
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [cards, userPubkey]);
-
   // 選択されたカードの送信者プロフィールを取得
   useEffect(() => {
     if (!selectedCard) {
@@ -398,10 +333,6 @@ export function Gallery({
     if (profile?.display_name) return profile.display_name;
     if (profile?.name) return profile.name;
     return pubkeyToNpub(pubkey).slice(0, 8) + '...';
-  };
-
-  const getProfilePicture = (pubkey: string) => {
-    return profiles.get(pubkey)?.picture;
   };
 
   // タグでフィルタリングされたカード
@@ -521,7 +452,6 @@ export function Gallery({
                   return sortOrder === 'desc' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
                 }).slice(0, newLimit);
                 setCards(sortedCards);
-                setReactionCounts(new Map(reactions));
               }
             );
           } else {
@@ -576,34 +506,6 @@ export function Gallery({
   }, [hasMore, isLoadingMore, isLoading, handleLoadMore]);
 
   // 一覧からリアクションを送信
-  const handleReaction = useCallback(async (e: React.MouseEvent, card: NostrDrawPost) => {
-    e.stopPropagation(); // カード選択を防ぐ
-    
-    if (!signEvent || !userPubkey) return;
-    if (userReactions.has(card.id)) return; // 既にリアクション済み
-    if (reactingCards.has(card.id)) return; // リアクション中
-    
-    setReactingCards(prev => new Set(prev).add(card.id));
-    
-    try {
-      await sendReaction(card.id, card.pubkey, '❤️', signEvent);
-      setUserReactions(prev => new Set(prev).add(card.id));
-      setReactionCounts(prev => {
-        const newCounts = new Map(prev);
-        newCounts.set(card.id, (prev.get(card.id) || 0) + 1);
-        return newCounts;
-      });
-    } catch (error) {
-      console.error('リアクション送信失敗:', error);
-    } finally {
-      setReactingCards(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(card.id);
-        return newSet;
-      });
-    }
-  }, [signEvent, userPubkey, userReactions, reactingCards]);
-
   const handleAuthorClick = (pubkey: string) => {
     if (onUserClick) {
       onUserClick(pubkeyToNpub(pubkey));
@@ -705,19 +607,6 @@ export function Gallery({
       setDeletingPaletteId(null);
     }
   }, [signEvent, t]);
-
-  // リアクション数を取得
-  const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number => {
-    // stateから取得（リアルタイム更新用）
-    if (reactionCounts.has(card.id)) {
-      return reactionCounts.get(card.id) || 0;
-    }
-    // NostrDrawPostWithReactionsから取得
-    if ('reactionCount' in card) {
-      return card.reactionCount;
-    }
-    return 0;
-  };
 
   return (
     <div className={styles.gallery}>
@@ -1042,63 +931,29 @@ export function Gallery({
             {filteredCards.length > 0 && (
               <>
                 <div className={styles.grid}>
-              {filteredCards.map((card) => {
-                const picture = getProfilePicture(card.pubkey);
-                const name = getProfileName(card.pubkey);
-                const reactionCount = getReactionCount(card);
-
-                return (
-                  <div key={card.id} className={styles.item}>
-                    <div 
-                      className={styles.thumbnail}
-                      onClick={() => handleSelectCard(card)}
-                    >
-                      {(() => {
-                        // isDiffの場合は合成完了まで待機
-                        if (card.isDiff && card.parentEventId) {
-                          const mergedSvg = mergedSvgs.get(card.id);
-                          if (mergedSvg) {
-                            return <SvgRenderer svg={mergedSvg} className={styles.thumbnailImage} />;
-                          }
-                          // 合成完了まではローディング表示
-                          return <Spinner size="sm" />;
-                        }
-                        // 通常のカード
-                        return card.svg ? (
-                          <SvgRenderer svg={card.svg} className={styles.thumbnailImage} />
-                        ) : (
-                          <span className={styles.placeholderEmoji}>🎨</span>
-                        );
-                      })()}
-                    </div>
-                    <div className={styles.info}>
-                      <div 
-                        className={styles.author}
-                        onClick={() => handleAuthorClick(card.pubkey)}
-                      >
-                        {picture && (
-                          <img src={picture} alt="" className={styles.avatar} />
-                        )}
-                        <span className={styles.name}>{name}</span>
-                      </div>
-                      <div className={styles.meta}>
-                        <button
-                          className={`${styles.reactionButton} ${userReactions.has(card.id) ? styles.reacted : ''}`}
-                          onClick={(e) => handleReaction(e, card)}
-                          disabled={!signEvent || !userPubkey || userReactions.has(card.id) || reactingCards.has(card.id)}
-                          title={userReactions.has(card.id) ? t('reaction.liked') : t('reaction.like')}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px', fontVariationSettings: userReactions.has(card.id) ? "'FILL' 1" : "'FILL' 0", color: '#e94560' }}>favorite</span>
-                          <span>{reactionCount}</span>
-                        </button>
-                        <span className={styles.date}>
-                          {formatDate(card.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredCards.map((card) => (
+                <CardItem
+                  key={card.id}
+                  card={card}
+                  profile={profiles.get(card.pubkey)}
+                  userPubkey={userPubkey}
+                  signEvent={signEvent}
+                  onCardClick={handleSelectCard}
+                  onAuthorClick={handleAuthorClick}
+                  mergedSvg={mergedSvgs.get(card.id)}
+                  onMergedSvgLoaded={(cardId, svg) => {
+                    setMergedSvgs(prev => new Map(prev).set(cardId, svg));
+                  }}
+                  variant="thumbnail"
+                  followedTags={tagFilters}
+                  onTagClick={(tag) => {
+                    // タグがフィルターになければ追加
+                    if (!tagFilters.includes(tag)) {
+                      setTagFilters(prev => [...prev, tag]);
+                    }
+                  }}
+                />
+              ))}
             </div>
 
             {/* 無限スクロール: ローディングとトリガー */}
