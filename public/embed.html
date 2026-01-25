@@ -174,6 +174,33 @@
       return false;
     }
 
+    // Sanitize CSS style attribute to remove dangerous patterns
+    function sanitizeStyle(styleValue) {
+      if (!styleValue) return '';
+      
+      const lowerStyle = styleValue.toLowerCase();
+      
+      // Dangerous CSS patterns that can execute code
+      const dangerousPatterns = [
+        /expression\s*\(/gi,           // IE CSS expressions
+        /behavior\s*:/gi,              // IE behavior
+        /-moz-binding\s*:/gi,          // Firefox XBL binding
+        /javascript\s*:/gi,            // javascript: URLs
+        /vbscript\s*:/gi,              // vbscript: URLs
+        /@import/gi,                   // @import can load external CSS
+        /url\s*\(\s*["']?\s*javascript/gi,  // url(javascript:...)
+        /url\s*\(\s*["']?\s*data\s*:/gi,    // url(data:...) can be dangerous
+      ];
+      
+      for (const pattern of dangerousPatterns) {
+        if (pattern.test(lowerStyle)) {
+          return ''; // Remove entire style if dangerous pattern found
+        }
+      }
+      
+      return styleValue;
+    }
+
     // Sanitize SVG to prevent XSS attacks
     function sanitizeSvg(svgString) {
       const parser = new DOMParser();
@@ -189,8 +216,8 @@
       const svg = doc.querySelector('svg');
       if (!svg) return null;
       
-      // Remove dangerous elements
-      const dangerousElements = ['script', 'foreignObject', 'iframe', 'object', 'embed'];
+      // Remove dangerous elements (including style elements that could contain malicious CSS)
+      const dangerousElements = ['script', 'foreignObject', 'iframe', 'object', 'embed', 'style'];
       dangerousElements.forEach(tag => {
         svg.querySelectorAll(tag).forEach(el => el.remove());
       });
@@ -215,12 +242,31 @@
             el.removeAttribute(attr);
           }
         });
+        // Sanitize style attributes
+        const styleVal = el.getAttribute('style');
+        if (styleVal) {
+          const sanitized = sanitizeStyle(styleVal);
+          if (sanitized) {
+            el.setAttribute('style', sanitized);
+          } else {
+            el.removeAttribute('style');
+          }
+        }
       });
       
       // Also check the svg element itself
       dangerousAttrs.forEach(attr => {
         svg.removeAttribute(attr);
       });
+      const svgStyle = svg.getAttribute('style');
+      if (svgStyle) {
+        const sanitized = sanitizeStyle(svgStyle);
+        if (sanitized) {
+          svg.setAttribute('style', sanitized);
+        } else {
+          svg.removeAttribute('style');
+        }
+      }
       
       return svg;
     }
