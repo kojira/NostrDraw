@@ -14,44 +14,92 @@
       width: 100%;
       height: 100%;
       background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     .container {
       width: 100%;
       height: 100%;
       min-height: 100px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
     }
     .loading {
       color: #666;
-      font-family: sans-serif;
       font-size: 14px;
     }
     .error {
       color: #c00;
-      font-family: sans-serif;
       font-size: 14px;
       text-align: center;
       padding: 20px;
     }
-    .card {
+    .card-wrapper {
+      display: flex;
+      flex-direction: column;
       max-width: 100%;
-      max-height: 100%;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .card-image {
+      display: block;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: opacity 0.2s;
     }
-    .card:hover {
-      transform: scale(1.02);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    .card-image:hover {
+      opacity: 0.9;
     }
-    .card img, .card svg {
+    .card-image img, .card-image svg {
       display: block;
       max-width: 100%;
       max-height: 100%;
-      border-radius: 8px;
+    }
+    .card-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #fafafa;
+      border-top: 1px solid #eee;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s;
+    }
+    .card-footer:hover {
+      background: #f0f0f0;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #ddd;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .user-info {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .post-time {
+      font-size: 11px;
+      color: #888;
+    }
+    .nostr-logo {
+      width: 20px;
+      height: 20px;
+      opacity: 0.5;
     }
   </style>
 </head>
@@ -70,6 +118,7 @@
     ];
 
     const NOSTRDRAW_KIND = 31898;
+    const PROFILE_KIND = 0;
 
     // URL parameters
     const params = new URLSearchParams(window.location.search);
@@ -77,10 +126,21 @@
     const relayParam = params.get('relay');
     const relays = relayParam ? [relayParam] : DEFAULT_RELAYS;
 
+    // Format date with seconds
+    function formatDateTime(timestamp) {
+      const date = new Date(timestamp * 1000);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+    }
+
     // Check if string is valid Base64
     function isBase64(str) {
       if (!str || str.length === 0) return false;
-      // Base64 should only contain these characters
       const base64Regex = /^[A-Za-z0-9+/=]+$/;
       return base64Regex.test(str) && str.length % 4 === 0;
     }
@@ -88,12 +148,10 @@
     // Decompress SVG
     function decompressSvg(compressedData) {
       if (!compressedData || !isBase64(compressedData)) {
-        console.log('Content is not valid Base64');
         return null;
       }
       
       try {
-        // Try deflate+base64 first (current format)
         const binaryStr = atob(compressedData);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) {
@@ -102,7 +160,6 @@
         const decompressed = pako.inflate(bytes, { to: 'string' });
         return decompressed;
       } catch (e) {
-        // Try gzip+base64 (legacy format)
         try {
           const binaryStr = atob(compressedData);
           const bytes = new Uint8Array(binaryStr.length);
@@ -127,7 +184,6 @@
       let svg = null;
       let content = event.content || '';
       
-      // Check if content is JSON (NostrDraw format with svgCompressed field)
       if (content.trim().startsWith('{')) {
         try {
           const jsonContent = JSON.parse(content);
@@ -140,19 +196,15 @@
           console.error('Failed to parse JSON content:', e);
         }
       }
-      // Check if content is raw SVG (starts with <svg or <?xml)
       else if (content.trim().startsWith('<svg') || content.trim().startsWith('<?xml')) {
         svg = content;
       }
-      // Check if encoding tag indicates compression
       else if (encoding === 'deflate+base64' || encoding === 'binary+gzip+base64') {
         svg = decompressSvg(content);
       }
-      // Try to decompress if content looks like Base64
       else if (isBase64(content)) {
         svg = decompressSvg(content);
       }
-      // Otherwise, if content type is SVG, use as-is
       else if (contentType === 'image/svg+xml' && content) {
         svg = content;
       }
@@ -188,9 +240,7 @@
         }, 5000);
         
         ws.onopen = () => {
-          // Try fetching by event ID (could be kind 31898 replaceable event)
           ws.send(JSON.stringify(['REQ', subId, { ids: [eventId] }]));
-          // Also try fetching by d tag for replaceable events
           ws.send(JSON.stringify(['REQ', subId + '-d', { kinds: [NOSTRDRAW_KIND], '#d': [eventId] }]));
         };
         
@@ -204,8 +254,75 @@
                 ws.close();
                 resolve(data[2]);
               }
+            }
+          } catch (e) {
+            console.error('Parse error:', e);
+          }
+        };
+        
+        ws.onerror = (e) => {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            reject(e);
+          }
+        };
+      });
+    }
+
+    // Fetch profile
+    async function fetchProfile(pubkey, relays) {
+      for (const relay of relays) {
+        try {
+          const result = await fetchProfileFromRelay(relay, pubkey);
+          if (result) return result;
+        } catch (e) {
+          console.warn(`Failed to fetch profile from ${relay}:`, e);
+        }
+      }
+      return null;
+    }
+
+    function fetchProfileFromRelay(relayUrl, pubkey) {
+      return new Promise((resolve, reject) => {
+        const ws = new WebSocket(relayUrl);
+        const subId = 'profile-' + Math.random().toString(36).slice(2);
+        let resolved = false;
+        
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            ws.close();
+            resolve(null);
+          }
+        }, 3000);
+        
+        ws.onopen = () => {
+          ws.send(JSON.stringify(['REQ', subId, { kinds: [PROFILE_KIND], authors: [pubkey], limit: 1 }]));
+        };
+        
+        ws.onmessage = (msg) => {
+          try {
+            const data = JSON.parse(msg.data);
+            if (data[0] === 'EVENT' && data[2] && data[2].kind === PROFILE_KIND) {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                ws.close();
+                try {
+                  const profile = JSON.parse(data[2].content);
+                  resolve(profile);
+                } catch (e) {
+                  resolve(null);
+                }
+              }
             } else if (data[0] === 'EOSE') {
-              // Continue waiting for other subscription
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                ws.close();
+                resolve(null);
+              }
             }
           } catch (e) {
             console.error('Parse error:', e);
@@ -241,18 +358,26 @@
         
         const { svg, imageUrl } = parseNostrDrawEvent(event);
         
+        // Fetch profile
+        const profile = await fetchProfile(event.pubkey, relays);
+        const displayName = profile?.display_name || profile?.name || event.pubkey.slice(0, 8) + '...';
+        const avatarUrl = profile?.picture || '';
+        
+        // Create wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'card-wrapper';
+        
+        // Create image link
         const cardLink = document.createElement('a');
         cardLink.href = `https://kojira.github.io/NostrDraw/?view=${eventId}`;
         cardLink.target = '_blank';
-        cardLink.className = 'card';
+        cardLink.className = 'card-image';
         
         if (svg) {
-          // Display SVG inline
-          const wrapper = document.createElement('div');
-          wrapper.innerHTML = svg;
-          const svgEl = wrapper.querySelector('svg');
+          const svgWrapper = document.createElement('div');
+          svgWrapper.innerHTML = svg;
+          const svgEl = svgWrapper.querySelector('svg');
           if (svgEl) {
-            // Ensure SVG has width/height for proper rendering
             if (!svgEl.getAttribute('width')) {
               svgEl.setAttribute('width', '100%');
             }
@@ -266,11 +391,9 @@
             svgEl.style.display = 'block';
             cardLink.appendChild(svgEl);
           } else {
-            // If no SVG element found, try to show as-is
             cardLink.innerHTML = svg;
           }
         } else if (imageUrl) {
-          // Fall back to image URL
           const img = document.createElement('img');
           img.src = imageUrl;
           img.alt = 'NostrDraw Card';
@@ -280,8 +403,57 @@
           return;
         }
         
+        wrapper.appendChild(cardLink);
+        
+        // Create footer
+        const footer = document.createElement('a');
+        footer.href = `https://kojira.github.io/NostrDraw/?view=${eventId}`;
+        footer.target = '_blank';
+        footer.className = 'card-footer';
+        
+        // Avatar
+        if (avatarUrl) {
+          const avatar = document.createElement('img');
+          avatar.src = avatarUrl;
+          avatar.alt = displayName;
+          avatar.className = 'avatar';
+          avatar.onerror = () => { avatar.style.display = 'none'; };
+          footer.appendChild(avatar);
+        } else {
+          const avatarPlaceholder = document.createElement('div');
+          avatarPlaceholder.className = 'avatar';
+          avatarPlaceholder.style.background = `hsl(${parseInt(event.pubkey.slice(0, 8), 16) % 360}, 60%, 70%)`;
+          footer.appendChild(avatarPlaceholder);
+        }
+        
+        // User info
+        const userInfo = document.createElement('div');
+        userInfo.className = 'user-info';
+        
+        const userName = document.createElement('div');
+        userName.className = 'user-name';
+        userName.textContent = displayName;
+        userInfo.appendChild(userName);
+        
+        const postTime = document.createElement('div');
+        postTime.className = 'post-time';
+        postTime.textContent = formatDateTime(event.created_at);
+        userInfo.appendChild(postTime);
+        
+        footer.appendChild(userInfo);
+        
+        // Nostr logo (simple purple circle)
+        const logo = document.createElement('div');
+        logo.innerHTML = `<svg class="nostr-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="#8B5CF6"/>
+          <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">N</text>
+        </svg>`;
+        footer.appendChild(logo);
+        
+        wrapper.appendChild(footer);
+        
         container.innerHTML = '';
-        container.appendChild(cardLink);
+        container.appendChild(wrapper);
         
       } catch (e) {
         console.error('Render error:', e);
