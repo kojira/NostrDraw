@@ -311,17 +311,27 @@ export const CardFlip = memo(function CardFlip({
 
   // リアクション状態を取得（一度だけ）
   useEffect(() => {
+    let cancelled = false;
+    
     // リアクション数を一度だけ取得
     fetchReactionCounts([card.id]).then(counts => {
-      setReactionCount(counts.get(card.id) || 0);
+      if (!cancelled) {
+        setReactionCount(counts.get(card.id) || 0);
+      }
     });
     
     // 自分がリアクション済みかチェック
     if (userPubkey) {
       hasUserReacted(card.id, userPubkey).then(reacted => {
-        setHasReacted(reacted);
+        if (!cancelled) {
+          setHasReacted(reacted);
+        }
       });
     }
+    
+    return () => {
+      cancelled = true;
+    };
   }, [card.id, userPubkey]);
 
   // ツリー全体を取得（すべての祖先と子孫）
@@ -355,17 +365,27 @@ export const CardFlip = memo(function CardFlip({
     const allTreeCards = [...ancestors, ...descendants];
     if (allTreeCards.length === 0) return;
     
+    let cancelled = false;
+    
     // プロファイルを取得
     const pubkeys = [...new Set(allTreeCards.map(c => c.pubkey))];
     fetchProfiles(pubkeys).then(profiles => {
-      setTreeProfiles(profiles);
+      if (!cancelled) {
+        setTreeProfiles(profiles);
+      }
     });
     
     // リアクション数を一度だけ取得
     const eventIds = allTreeCards.map(c => c.id);
     fetchReactionCounts(eventIds).then(reactions => {
-      setTreeReactions(new Map(reactions));
+      if (!cancelled) {
+        setTreeReactions(new Map(reactions));
+      }
     });
+    
+    return () => {
+      cancelled = true;
+    };
   }, [ancestors, descendants]);
 
   // ツリーカードの完全なSVGを取得（差分マージ）

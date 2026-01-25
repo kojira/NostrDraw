@@ -92,45 +92,9 @@ export function useSentCards(pubkey: string | null) {
   };
 }
 
-// リアクション数を取得して更新するヘルパー（Promiseベース）
-// 一度だけリアクション数を取得して更新
-async function fetchAndUpdateReactions(
-  cards: NostrDrawPost[],
-  userPubkey: string | null | undefined,
-  setCards: React.Dispatch<React.SetStateAction<NostrDrawPostWithReactions[]>>
-): Promise<void> {
-  if (cards.length === 0) return;
-  
-  console.log('[fetchAndUpdateReactions] starting for', cards.length, 'cards');
-  const cardIds = cards.map(c => c.id);
-  const userReactedSet = new Set<string>();
-  
-  // ユーザーのリアクション状態を取得
-  if (userPubkey) {
-    await Promise.all(
-      cardIds.map(async (cardId) => {
-        const reacted = await hasUserReacted(cardId, userPubkey);
-        if (reacted) {
-          userReactedSet.add(cardId);
-        }
-      })
-    );
-  }
-  
-  // リアクション数を一度だけ取得
-  console.log('[fetchAndUpdateReactions] fetching reaction counts');
-  const reactions = await fetchReactionCounts(cardIds);
-  console.log('[fetchAndUpdateReactions] got reactions:', reactions.size);
-  
-  // カードを更新
-  setCards(prevCards => {
-    const updatedCards = prevCards.map(card => ({
-      ...card,
-      reactionCount: reactions.get(card.id) || card.reactionCount,
-      userReacted: userReactedSet.has(card.id) || card.userReacted,
-    }));
-    return updatedCards;
-  });
+// カードIDリストを安定した文字列に変換（useEffectの依存配列用）
+function getCardIdsKey(cards: { id: string }[]): string {
+  return cards.map(c => c.id).join(',');
 }
 
 // 公開ギャラリー（みんなの作品・新着）を取得
@@ -143,12 +107,8 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const userPubkeyRef = useRef(userPubkey);
-  
-  // userPubkeyの変更を追跡
-  useEffect(() => {
-    userPubkeyRef.current = userPubkey;
-  }, [userPubkey]);
+  // リアクション取得済みのカードIDを追跡
+  const fetchedReactionIdsRef = useRef<Set<string>>(new Set());
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -162,6 +122,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
     setHasMore(true);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
+    fetchedReactionIdsRef.current = new Set();
 
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
@@ -173,7 +134,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
       
       allCardsRef.current.push(card);
       
-      // 関数形式でsetCardsを呼び出し、既存のリアクション数を保持する
+      // カードを追加（リアクション数は後で取得）
       setCards(prevCards => {
         const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
         const sortedCards = [...allCardsRef.current]
@@ -208,11 +169,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
           console.error('[usePublicGalleryCards] Failed to merge tags:', err);
         }
       }
-      
-      // EOSE後にリアクション数を一度だけ取得
-      if (allCardsRef.current.length > 0) {
-        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
-      }
+      // リアクション取得はuseEffectで行う
       setIsLoading(false);
     };
 
@@ -248,9 +205,17 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
           seenIdsRef.current.add(card.id);
           allCardsRef.current.push(card);
         }
-        
-        // 追加カードのリアクション数を取得
-        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
+        // カードを追加（リアクション数はuseEffectで取得）
+        setCards(prevCards => {
+          const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
+          return [...allCardsRef.current]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map(c => ({
+              ...c,
+              reactionCount: reactionMap.get(c.id)?.reactionCount ?? 0,
+              userReacted: reactionMap.get(c.id)?.userReacted ?? false,
+            }));
+        });
       }
     } catch (err) {
       console.error('追加読み込みエラー:', err);
@@ -259,6 +224,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
     }
   }, [isLoadingMore, hasMore]);
 
+  // カード購読の開始とクリーンアップ
   useEffect(() => {
     loadCards();
     
@@ -268,6 +234,64 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
       }
     };
   }, [loadCards]);
+
+  // リアクション取得（カードIDリストが変わった時に実行）
+  // useEffectで分離することで、適切なライフサイクル管理とキャンセル処理が可能
+  const cardIdsKey = getCardIdsKey(cards);
+  useEffect(() => {
+    if (isLoading || cards.length === 0) return;
+    
+    // 未取得のカードIDのみ抽出
+    const newCardIds = cards
+      .filter(c => !fetchedReactionIdsRef.current.has(c.id))
+      .map(c => c.id);
+    
+    if (newCardIds.length === 0) return;
+    
+    let cancelled = false;
+    
+    const fetchReactions = async () => {
+      try {
+        // リアクション数を取得
+        const reactions = await fetchReactionCounts(newCardIds);
+        
+        if (cancelled) return;
+        
+        // ユーザーのリアクション状態を取得
+        const userReactedSet = new Set<string>();
+        if (userPubkey) {
+          await Promise.all(
+            newCardIds.map(async (cardId) => {
+              if (cancelled) return;
+              const reacted = await hasUserReacted(cardId, userPubkey);
+              if (reacted) userReactedSet.add(cardId);
+            })
+          );
+        }
+        
+        if (cancelled) return;
+        
+        // 取得済みとしてマーク
+        newCardIds.forEach(id => fetchedReactionIdsRef.current.add(id));
+        
+        // カードを更新
+        setCards(prevCards => prevCards.map(card => ({
+          ...card,
+          reactionCount: reactions.get(card.id) ?? card.reactionCount,
+          userReacted: userReactedSet.has(card.id) || card.userReacted,
+        })));
+      } catch (err) {
+        console.error('[usePublicGalleryCards] Failed to fetch reactions:', err);
+      }
+    };
+    
+    fetchReactions();
+    
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardIdsKey, isLoading, userPubkey]);
 
   return {
     cards,
@@ -289,6 +313,8 @@ export function usePopularCards(days: number = 3) {
   const allCardsRef = useRef<NostrDrawPost[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  // キャンセルフラグ
+  const cancelledRef = useRef(false);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -296,6 +322,7 @@ export function usePopularCards(days: number = 3) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
+    cancelledRef.current = false;
     
     setIsLoading(true);
     setError(null);
@@ -306,6 +333,8 @@ export function usePopularCards(days: number = 3) {
     const sinceTimestamp = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
 
     const handleCard = (card: NostrDrawPost) => {
+      if (cancelledRef.current) return;
+      
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);
@@ -320,20 +349,27 @@ export function usePopularCards(days: number = 3) {
     };
 
     const handleEose = async () => {
+      if (cancelledRef.current) return;
+      
       // 別kindで管理されているタグをマージ
       if (allCardsRef.current.length > 0) {
         try {
           const mergedCards = await mergePostTags(allCardsRef.current);
+          if (cancelledRef.current) return;
           allCardsRef.current = mergedCards;
         } catch (err) {
           console.error('[usePopularCards] Failed to merge tags:', err);
         }
       }
       
+      if (cancelledRef.current) return;
+      
       // EOSE後にリアクション数を一度だけ取得して人気順にソート
       if (allCardsRef.current.length > 0) {
         const cardIds = allCardsRef.current.map(c => c.id);
         const reactions = await fetchReactionCounts(cardIds);
+        
+        if (cancelledRef.current) return;
         
         const sortedCards = [...allCardsRef.current]
           .map(c => ({
@@ -361,6 +397,7 @@ export function usePopularCards(days: number = 3) {
     loadCards();
     
     return () => {
+      cancelledRef.current = true;
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
@@ -387,17 +424,13 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
   const seenIdsRef = useRef<Set<string>>(new Set());
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const followeesRef = useRef<string[]>(followees);
-  const userPubkeyRef = useRef(userPubkey);
+  // リアクション取得済みのカードIDを追跡
+  const fetchedReactionIdsRef = useRef<Set<string>>(new Set());
 
   // followeesの変更を追跡
   useEffect(() => {
     followeesRef.current = followees;
   }, [followees]);
-  
-  // userPubkeyの変更を追跡
-  useEffect(() => {
-    userPubkeyRef.current = userPubkey;
-  }, [userPubkey]);
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -423,6 +456,7 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
     setHasMore(true);
     allCardsRef.current = [];
     seenIdsRef.current = new Set();
+    fetchedReactionIdsRef.current = new Set();
 
     const handleCard = (card: NostrDrawPost) => {
       // 重複チェック
@@ -431,7 +465,7 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       
       allCardsRef.current.push(card);
       
-      // 関数形式でsetCardsを呼び出し、既存のリアクション数を保持する
+      // カードを追加（リアクション数は後で取得）
       setCards(prevCards => {
         const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
         const sortedCards = [...allCardsRef.current]
@@ -466,11 +500,7 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
           console.error('[useFollowCards] Failed to merge tags:', err);
         }
       }
-      
-      // EOSE後にリアクション数を一度だけ取得
-      if (allCardsRef.current.length > 0) {
-        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
-      }
+      // リアクション取得はuseEffectで行う
       setIsLoading(false);
     };
 
@@ -485,8 +515,8 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
   // 無限スクロール：追加読み込み
   const loadMore = useCallback(async () => {
     // フォロイー + 自分自身のpubkeyを含める
-    const authors = userPubkeyRef.current
-      ? [...new Set([...followeesRef.current, userPubkeyRef.current])]
+    const authors = userPubkey
+      ? [...new Set([...followeesRef.current, userPubkey])]
       : followeesRef.current;
     
     if (isLoadingMore || !hasMore || allCardsRef.current.length === 0 || authors.length === 0) return;
@@ -512,17 +542,26 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
           seenIdsRef.current.add(card.id);
           allCardsRef.current.push(card);
         }
-        
-        // 追加カードのリアクション数を取得
-        fetchAndUpdateReactions(allCardsRef.current, userPubkeyRef.current, setCards);
+        // カードを追加（リアクション数はuseEffectで取得）
+        setCards(prevCards => {
+          const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
+          return [...allCardsRef.current]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map(c => ({
+              ...c,
+              reactionCount: reactionMap.get(c.id)?.reactionCount ?? 0,
+              userReacted: reactionMap.get(c.id)?.userReacted ?? false,
+            }));
+        });
       }
     } catch (err) {
       console.error('追加読み込みエラー:', err);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMore]);
+  }, [isLoadingMore, hasMore, userPubkey]);
 
+  // カード購読の開始とクリーンアップ
   useEffect(() => {
     loadCards();
     
@@ -532,6 +571,63 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       }
     };
   }, [loadCards]);
+
+  // リアクション取得（カードIDリストが変わった時に実行）
+  const cardIdsKey = getCardIdsKey(cards);
+  useEffect(() => {
+    if (isLoading || cards.length === 0) return;
+    
+    // 未取得のカードIDのみ抽出
+    const newCardIds = cards
+      .filter(c => !fetchedReactionIdsRef.current.has(c.id))
+      .map(c => c.id);
+    
+    if (newCardIds.length === 0) return;
+    
+    let cancelled = false;
+    
+    const fetchReactions = async () => {
+      try {
+        // リアクション数を取得
+        const reactions = await fetchReactionCounts(newCardIds);
+        
+        if (cancelled) return;
+        
+        // ユーザーのリアクション状態を取得
+        const userReactedSet = new Set<string>();
+        if (userPubkey) {
+          await Promise.all(
+            newCardIds.map(async (cardId) => {
+              if (cancelled) return;
+              const reacted = await hasUserReacted(cardId, userPubkey);
+              if (reacted) userReactedSet.add(cardId);
+            })
+          );
+        }
+        
+        if (cancelled) return;
+        
+        // 取得済みとしてマーク
+        newCardIds.forEach(id => fetchedReactionIdsRef.current.add(id));
+        
+        // カードを更新
+        setCards(prevCards => prevCards.map(card => ({
+          ...card,
+          reactionCount: reactions.get(card.id) ?? card.reactionCount,
+          userReacted: userReactedSet.has(card.id) || card.userReacted,
+        })));
+      } catch (err) {
+        console.error('[useFollowCards] Failed to fetch reactions:', err);
+      }
+    };
+    
+    fetchReactions();
+    
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardIdsKey, isLoading, userPubkey]);
 
   return {
     cards,

@@ -161,6 +161,8 @@ export function Gallery({
 
   // ストリーミングでカードを取得（リアルタイム表示）
   useEffect(() => {
+    let cancelled = false;
+    
     setIsLoading(true);
     setError(null);
     setCards([]);
@@ -186,6 +188,8 @@ export function Gallery({
     authorPubkeyRef.current = authorPubkey;
     
     const handleCard = (card: NostrDrawPost) => {
+      if (cancelled) return;
+      
       // 重複チェック
       if (seenIdsRef.current.has(card.id)) return;
       seenIdsRef.current.add(card.id);
@@ -213,17 +217,22 @@ export function Gallery({
     };
     
     const handleEose = async () => {
+      if (cancelled) return;
+      
       eoseReceivedRef.current = true; // EOSE完了をマーク
       
       // 別kindで管理されているタグをマージ
       if (allReceivedCardsRef.current.length > 0) {
         try {
           const mergedCards = await mergePostTags(allReceivedCardsRef.current);
+          if (cancelled) return;
           allReceivedCardsRef.current = mergedCards;
         } catch (err) {
           console.error('[Gallery] Failed to merge tags:', err);
         }
       }
+      
+      if (cancelled) return;
       
       const currentLimit = displayLimitRef.current;
       
@@ -233,6 +242,8 @@ export function Gallery({
         
         // リアクション数を一度だけ取得
         const reactions = await fetchReactionCounts(cardIds);
+        if (cancelled) return;
+        
         reactionCountsRef.current = reactions;
         
         // リアクション数でソート（第一キー：リアクション数、第二キー：日付）
@@ -268,6 +279,7 @@ export function Gallery({
     
     // クリーンアップ
     return () => {
+      cancelled = true;
       unsubscribe();
     };
   }, [activeTab, period, sortOrder, authorFilter, periodToDays]);

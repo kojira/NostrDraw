@@ -28,6 +28,11 @@ const INITIAL_LIMIT = 50;
 const LOAD_MORE_LIMIT = 20;
 const DISPLAY_LIMIT = 20;
 
+// カードIDリストを安定した文字列に変換
+function getCardIdsKey(cards: { id: string }[]): string {
+  return cards.map(c => c.id).join(',');
+}
+
 export function useTagTimeline({
   tags,
   enabled = true,
@@ -42,6 +47,8 @@ export function useTagTimeline({
   const seenIdsRef = useRef<Set<string>>(new Set());
   const isLoadingMoreRef = useRef(false);
   const oldestTimestampRef = useRef<number | null>(null);
+  // リアクション取得済みのカードIDを追跡
+  const fetchedReactionIdsRef = useRef<Set<string>>(new Set());
 
   // カードの追加（重複防止）
   const addCard = useCallback((card: NostrDrawPost) => {
@@ -64,20 +71,6 @@ export function useTagTimeline({
     });
   }, []);
 
-  // リアクション情報の更新
-  const updateReactions = useCallback((counts: Map<string, number>) => {
-    setCards(prev => prev.map(card => {
-      const count = counts.get(card.id);
-      if (count !== undefined) {
-        return {
-          ...card,
-          reactionCount: count,
-        };
-      }
-      return card;
-    }));
-  }, []);
-
   // 初期読み込み
   const loadCards = useCallback(() => {
     if (!enabled || tags.length === 0) {
@@ -96,6 +89,7 @@ export function useTagTimeline({
     setError(null);
     seenIdsRef.current.clear();
     oldestTimestampRef.current = null;
+    fetchedReactionIdsRef.current.clear();
     setCards([]);
     setHasMore(true);
     setDisplayCount(DISPLAY_LIMIT);
@@ -144,13 +138,49 @@ export function useTagTimeline({
     };
   }, [loadCards]);
 
-  // リアクション数の取得（一度だけ）
+  // リアクション数の取得（カードIDが変わった時に実行）
+  const displayedCards = cards.slice(0, displayCount);
+  const cardIdsKey = getCardIdsKey(displayedCards);
   useEffect(() => {
-    if (cards.length === 0) return;
-
-    const eventIds = cards.slice(0, displayCount).map(c => c.id);
-    fetchReactionCounts(eventIds).then(updateReactions);
-  }, [cards.length, displayCount]); // cards.lengthで依存を最小化
+    if (isLoading || displayedCards.length === 0) return;
+    
+    // 未取得のカードIDのみ抽出
+    const newCardIds = displayedCards
+      .filter(c => !fetchedReactionIdsRef.current.has(c.id))
+      .map(c => c.id);
+    
+    if (newCardIds.length === 0) return;
+    
+    let cancelled = false;
+    
+    const fetchReactions = async () => {
+      try {
+        const counts = await fetchReactionCounts(newCardIds);
+        
+        if (cancelled) return;
+        
+        // 取得済みとしてマーク
+        newCardIds.forEach(id => fetchedReactionIdsRef.current.add(id));
+        
+        setCards(prev => prev.map(card => {
+          const count = counts.get(card.id);
+          if (count !== undefined) {
+            return { ...card, reactionCount: count };
+          }
+          return card;
+        }));
+      } catch (err) {
+        console.error('[useTagTimeline] Failed to fetch reactions:', err);
+      }
+    };
+    
+    fetchReactions();
+    
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardIdsKey, isLoading]);
 
   // 追加読み込み
   const loadMore = useCallback(async () => {
