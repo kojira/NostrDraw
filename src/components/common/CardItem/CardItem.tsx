@@ -18,15 +18,18 @@ import styles from './CardItem.module.css';
 // dangerouslySetInnerHTMLを使用してフォントを正しく表示
 // ※ Timeline.tsxと完全に同じ実装
 function SvgRenderer({ svg, className, cover }: { svg: string; className?: string; cover?: boolean }) {
-  // タイル表示用: SVGにpreserveAspectRatio="xMidYMid slice"を追加して画像をカバー
   let processedSvg = svg;
   if (cover) {
+    // タイル表示用: SVGを中央でクロップして表示
+    // preserveAspectRatio="xMidYMid slice" でアスペクト比を維持しながらカバー
+    // overflow="hidden" でviewBox外をクリップ
     processedSvg = svg.replace(
       /<svg([^>]*)>/i,
       (match, attrs) => {
-        // 既存のpreserveAspectRatioを削除して新しいものを追加
-        const cleanAttrs = attrs.replace(/preserveAspectRatio="[^"]*"/gi, '');
-        return `<svg${cleanAttrs} preserveAspectRatio="xMidYMid slice">`;
+        let cleanAttrs = attrs
+          .replace(/preserveAspectRatio="[^"]*"/gi, '')
+          .replace(/overflow="[^"]*"/gi, '');
+        return `<svg${cleanAttrs} preserveAspectRatio="xMidYMid slice" overflow="hidden">`;
       }
     );
   }
@@ -185,22 +188,20 @@ export function CardItem({
         className={styles.tile}
         onClick={() => onCardClick?.(card)}
       >
-        {/* 画像 */}
-        <div className={styles.tileImage}>
-          {(() => {
-            if (card.isDiff && card.parentEventId) {
-              if (mergedSvg) {
-                return <SvgRenderer svg={mergedSvg} className={styles.tileSvg} cover />;
-              }
-              return <Spinner size="sm" />;
+        {/* 画像 - coverでアスペクト比を維持しながら中央クロップ */}
+        {(() => {
+          if (card.isDiff && card.parentEventId) {
+            if (mergedSvg) {
+              return <SvgRenderer svg={mergedSvg} className={styles.svg} cover />;
             }
-            return card.svg ? (
-              <SvgRenderer svg={card.svg} className={styles.tileSvg} cover />
-            ) : (
-              <span className={styles.placeholderEmoji}>🎨</span>
-            );
-          })()}
-        </div>
+            return <Spinner size="sm" />;
+          }
+          return card.svg ? (
+            <SvgRenderer svg={card.svg} className={styles.svg} cover />
+          ) : (
+            <span className={styles.placeholderEmoji}>🎨</span>
+          );
+        })()}
         {/* Hoverオーバーレイ */}
         <div className={styles.tileOverlay}>
           <div className={styles.tileActions}>
