@@ -442,13 +442,14 @@
         
         footer.appendChild(userInfo);
         
-        // Nostr logo (simple purple circle)
-        const logo = document.createElement('div');
-        logo.innerHTML = `<svg class="nostr-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" fill="#8B5CF6"/>
-          <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">N</text>
+        // External link icon
+        const linkIcon = document.createElement('div');
+        linkIcon.innerHTML = `<svg class="nostr-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="15 3 21 3 21 9" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="10" y1="14" x2="21" y2="3" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>`;
-        footer.appendChild(logo);
+        footer.appendChild(linkIcon);
         
         wrapper.appendChild(footer);
         
