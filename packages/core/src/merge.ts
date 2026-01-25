@@ -8,6 +8,9 @@ import { parseNostrDrawEvent, extractSvg, parseNostrDrawContent } from './parse'
 /**
  * Merge two SVGs (parent + child diff)
  * Child SVG layers are placed on top of parent SVG layers
+ * 
+ * Note: This matches the app's mergeSvgWithDiff implementation exactly.
+ * Output format includes xmlns and viewBox only (no other attributes).
  */
 export function mergeSvgs(parentSvg: string, childSvg: string): string {
   // Extract viewBox from parent
@@ -22,12 +25,12 @@ export function mergeSvgs(parentSvg: string, childSvg: string): string {
   const childContentMatch = childSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
   const childContent = childContentMatch ? childContentMatch[1] : '';
   
-  // Extract SVG attributes from parent (preserving xmlns, etc.)
-  const svgAttrsMatch = parentSvg.match(/<svg([^>]*)>/i);
-  const svgAttrs = svgAttrsMatch ? svgAttrsMatch[1] : ` xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"`;
-  
   // Merge: parent content first, then child content on top
-  return `<svg${svgAttrs}>${parentContent}${childContent}</svg>`;
+  // Match app's exact format (with newlines and indentation)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
+  ${parentContent}
+  ${childContent}
+</svg>`;
 }
 
 /**

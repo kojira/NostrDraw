@@ -7,6 +7,7 @@ import pako from 'pako';
 import { decompressSvg, compressSvg, optimizeSvg } from './compress';
 import { parseNostrDrawEvent, extractSvg, parseNostrDrawContent, isBinaryFormat } from './parse';
 import { isNostrDrawEvent, hasNostrDrawKind } from './validate';
+import { mergeSvgs } from './merge';
 import { NOSTRDRAW_KIND, NOSTRDRAW_CLIENT_TAG } from './constants';
 import type { NostrEvent, NostrDrawContent } from './types';
 
@@ -224,6 +225,44 @@ describe('binary format detection', () => {
       compression: 'binary+gzip+base64',
     };
     expect(extractSvg(binaryContent)).toBeNull();
+  });
+});
+
+describe('mergeSvgs compatibility', () => {
+  // アプリ側と同じ実装
+  function appMergeSvgWithDiff(parentSvg: string, diffSvg: string): string {
+    const viewBoxMatch = parentSvg.match(/viewBox="([^"]+)"/);
+    const viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 800 600';
+    
+    const parentContentMatch = parentSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+    const parentContent = parentContentMatch ? parentContentMatch[1] : '';
+    
+    const diffContentMatch = diffSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+    const diffContent = diffContentMatch ? diffContentMatch[1] : '';
+    
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
+  ${parentContent}
+  ${diffContent}
+</svg>`;
+  }
+  
+  it('produces same output as app mergeSvgWithDiff', () => {
+    const parentSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect fill="blue"/></svg>';
+    const childSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><circle fill="red"/></svg>';
+    
+    const appResult = appMergeSvgWithDiff(parentSvg, childSvg);
+    const coreResult = mergeSvgs(parentSvg, childSvg);
+    
+    expect(coreResult).toBe(appResult);
+  });
+  
+  it('preserves viewBox from parent', () => {
+    const parentSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><rect/></svg>';
+    const childSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><circle/></svg>';
+    
+    const result = mergeSvgs(parentSvg, childSvg);
+    
+    expect(result).toContain('viewBox="0 0 600 600"');
   });
 });
 
