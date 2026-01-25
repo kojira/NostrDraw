@@ -6,3 +6,4 @@ export * from './Skeleton';
 export * from './CardThumbnail';
 export * from './TagInput';
 export * from './TagDisplay';
+export * from './CardItem';

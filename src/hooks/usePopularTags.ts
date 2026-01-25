@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { TagStats } from '../types';
-import { NOSTRDRAW_KIND } from '../types';
+import { NOSTRDRAW_KIND, POST_TAGS_KIND } from '../types';
 import { subscribeToEvents } from '../services/relay';
 import { getCachedEventsByFilter } from '../services/eventCache';
 
@@ -43,13 +43,36 @@ export function usePopularTags({
   const [error, setError] = useState<string | null>(null);
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const unsubscribeRef2 = useRef<(() => void) | null>(null);
   const tagCountsRef = useRef<Map<string, number>>(new Map());
   const processedIdsRef = useRef<Set<string>>(new Set());
+  // POST_TAGS_KINDの場合、参照先の投稿IDごとに処理済みかを追跡
+  const processedPostTagsRef = useRef<Set<string>>(new Set());
 
-  // イベントからタグを抽出して集計
-  const processEvent = useCallback((event: { id: string; tags: string[][] }) => {
+  // 投稿イベントからタグを抽出して集計
+  const processPostEvent = useCallback((event: { id: string; tags: string[][] }) => {
     if (processedIdsRef.current.has(event.id)) return;
     processedIdsRef.current.add(event.id);
+    
+    for (const tag of event.tags) {
+      if (tag[0] === 't' && tag[1]) {
+        const tagValue = tag[1];
+        const currentCount = tagCountsRef.current.get(tagValue) || 0;
+        tagCountsRef.current.set(tagValue, currentCount + 1);
+      }
+    }
+  }, []);
+
+  // POST_TAGS_KINDイベントからタグを抽出して集計
+  const processTagEvent = useCallback((event: { id: string; tags: string[][] }) => {
+    // dタグ（参照先の投稿ID）を取得
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+    if (!dTag) return;
+    
+    // 同じ投稿に対して既に処理済みなら古いものを削除して新しいものを追加
+    // （より新しいタグイベントが優先される）
+    if (processedPostTagsRef.current.has(dTag)) return;
+    processedPostTagsRef.current.add(dTag);
     
     for (const tag of event.tags) {
       if (tag[0] === 't' && tag[1]) {
@@ -92,28 +115,55 @@ export function usePopularTags({
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
+    if (unsubscribeRef2.current) {
+      unsubscribeRef2.current();
+      unsubscribeRef2.current = null;
+    }
 
     setIsLoading(true);
     setError(null);
     tagCountsRef.current.clear();
     processedIdsRef.current.clear();
+    processedPostTagsRef.current.clear();
 
     const since = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+    let completedStreams = 0;
+    const totalStreams = 2;
+
+    const checkCompletion = () => {
+      completedStreams++;
+      if (completedStreams >= totalStreams) {
+        updateTagStats();
+        setIsLoading(false);
+      }
+    };
 
     try {
-      // まずキャッシュから取得
-      const cachedEvents = getCachedEventsByFilter({
+      // 1. 投稿イベントからタグを取得
+      const cachedPostEvents = getCachedEventsByFilter({
         kinds: [NOSTRDRAW_KIND],
         since,
         limit: 500,
       });
 
-      for (const event of cachedEvents) {
-        processEvent(event);
+      for (const event of cachedPostEvents) {
+        processPostEvent(event);
       }
+
+      // 2. POST_TAGS_KINDからタグを取得
+      const cachedTagEvents = getCachedEventsByFilter({
+        kinds: [POST_TAGS_KIND],
+        since,
+        limit: 500,
+      });
+
+      for (const event of cachedTagEvents) {
+        processTagEvent(event);
+      }
+      
       updateTagStats();
 
-      // リレーからストリーミングで取得
+      // リレーからストリーミングで取得（投稿イベント）
       unsubscribeRef.current = subscribeToEvents(
         {
           kinds: [NOSTRDRAW_KIND],
@@ -121,19 +171,29 @@ export function usePopularTags({
           limit: 500,
         },
         (event) => {
-          processEvent(event);
+          processPostEvent(event);
         },
-        () => {
-          updateTagStats();
-          setIsLoading(false);
-        }
+        checkCompletion
+      );
+
+      // リレーからストリーミングで取得（タグイベント）
+      unsubscribeRef2.current = subscribeToEvents(
+        {
+          kinds: [POST_TAGS_KIND],
+          since,
+          limit: 500,
+        },
+        (event) => {
+          processTagEvent(event);
+        },
+        checkCompletion
       );
     } catch (err) {
       console.error('[usePopularTags] Failed to load tags:', err);
       setError(err instanceof Error ? err.message : '読み込みに失敗しました');
       setIsLoading(false);
     }
-  }, [days, limit, enabled, processEvent, updateTagStats]);
+  }, [days, limit, enabled, processPostEvent, processTagEvent, updateTagStats]);
 
   // 初期読み込み
   useEffect(() => {
@@ -143,6 +203,10 @@ export function usePopularTags({
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
+      }
+      if (unsubscribeRef2.current) {
+        unsubscribeRef2.current();
+        unsubscribeRef2.current = null;
       }
     };
   }, [loadTags]);

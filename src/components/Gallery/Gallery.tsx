@@ -6,7 +6,7 @@ import type { NostrDrawPost, NostrProfile } from '../../types';
 import { PRESET_TAGS } from '../../types';
 import type { Event, EventTemplate } from 'nostr-tools';
 import type { NostrDrawPostWithReactions } from '../../services/card';
-import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg } from '../../services/card';
+import { sendReaction, hasUserReacted, streamReactionCounts, subscribeToPublicGalleryCards, subscribeToCardsByAuthor, fetchMorePublicGalleryCards, fetchMoreCardsByAuthors, getCardFullSvg, mergePostTags } from '../../services/card';
 import { fetchProfile, pubkeyToNpub, npubToPubkey } from '../../services/profile';
 import { fetchPublicPalettes, fetchPalettesByAuthor, type ColorPalette, addFavoritePalette, removeFavoritePalette, isFavoritePalette, loadPalettesFromLocal, savePalettesToLocal, generatePaletteId, deletePaletteFromNostr, saveFavoritePalettesToNostr, getFavoritePaletteIds, fetchPalettePopularityCounts, PRESET_PALETTES, isPresetPalette } from '../../services/palette';
 import { CardFlip } from '../CardViewer/CardFlip';
@@ -247,8 +247,18 @@ export function Gallery({
       setCards(sortedCards);
     };
     
-    const handleEose = () => {
+    const handleEose = async () => {
       eoseReceivedRef.current = true; // EOSE完了をマーク
+      
+      // 別kindで管理されているタグをマージ
+      if (allReceivedCardsRef.current.length > 0) {
+        try {
+          const mergedCards = await mergePostTags(allReceivedCardsRef.current);
+          allReceivedCardsRef.current = mergedCards;
+        } catch (err) {
+          console.error('[Gallery] Failed to merge tags:', err);
+        }
+      }
       
       const currentLimit = displayLimitRef.current;
       

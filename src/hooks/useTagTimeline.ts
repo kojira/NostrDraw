@@ -6,6 +6,7 @@ import {
   subscribeToCardsByTags,
   fetchMoreCardsByTags,
   streamReactionCounts,
+  mergePostTags,
   type NostrDrawPostWithReactions,
 } from '../services/card';
 
@@ -103,7 +104,23 @@ export function useTagTimeline({
       unsubscribeRef.current = subscribeToCardsByTags(
         tags,
         addCard,
-        () => {
+        async () => {
+          // 別kindで管理されているタグをマージ
+          setCards(prevCards => {
+            if (prevCards.length > 0) {
+              // 非同期でタグをマージ
+              mergePostTags(prevCards).then(mergedCards => {
+                setCards(mergedCards.map(c => ({
+                  ...c,
+                  reactionCount: prevCards.find(p => p.id === c.id)?.reactionCount ?? 0,
+                  userReacted: prevCards.find(p => p.id === c.id)?.userReacted ?? false,
+                })).sort((a, b) => b.createdAt - a.createdAt));
+              }).catch(err => {
+                console.error('[useTagTimeline] Failed to merge tags:', err);
+              });
+            }
+            return prevCards;
+          });
           setIsLoading(false);
         },
         INITIAL_LIMIT

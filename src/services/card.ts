@@ -1,6 +1,6 @@
 // NostrDraw 送受信サービス
 
-import { type Event, finalizeEvent, type EventTemplate } from 'nostr-tools';
+import { type Event, finalizeEvent, type EventTemplate, type Filter } from 'nostr-tools';
 import { fetchEvents, publishEvent, subscribeToEvents } from './relay';
 import { cacheEvent, cacheEvents, getCachedEventsByFilter, getCachedEvent } from './eventCache';
 import { streamEvents } from './relay';
@@ -365,21 +365,39 @@ export function parseNostrDrawPost(event: Event): NostrDrawPost | null {
 }
 
 // イベントIDからカードを取得（キャッシュ付き）
-export async function fetchCardById(eventId: string): Promise<NostrDrawPost | null> {
+export async function fetchCardById(eventId: string, includeSeparateTags = true): Promise<NostrDrawPost | null> {
   // まずキャッシュをチェック
   const cached = getCachedEvent(eventId);
+  let card: NostrDrawPost | null = null;
+  
   if (cached) {
-    return parseNostrDrawPost(cached);
+    card = parseNostrDrawPost(cached);
+  } else {
+    // リレーから取得（fetchEventsは内部でキャッシュを使用）
+    const events = await fetchEvents({
+      ids: [eventId],
+      kinds: [NOSTRDRAW_KIND],
+    });
+    
+    if (events.length === 0) return null;
+    card = parseNostrDrawPost(events[0]);
   }
   
-  // リレーから取得（fetchEventsは内部でキャッシュを使用）
-  const events = await fetchEvents({
-    ids: [eventId],
-    kinds: [NOSTRDRAW_KIND],
-  });
+  if (!card) return null;
   
-  if (events.length === 0) return null;
-  return parseNostrDrawPost(events[0]);
+  // 別kindで管理されているタグを取得してマージ
+  if (includeSeparateTags) {
+    const tagsMap = await fetchPostTags([eventId], card.pubkey);
+    const separateTags = tagsMap.get(eventId);
+    if (separateTags && separateTags.length > 0) {
+      // 別kindのタグを優先（投稿本体のタグとマージ）
+      const existingTags = card.tags || [];
+      const mergedTags = [...new Set([...separateTags, ...existingTags])];
+      card = { ...card, tags: mergedTags };
+    }
+  }
+  
+  return card;
 }
 
 // 特定のカードを親として持つ子カード（描き足しされたカード）を取得
@@ -1236,53 +1254,44 @@ export function signEventWithPrivateKey(
   return finalizeEvent(eventTemplate, privateKey);
 }
 
-// 投稿のタグを更新（既存イベントを再発行）
+// 投稿のタグを更新（別kindで管理、元の投稿は変更しない）
+// これによりリアクションが保持される
 export async function updateCardTags(
   eventId: string,
   newTags: string[],
   signEvent: (event: EventTemplate) => Promise<Event>
-): Promise<{ success: boolean; error?: string; newEventId?: string }> {
+): Promise<{ success: boolean; error?: string }> {
+  const { POST_TAGS_KIND } = await import('../types');
+  const timestamp = Math.floor(Date.now() / 1000);
+
   try {
-    // 元のイベントを取得
-    const events = await fetchEvents({
-      ids: [eventId],
-      kinds: [NOSTRDRAW_KIND],
-    });
-    
-    if (events.length === 0) {
-      return { success: false, error: 'イベントが見つかりません' };
-    }
-    
-    const originalEvent = events[0];
-    const timestamp = Math.floor(Date.now() / 1000);
-    
-    // 元のタグを複製し、tタグを削除
-    const updatedTags: string[][] = originalEvent.tags.filter(
-      tag => tag[0] !== 't'
-    );
+    // タグ情報イベントを作成（NIP-33形式）
+    // d-tagにイベントIDを使用して一意性を確保
+    const tags: string[][] = [
+      ['d', eventId],  // Addressable Event識別子
+      ['e', eventId],  // 対象投稿への参照
+    ];
     
     // 新しいtタグを追加
     for (const tag of newTags) {
-      updatedTags.push(['t', tag]);
+      tags.push(['t', tag]);
     }
     
-    // 新しいイベントを作成（contentは同じ）
     const eventTemplate: EventTemplate = {
-      kind: NOSTRDRAW_KIND,
+      kind: POST_TAGS_KIND,
       created_at: timestamp,
-      tags: updatedTags,
-      content: originalEvent.content,
+      tags,
+      content: '', // タグ情報はタグで管理
     };
     
     const signedEvent = await signEvent(eventTemplate);
     await publishEvent(signedEvent);
     
-    // NIP-33 Addressable Event: 古いイベントをキャッシュから削除し、新しいイベントを追加
-    const { removeEventFromCache, cacheEvent: addToCache } = await import('./eventCache');
-    removeEventFromCache(eventId);
-    addToCache(signedEvent);
+    // タグイベントをキャッシュに追加
+    const { cacheEvent } = await import('./eventCache');
+    cacheEvent(signedEvent);
     
-    return { success: true, newEventId: signedEvent.id };
+    return { success: true };
   } catch (error) {
     console.error('[updateCardTags] Failed to update tags:', error);
     return {
@@ -1290,6 +1299,79 @@ export async function updateCardTags(
       error: error instanceof Error ? error.message : '不明なエラー',
     };
   }
+}
+
+// 投稿のタグ情報を取得（別kindから）
+export async function fetchPostTags(
+  eventIds: string[],
+  authorPubkey?: string
+): Promise<Map<string, string[]>> {
+  const { POST_TAGS_KIND } = await import('../types');
+  const result = new Map<string, string[]>();
+  
+  if (eventIds.length === 0) return result;
+
+  try {
+    // タグイベントを取得
+    const filter: Filter = {
+      kinds: [POST_TAGS_KIND],
+      '#d': eventIds,
+    };
+    
+    // 投稿者が指定されている場合は絞り込み
+    if (authorPubkey) {
+      filter.authors = [authorPubkey];
+    }
+    
+    const tagEvents = await fetchEvents(filter);
+    
+    // イベントIDごとに最新のタグイベントを取得
+    const latestByEventId = new Map<string, Event>();
+    
+    for (const event of tagEvents) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+      if (!dTag) continue;
+      
+      const existing = latestByEventId.get(dTag);
+      if (!existing || event.created_at > existing.created_at) {
+        latestByEventId.set(dTag, event);
+      }
+    }
+    
+    // タグを抽出
+    for (const [eventId, event] of latestByEventId) {
+      const tags = event.tags
+        .filter(t => t[0] === 't' && t[1])
+        .map(t => t[1]);
+      result.set(eventId, tags);
+    }
+  } catch (error) {
+    console.error('[fetchPostTags] Failed to fetch tags:', error);
+  }
+  
+  return result;
+}
+
+// カード一覧に別kindで管理されているタグをマージ
+export async function mergePostTags(cards: NostrDrawPost[]): Promise<NostrDrawPost[]> {
+  if (cards.length === 0) return cards;
+  
+  // イベントIDと投稿者のペアを収集
+  const eventIds = cards.map(c => c.id);
+  
+  // タグを取得（投稿者でフィルタしないで全て取得）
+  const tagsMap = await fetchPostTags(eventIds);
+  
+  // タグをマージ
+  return cards.map(card => {
+    const separateTags = tagsMap.get(card.id);
+    if (separateTags && separateTags.length > 0) {
+      const existingTags = card.tags || [];
+      const mergedTags = [...new Set([...separateTags, ...existingTags])];
+      return { ...card, tags: mergedTags };
+    }
+    return card;
+  });
 }
 
 // 投稿を削除（NIP-09 Event Deletion）

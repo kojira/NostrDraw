@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile } from '../../../types';
 import { pubkeyToNpub, fetchProfiles } from '../../../services/profile';
-import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard, updateCardTags } from '../../../services/card';
+import { sendReaction, hasUserReacted, streamReactionCounts, fetchCardById, fetchAncestors, fetchDescendants, mergeSvgWithDiff, getCardFullSvg, getCardFullSvgWithInfo, deleteCard, updateCardTags, fetchPostTags } from '../../../services/card';
 import { addAnimationToNewElements, addAnimationToAllStrokes, injectStrokeAnimationStyles } from '../../../utils/svgDiff';
 import type { Event, EventTemplate } from 'nostr-tools';
 import { Spinner } from '../../common/Spinner';
@@ -135,6 +135,34 @@ export const CardFlip = memo(function CardFlip({
   
   // 自分の投稿かどうか
   const isOwner = userPubkey && userPubkey === card.pubkey;
+
+  // マウント時に別kindで管理されているタグを取得してマージ
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadSeparateTags = async () => {
+      try {
+        const tagsMap = await fetchPostTags([card.id], card.pubkey);
+        const separateTags = tagsMap.get(card.id);
+        
+        if (isMounted && separateTags && separateTags.length > 0) {
+          // 別kindのタグを優先してマージ
+          const existingTags = card.tags || [];
+          const mergedTags = [...new Set([...separateTags, ...existingTags])];
+          setCurrentTags(mergedTags);
+          setEditingTags(mergedTags);
+        }
+      } catch (error) {
+        console.error('[CardFlip] Failed to load separate tags:', error);
+      }
+    };
+    
+    loadSeparateTags();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [card.id, card.pubkey, card.tags]);
   
   // メニューの外側クリックで閉じる
   useEffect(() => {
@@ -171,7 +199,7 @@ export const CardFlip = memo(function CardFlip({
     }
   }, [card.id, signEvent, isOwner, onClose]);
 
-  // タグを保存
+  // タグを保存（別kindで管理、元の投稿は変更しない）
   const handleSaveTags = useCallback(async () => {
     if (!signEvent || !isOwner) return;
     
@@ -181,9 +209,9 @@ export const CardFlip = memo(function CardFlip({
       if (result.success) {
         setCurrentTags(editingTags);
         setShowTagEditor(false);
-        // 親コンポーネントに更新を通知
-        if (result.newEventId && onCardUpdated) {
-          onCardUpdated(card.id, result.newEventId, editingTags);
+        // 親コンポーネントに更新を通知（イベントIDは変わらない）
+        if (onCardUpdated) {
+          onCardUpdated(card.id, card.id, editingTags);
         }
       } else {
         alert(result.error || 'タグの保存に失敗しました');

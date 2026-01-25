@@ -70,6 +70,10 @@ export const TAG_FOLLOW_KIND = 30899;
 // タグフォローリストのdタグ値
 export const TAG_FOLLOW_D_TAG = 'nostrdraw-tag-follows';
 
+// 投稿タグ情報用kind（NIP-33形式）
+// 投稿本体を変更せずにタグを管理（リアクション保持のため）
+export const POST_TAGS_KIND = 30898;
+
 // アプリ識別タグ（フィルタリング用）
 export const NOSTRDRAW_CLIENT_TAG = 'nostrdraw';
 

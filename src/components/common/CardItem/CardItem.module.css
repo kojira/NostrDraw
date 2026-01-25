@@ -1,0 +1,265 @@
+/* CardItem - Timeline.module.cssからそのままコピー */
+
+/* 各投稿 */
+.post {
+  background: var(--color-bg-raised);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-border);
+  transition: 
+    transform var(--duration-normal) var(--easing-default),
+    box-shadow var(--duration-normal) var(--easing-default);
+}
+
+/* PC版: タイル用スタイル */
+@media (min-width: 1025px) {
+  .post {
+    margin-bottom: 0;
+  }
+
+  .post:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.postHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--easing-default);
+}
+
+.postHeader:hover {
+  background: var(--color-bg-subtle);
+}
+
+.avatar {
+  width: var(--size-avatar-lg);
+  height: var(--size-avatar-lg);
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: var(--size-avatar-lg);
+  height: var(--size-avatar-lg);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.authorName {
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+}
+
+.postTime {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* 投稿画像 */
+.postImage {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.postImage.clickable {
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--easing-default);
+}
+
+.postImage.clickable:hover {
+  opacity: 0.9;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.svg svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.placeholder {
+  font-size: var(--text-4xl);
+  opacity: 0.3;
+}
+
+/* 投稿フッター */
+.postFooter {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* リアクションボタン */
+.reactionButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-family: var(--font-family-base);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    border-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default),
+    transform var(--duration-fast) var(--easing-default);
+}
+
+.reactionButton:hover:not(:disabled) {
+  color: var(--color-error);
+  background: var(--color-error-muted);
+  border-color: var(--color-error);
+  transform: scale(1.05);
+}
+
+.reactionButton:disabled {
+  cursor: default;
+}
+
+.reactionButton.reacted {
+  color: var(--color-error);
+  background: var(--color-error-muted);
+  border-color: var(--color-error);
+}
+
+/* シェアボタン */
+.shareButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    border-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default),
+    transform var(--duration-fast) var(--easing-default);
+}
+
+.shareButton:hover {
+  color: var(--color-success);
+  background: var(--color-success-muted);
+  border-color: var(--color-success);
+  transform: scale(1.1);
+}
+
+.shareButton.copied {
+  color: var(--color-success);
+  background: var(--color-success-muted);
+  border-color: var(--color-success);
+}
+
+.shareButton svg {
+  display: block;
+}
+
+/* 描き足しボタン */
+.extendButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--color-accent);
+  background: transparent;
+  border: var(--border-thin) solid var(--color-accent);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default),
+    transform var(--duration-fast) var(--easing-default);
+}
+
+.extendButton:hover {
+  color: #fff;
+  background: var(--color-accent);
+  transform: scale(1.1);
+}
+
+.extendButton svg {
+  display: block;
+}
+
+.message {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.cardTags {
+  padding-top: var(--space-2);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+/* PC版レスポンシブ調整 */
+@media (min-width: 1025px) {
+  .postHeader {
+    padding: var(--space-2);
+  }
+
+  .avatar,
+  .avatarPlaceholder {
+    width: var(--size-avatar-md);
+    height: var(--size-avatar-md);
+  }
+
+  .postFooter {
+    padding: var(--space-2);
+  }
+}
+
+/* ライトテーマ - カード画像シャドウ */
+:global(.light-theme) .postImage {
+  box-shadow: var(--shadow-sm);
+}

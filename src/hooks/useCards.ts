@@ -10,6 +10,7 @@ import {
   subscribeToCardsByAuthors,
   fetchMorePublicGalleryCards,
   fetchMoreCardsByAuthors,
+  mergePostTags,
   type SendCardParams,
   type NostrDrawPostWithReactions,
 } from '../services/card';
@@ -235,7 +236,28 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
       }
     };
 
-    const handleEose = () => {
+    const handleEose = async () => {
+      // 別kindで管理されているタグをマージ
+      if (allCardsRef.current.length > 0) {
+        try {
+          const mergedCards = await mergePostTags(allCardsRef.current);
+          allCardsRef.current = mergedCards;
+          // タグをマージしたカードで更新
+          setCards(prevCards => {
+            const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
+            return mergedCards
+              .sort((a, b) => b.createdAt - a.createdAt)
+              .map(c => ({
+                ...c,
+                reactionCount: reactionMap.get(c.id)?.reactionCount ?? 0,
+                userReacted: reactionMap.get(c.id)?.userReacted ?? false,
+              }));
+          });
+        } catch (err) {
+          console.error('[usePublicGalleryCards] Failed to merge tags:', err);
+        }
+      }
+      
       // EOSE後、まだリアクション取得が開始されていなければ開始
       if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
         reactionsStartedRef.current = true;
@@ -416,7 +438,17 @@ export function usePopularCards(days: number = 3) {
       });
     };
 
-    const handleEose = () => {
+    const handleEose = async () => {
+      // 別kindで管理されているタグをマージ
+      if (allCardsRef.current.length > 0) {
+        try {
+          const mergedCards = await mergePostTags(allCardsRef.current);
+          allCardsRef.current = mergedCards;
+        } catch (err) {
+          console.error('[usePopularCards] Failed to merge tags:', err);
+        }
+      }
+      
       // EOSE後、まだリアクション取得が開始されていなければ開始
       if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
         reactionsStartedRef.current = true;
@@ -550,7 +582,28 @@ export function useFollowCards(followees: string[], userPubkey?: string | null) 
       }
     };
 
-    const handleEose = () => {
+    const handleEose = async () => {
+      // 別kindで管理されているタグをマージ
+      if (allCardsRef.current.length > 0) {
+        try {
+          const mergedCards = await mergePostTags(allCardsRef.current);
+          allCardsRef.current = mergedCards;
+          // タグをマージしたカードで更新
+          setCards(prevCards => {
+            const reactionMap = new Map(prevCards.map(c => [c.id, { reactionCount: c.reactionCount, userReacted: c.userReacted }]));
+            return mergedCards
+              .sort((a, b) => b.createdAt - a.createdAt)
+              .map(c => ({
+                ...c,
+                reactionCount: reactionMap.get(c.id)?.reactionCount ?? 0,
+                userReacted: reactionMap.get(c.id)?.userReacted ?? false,
+              }));
+          });
+        } catch (err) {
+          console.error('[useFollowCards] Failed to merge tags:', err);
+        }
+      }
+      
       // EOSE後、まだリアクション取得が開始されていなければ開始
       if (!reactionsStartedRef.current && allCardsRef.current.length > 0) {
         reactionsStartedRef.current = true;

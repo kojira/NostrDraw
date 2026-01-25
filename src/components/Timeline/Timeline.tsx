@@ -1,27 +1,15 @@
 // タイムラインコンポーネント - フォロー/グローバル/タグタブ切り替え
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { NostrDrawPost, NostrProfile, TagStats } from '../../types';
-import { sendReaction, type NostrDrawPostWithReactions, getCardFullSvg } from '../../services/card';
+import { type NostrDrawPostWithReactions, getCardFullSvg } from '../../services/card';
 import { fetchProfile, pubkeyToNpub } from '../../services/profile';
-import { BASE_URL } from '../../config';
 import type { EventTemplate, Event } from 'nostr-tools';
 import { Icon } from '../common/Icon';
 import { Spinner } from '../common/Spinner';
-import { TagDisplay } from '../common/TagDisplay';
+import { CardItem } from '../common/CardItem';
 import styles from './Timeline.module.css';
-
-// SVGを安全にレンダリングするためのコンポーネント
-// dangerouslySetInnerHTMLを使用してフォントを正しく表示
-function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
-  return (
-    <div 
-      className={className}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  );
-}
 
 interface TimelineProps {
   followCards: (NostrDrawPost | NostrDrawPostWithReactions)[];
@@ -107,12 +95,6 @@ export function Timeline({
   const [mergedSvgs, setMergedSvgs] = useState<Map<string, string>>(new Map());
   // 差分SVG取得中のIDを追跡
   const fetchingDiffRef = useRef<Set<string>>(new Set());
-  // リアクション中のイベントIDを追跡
-  const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
-  // ローカルでリアクション済みのイベントIDを追跡
-  const [localReactedIds, setLocalReactedIds] = useState<Set<string>>(new Set());
-  // コピー済みのイベントIDを追跡（一時的なフィードバック用）
-  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
 
   // タブに応じたカードを取得
   const getCardsForTab = () => {
@@ -200,104 +182,12 @@ export function Timeline({
     });
   }, [cards, mergedSvgs]);
 
-  const getProfileName = (pubkey: string) => {
-    const profile = profiles.get(pubkey);
-    if (profile?.display_name) return profile.display_name;
-    if (profile?.name) return profile.name;
-    return pubkeyToNpub(pubkey).slice(0, 12) + '...';
-  };
-
-  const getProfilePicture = (pubkey: string) => {
-    const profile = profiles.get(pubkey);
-    return profile?.picture || null;
-  };
-
   const handleAuthorClick = (pubkey: string) => {
     if (onUserClick) {
       const npub = pubkeyToNpub(pubkey);
       onUserClick(npub);
     }
   };
-
-  const getReactionCount = (card: NostrDrawPost | NostrDrawPostWithReactions): number => {
-    if ('reactionCount' in card) {
-      return card.reactionCount;
-    }
-    return 0;
-  };
-
-  const getUserReacted = (card: NostrDrawPost | NostrDrawPostWithReactions): boolean => {
-    // ローカルでリアクション済みならtrue
-    if (localReactedIds.has(card.id)) {
-      return true;
-    }
-    // サーバーからの情報
-    if ('userReacted' in card && card.userReacted === true) {
-      return true;
-    }
-    return false;
-  };
-
-  // リアクションを送信
-  const handleReaction = useCallback(async (card: NostrDrawPost | NostrDrawPostWithReactions) => {
-    if (!signEvent || !userPubkey) {
-      return;
-    }
-    
-    // 既にリアクション済みか処理中ならスキップ
-    if (getUserReacted(card) || reactingIds.has(card.id)) {
-      return;
-    }
-    
-    // 処理中としてマーク
-    setReactingIds(prev => new Set(prev).add(card.id));
-    
-    try {
-      await sendReaction(card.id, card.pubkey, '❤️', signEvent);
-      // ローカルでリアクション済みとしてマーク
-      setLocalReactedIds(prev => new Set(prev).add(card.id));
-    } catch (error) {
-      console.error('リアクション送信エラー:', error);
-    } finally {
-      setReactingIds(prev => {
-        const next = new Set(prev);
-        next.delete(card.id);
-        return next;
-      });
-    }
-  }, [signEvent, userPubkey, reactingIds, localReactedIds]);
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
-    // 絶対日時表示 (YYYY/MM/DD HH:mm:ss)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-  };
-
-  // シェアボタンのハンドラ
-  const handleShare = useCallback(async (card: NostrDrawPost | NostrDrawPostWithReactions) => {
-    const url = `${BASE_URL}/?eventid=${card.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      // コピー成功のフィードバック
-      setCopiedIds(prev => new Set(prev).add(card.id));
-      // 2秒後にフィードバックを消す
-      setTimeout(() => {
-        setCopiedIds(prev => {
-          const next = new Set(prev);
-          next.delete(card.id);
-          return next;
-        });
-      }, 2000);
-    } catch (error) {
-      console.error('URLのコピーに失敗:', error);
-    }
-  }, []);
 
   return (
     <div className={styles.timeline}>
@@ -409,124 +299,26 @@ export function Timeline({
               }</p>
             </div>
           ) : (
-            cards.map(card => {
-              const picture = getProfilePicture(card.pubkey);
-              const name = getProfileName(card.pubkey);
-              const reactionCount = getReactionCount(card);
-
-              return (
-                <div key={card.id} className={styles.post}>
-                  {/* ヘッダー（著者情報） */}
-                  <div 
-                    className={styles.postHeader}
-                    onClick={() => handleAuthorClick(card.pubkey)}
-                  >
-                    {picture ? (
-                      <img src={picture} alt="" className={styles.avatar} />
-                    ) : (
-                      <div className={styles.avatarPlaceholder}>
-                        <Icon name="person" size="md" />
-                      </div>
-                    )}
-                    <div className={styles.authorInfo}>
-                      <span className={styles.authorName}>{name}</span>
-                      <span className={styles.postTime}>{formatDate(card.createdAt)}</span>
-                    </div>
-                  </div>
-
-                  {/* 画像 */}
-                  <div 
-                    className={`${styles.postImage} ${onCardClick ? styles.clickable : ''}`}
-                    onClick={() => onCardClick?.(card)}
-                  >
-                    {(() => {
-                      // isDiffの場合は合成完了まで待機
-                      if (card.isDiff && card.parentEventId) {
-                        const mergedSvg = mergedSvgs.get(card.id);
-                        if (mergedSvg) {
-                          return <SvgRenderer svg={mergedSvg} className={styles.svg} />;
-                        }
-                        // 合成完了まではローディング表示
-                        return (
-                          <div className={styles.placeholder}>
-                            <Spinner size="md" />
-                          </div>
-                        );
-                      }
-                      // 通常のカード
-                      return card.svg ? (
-                        <SvgRenderer svg={card.svg} className={styles.svg} />
-                      ) : (
-                        <div className={styles.placeholder}>🎨</div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* フッター（リアクション・描き足し） */}
-                  <div className={styles.postFooter}>
-                    <div className={styles.footerActions}>
-                      <button
-                        className={`${styles.reactionButton} ${getUserReacted(card) ? styles.reacted : ''}`}
-                        onClick={() => handleReaction(card)}
-                        disabled={!signEvent || !userPubkey || getUserReacted(card) || reactingIds.has(card.id)}
-                        title={getUserReacted(card) ? t('viewer.reacted') : t('viewer.reaction')}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: (reactingIds.has(card.id) || getUserReacted(card)) ? "'FILL' 1" : "'FILL' 0", color: '#e94560' }}>favorite</span> {reactionCount + (localReactedIds.has(card.id) && !('userReacted' in card && card.userReacted) ? 1 : 0)}
-                      </button>
-                      <button
-                        className={`${styles.shareButton} ${copiedIds.has(card.id) ? styles.copied : ''}`}
-                        onClick={() => handleShare(card)}
-                        title={t('timeline.share')}
-                      >
-                        {copiedIds.has(card.id) ? (
-                          <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
-                            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-                          </svg>
-                        ) : (
-                          <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
-                            <path d="M720-80q-50 0-85-35t-35-85q0-7 1-14.5t3-13.5L322-392q-17 15-38 23.5t-44 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q23 0 44 8.5t38 23.5l282-164q-2-6-3-13.5t-1-14.5q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-23 0-44-8.5T602-672L320-508q2 6 3 13.5t1 14.5q0 7-1 14.5t-3 13.5l282 164q17-15 38-23.5t44-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Z"/>
-                          </svg>
-                        )}
-                      </button>
-                      {card.allowExtend && onExtend && (
-                        <button
-                          className={styles.extendButton}
-                          onClick={() => onExtend(card)}
-                          title={t('viewer.extend')}
-                        >
-                          <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
-                            <path d="M480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 32.5-156t88-127Q256-817 330-848.5T488-880q80 0 151 27.5t124.5 76q53.5 48.5 85 115T880-518q0 115-70 176.5T640-280h-74q-9 0-12.5 5t-3.5 11q0 12 15 34.5t15 51.5q0 50-27.5 74T480-80Zm0-400Zm-220 40q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm120-160q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm200 0q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm120 160q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17ZM480-160q9 0 14.5-5t5.5-13q0-14-15-33t-15-57q0-42 29-67t71-25h70q66 0 113-38.5T800-518q0-121-92.5-201.5T488-800q-136 0-232 93t-96 227q0 133 93.5 226.5T480-160Z"/>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    {/* タグ表示 */}
-                    {card.tags && card.tags.length > 0 && (
-                      <div className={styles.cardTags}>
-                        <TagDisplay
-                          tags={card.tags}
-                          followedTags={followedTags}
-                          onTagClick={onTagClick}
-                          showFollowButton={!!onFollowTag && !!onUnfollowTag}
-                          onFollowToggle={(tag, isFollowed) => {
-                            if (isFollowed) {
-                              onUnfollowTag?.(tag);
-                            } else {
-                              onFollowTag?.(tag);
-                            }
-                          }}
-                          size="small"
-                          compact
-                        />
-                      </div>
-                    )}
-                    {card.message && (
-                      <span className={styles.message}>{card.message}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+            cards.map(card => (
+              <CardItem
+                key={card.id}
+                card={card}
+                profile={profiles.get(card.pubkey)}
+                userPubkey={userPubkey}
+                signEvent={signEvent}
+                onCardClick={onCardClick}
+                onAuthorClick={handleAuthorClick}
+                onExtend={onExtend}
+                followedTags={followedTags}
+                onTagClick={onTagClick}
+                onFollowTag={onFollowTag}
+                onUnfollowTag={onUnfollowTag}
+                mergedSvg={mergedSvgs.get(card.id)}
+                onMergedSvgLoaded={(cardId, svg) => {
+                  setMergedSvgs(prev => new Map(prev).set(cardId, svg));
+                }}
+              />
+            ))
           )}
           
           {/* 無限スクロール: ローディングとトリガー */}

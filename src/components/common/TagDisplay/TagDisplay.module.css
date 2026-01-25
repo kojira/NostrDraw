@@ -30,6 +30,10 @@
   border-radius: 1rem;
   font-size: 0.75rem;
   transition: all 0.15s ease;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tag::before {
