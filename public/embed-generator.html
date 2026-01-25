@@ -42,7 +42,7 @@
       margin-bottom: 8px;
       color: #333;
     }
-    input[type="text"], select {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       padding: 12px 16px;
       border: 2px solid #e0e0e0;
@@ -50,7 +50,7 @@
       font-size: 14px;
       transition: border-color 0.2s;
     }
-    input[type="text"]:focus, select:focus {
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
       outline: none;
       border-color: #667eea;
     }
@@ -173,10 +173,10 @@
       </div>
       
       <div class="form-group">
-        <label>サイズ</label>
+        <label>サイズ（50〜2000px）</label>
         <div class="size-inputs">
-          <input type="text" id="width" value="300" placeholder="幅">
-          <input type="text" id="height" value="300" placeholder="高さ">
+          <input type="number" id="width" value="300" min="50" max="2000" placeholder="幅">
+          <input type="number" id="height" value="300" min="50" max="2000" placeholder="高さ">
         </div>
       </div>
       
@@ -219,11 +219,30 @@
       setTimeout(generateEmbed, 100);
     }
     
+    // Validate and sanitize numeric input
+    function sanitizeSize(value, defaultValue) {
+      // Remove any non-numeric characters (including 'px', '%', etc.)
+      const numericValue = parseInt(value.replace(/[^0-9]/g, ''), 10);
+      // Return default if invalid or out of reasonable range
+      if (isNaN(numericValue) || numericValue < 50 || numericValue > 2000) {
+        return defaultValue;
+      }
+      return String(numericValue);
+    }
+
     function generateEmbed() {
       const eventId = document.getElementById('eventId').value.trim();
-      const width = document.getElementById('width').value.trim() || '300';
-      const height = document.getElementById('height').value.trim() || '300';
+      const widthInput = document.getElementById('width').value.trim();
+      const heightInput = document.getElementById('height').value.trim();
       const relay = document.getElementById('relay').value.trim();
+      
+      // Validate and sanitize width/height (numeric only, 50-2000 range)
+      const width = sanitizeSize(widthInput, '300');
+      const height = sanitizeSize(heightInput, '300');
+      
+      // Update input fields with sanitized values
+      document.getElementById('width').value = width;
+      document.getElementById('height').value = height;
       
       if (!eventId) {
         alert('Event IDを入力してください');
