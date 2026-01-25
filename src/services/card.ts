@@ -11,7 +11,7 @@ import {
   type NostrDrawPost, 
   type LayoutType 
 } from '../types';
-import { compressSvg, decompressSvg } from '../utils/compression';
+import { compressSvg, decompressSvg, mergeSvgs } from '@nostrdraw/core';
 import { decodeBinaryToLayers } from '../utils/binaryFormat';
 import type { Layer } from '../components/CardEditor/DrawingCanvas/types';
 import { BASE_URL } from '../config';
@@ -23,26 +23,9 @@ import { STAMPS } from '../data/templates';
  * @param parentSvg 親のSVG
  * @param diffSvg 差分SVG（テンプレートなしのレイヤーのみ）
  * @returns 合成されたSVG
+ * @deprecated Use mergeSvgs from @nostrdraw/core instead
  */
-export function mergeSvgWithDiff(parentSvg: string, diffSvg: string): string {
-  // 親SVGからviewBoxを取得
-  const viewBoxMatch = parentSvg.match(/viewBox="([^"]+)"/);
-  const viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 800 600';
-  
-  // 親SVGから内部コンテンツを抽出（<svg>タグの中身）
-  const parentContentMatch = parentSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
-  const parentContent = parentContentMatch ? parentContentMatch[1] : '';
-  
-  // 差分SVGから内部コンテンツを抽出（<svg>タグの中身）
-  const diffContentMatch = diffSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
-  const diffContent = diffContentMatch ? diffContentMatch[1] : '';
-  
-  // 合成：親の上に差分を重ねる
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
-  ${parentContent}
-  ${diffContent}
-</svg>`;
-}
+export const mergeSvgWithDiff = mergeSvgs;
 
 // 外部画像URLをbase64データURLに変換
 async function imageUrlToBase64(url: string): Promise<string | null> {
@@ -1532,7 +1515,7 @@ export async function getCardFullSvgWithInfo(card: NostrDrawPost): Promise<CardF
     const ancestor = ancestorsResult.ancestors[i];
     if (ancestor.isDiff) {
       // 差分保存の場合はマージ
-      fullSvg = mergeSvgWithDiff(fullSvg, ancestor.svg);
+      fullSvg = mergeSvgs(fullSvg, ancestor.svg);
     } else {
       // 完全なSVGの場合はそれをベースにする
       fullSvg = ancestor.svg;
@@ -1540,7 +1523,7 @@ export async function getCardFullSvgWithInfo(card: NostrDrawPost): Promise<CardF
   }
   
   // 最後に現在のカードの差分をマージ
-  fullSvg = mergeSvgWithDiff(fullSvg, card.svg);
+  fullSvg = mergeSvgs(fullSvg, card.svg);
   
   return {
     svg: fullSvg,
