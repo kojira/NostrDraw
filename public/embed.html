@@ -306,15 +306,19 @@
       const contentType = event.tags.find(t => t[0] === 'content-type')?.[1] || 'image/svg+xml';
       const encoding = event.tags.find(t => t[0] === 'encoding')?.[1];
       const imageUrl = event.tags.find(t => t[0] === 'image')?.[1];
-      const isDiff = event.tags.find(t => t[0] === 'isDiff')?.[1] === 'true';
-      const parentEventId = event.tags.find(t => t[0] === 'e')?.[1];
+      // parentEventId is from 'e' tag with 'root' or 'reply' marker, or just any 'e' tag
+      const eTag = event.tags.find(t => t[0] === 'e');
+      const parentEventId = eTag ? eTag[1] : null;
       
       let svg = null;
+      let isDiff = false;
       let content = event.content || '';
       
       if (content.trim().startsWith('{')) {
         try {
           const jsonContent = JSON.parse(content);
+          // isDiff is stored in JSON content, not in tags
+          isDiff = jsonContent.isDiff === true;
           if (jsonContent.svgCompressed) {
             svg = decompressSvg(jsonContent.svgCompressed);
           } else if (jsonContent.svg) {
