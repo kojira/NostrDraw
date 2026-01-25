@@ -49,6 +49,7 @@ export function Gallery({
   const [period, setPeriod] = useState<PeriodType>(initialPeriod as PeriodType || 'week');
   const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
   const [authorFilter, setAuthorFilter] = useState<string>(initialAuthor || '');
+  const [viewMode, setViewMode] = useState<'post' | 'tile'>('post');
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(new Map());
@@ -414,25 +415,46 @@ export function Gallery({
       )}
 
       {/* タブ */}
-      <div className={styles.tabs}>
-        <button
-          className={`${styles.tab} ${activeTab === 'popular' ? styles.active : ''}`}
-          onClick={() => setActiveTab('popular')}
-        >
-          🔥 {t('gallery.popular')}
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'recent' ? styles.active : ''}`}
-          onClick={() => setActiveTab('recent')}
-        >
-          🆕 {t('gallery.recent')}
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'palettes' ? styles.active : ''}`}
-          onClick={() => setActiveTab('palettes')}
-        >
-          🎨 {t('gallery.palettes')}
-        </button>
+      <div className={styles.tabsContainer}>
+        <div className={styles.tabs}>
+          <button
+            className={`${styles.tab} ${activeTab === 'popular' ? styles.active : ''}`}
+            onClick={() => setActiveTab('popular')}
+          >
+            🔥 {t('gallery.popular')}
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'recent' ? styles.active : ''}`}
+            onClick={() => setActiveTab('recent')}
+          >
+            🆕 {t('gallery.recent')}
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'palettes' ? styles.active : ''}`}
+            onClick={() => setActiveTab('palettes')}
+          >
+            🎨 {t('gallery.palettes')}
+          </button>
+        </div>
+        {/* 表示モード切り替え */}
+        {activeTab !== 'palettes' && (
+          <div className={styles.viewModeToggle}>
+            <button
+              className={`${styles.viewModeButton} ${viewMode === 'post' ? styles.active : ''}`}
+              onClick={() => setViewMode('post')}
+              title={t('gallery.viewPost', 'カード表示')}
+            >
+              <span className="material-symbols-outlined">view_agenda</span>
+            </button>
+            <button
+              className={`${styles.viewModeButton} ${viewMode === 'tile' ? styles.active : ''}`}
+              onClick={() => setViewMode('tile')}
+              title={t('gallery.viewTile', 'タイル表示')}
+            >
+              <span className="material-symbols-outlined">grid_view</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* フィルター */}
@@ -722,7 +744,7 @@ export function Gallery({
 
             {filteredCards.length > 0 && (
               <>
-                <div className={styles.grid}>
+                <div className={viewMode === 'tile' ? styles.tileGrid : styles.grid}>
               {filteredCards.map((card) => (
                 <CardItem
                   key={card.id}
@@ -737,7 +759,7 @@ export function Gallery({
                   onMergedSvgLoaded={(cardId, svg) => {
                     setMergedSvgs(prev => new Map(prev).set(cardId, svg));
                   }}
-                  variant="post"
+                  variant={viewMode}
                   followedTags={tagFilters}
                   onTagClick={(tag) => {
                     // タグがフィルターになければ追加

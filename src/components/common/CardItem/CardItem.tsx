@@ -26,7 +26,7 @@ function SvgRenderer({ svg, className }: { svg: string; className?: string }) {
   );
 }
 
-export type CardItemVariant = 'post' | 'thumbnail';
+export type CardItemVariant = 'post' | 'thumbnail' | 'tile';
 
 export interface CardItemProps {
   card: NostrDrawPost | NostrDrawPostWithReactions;
@@ -165,6 +165,64 @@ export function CardItem({
   const name = getProfileName();
   const reactionCount = getReactionCount();
   const userReacted = getUserReacted();
+
+  // タイル表示（画像のみ、hoverでオーバーレイ）
+  if (variant === 'tile') {
+    return (
+      <div 
+        className={styles.tile}
+        onClick={() => onCardClick?.(card)}
+      >
+        {/* 画像 */}
+        <div className={styles.tileImage}>
+          {(() => {
+            if (card.isDiff && card.parentEventId) {
+              if (mergedSvg) {
+                return <SvgRenderer svg={mergedSvg} className={styles.tileSvg} />;
+              }
+              return <Spinner size="sm" />;
+            }
+            return card.svg ? (
+              <SvgRenderer svg={card.svg} className={styles.tileSvg} />
+            ) : (
+              <span className={styles.placeholderEmoji}>🎨</span>
+            );
+          })()}
+        </div>
+        {/* Hoverオーバーレイ */}
+        <div className={styles.tileOverlay}>
+          <div className={styles.tileActions}>
+            <button
+              className={`${styles.tileActionButton} ${userReacted ? styles.reacted : ''}`}
+              onClick={(e) => { e.stopPropagation(); handleReaction(); }}
+              disabled={!signEvent || !userPubkey || userReacted || isReacting}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: userReacted ? "'FILL' 1" : "'FILL' 0" }}>favorite</span>
+              <span>{reactionCount + (localReacted && !('userReacted' in card && card.userReacted) ? 1 : 0)}</span>
+            </button>
+            <button
+              className={`${styles.tileActionButton} ${copied ? styles.copied : ''}`}
+              onClick={(e) => { e.stopPropagation(); handleShare(); }}
+            >
+              {copied ? (
+                <span className="material-symbols-outlined">check</span>
+              ) : (
+                <span className="material-symbols-outlined">share</span>
+              )}
+            </button>
+            {card.allowExtend && onExtend && (
+              <button
+                className={styles.tileActionButton}
+                onClick={(e) => { e.stopPropagation(); onExtend(card); }}
+              >
+                <span className="material-symbols-outlined">palette</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // サムネイル表示（Gallery用）
   if (variant === 'thumbnail') {

@@ -464,3 +464,87 @@
 :global(.light-theme) .item:hover {
   box-shadow: var(--shadow-xl);
 }
+
+/* タイル表示 */
+.tile {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-bg-raised);
+}
+
+.tileImage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tileSvg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tileSvg svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tileOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--easing-default);
+}
+
+.tile:hover .tileOverlay {
+  opacity: 1;
+}
+
+.tileActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.tileActionButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--easing-default);
+}
+
+.tileActionButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tileActionButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tileActionButton .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.tileActionButton.reacted {
+  color: var(--color-error);
+}
+
+.tileActionButton.copied {
+  color: var(--color-success);
+}

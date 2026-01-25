@@ -47,12 +47,52 @@
 }
 
 /* タブ */
-.tabs {
+.tabsContainer {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--space-4);
   border-bottom: var(--border-thin) solid var(--color-border);
   padding-bottom: var(--space-2);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.viewModeToggle {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.viewModeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--easing-default);
+}
+
+.viewModeButton:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.viewModeButton.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.viewModeButton .material-symbols-outlined {
+  font-size: 20px;
 }
 
 .tab {
@@ -304,6 +344,15 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--space-6);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* タイルグリッドレイアウト（隙間なし） */
+.tileGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px;
   width: 100%;
   box-sizing: border-box;
 }
