@@ -732,6 +732,7 @@ export function Gallery({
                   signEvent={signEvent}
                   onCardClick={handleSelectCard}
                   onAuthorClick={handleAuthorClick}
+                  onExtend={onExtend}
                   mergedSvg={mergedSvgs.get(card.id)}
                   onMergedSvgLoaded={(cardId, svg) => {
                     setMergedSvgs(prev => new Map(prev).set(cardId, svg));
