@@ -306,6 +306,8 @@
       const contentType = event.tags.find(t => t[0] === 'content-type')?.[1] || 'image/svg+xml';
       const encoding = event.tags.find(t => t[0] === 'encoding')?.[1];
       const imageUrl = event.tags.find(t => t[0] === 'image')?.[1];
+      const isDiff = event.tags.find(t => t[0] === 'isDiff')?.[1] === 'true';
+      const parentEventId = event.tags.find(t => t[0] === 'e')?.[1];
       
       let svg = null;
       let content = event.content || '';
@@ -335,7 +337,54 @@
         svg = content;
       }
       
-      return { svg, imageUrl, event };
+      return { svg, imageUrl, event, isDiff, parentEventId };
+    }
+
+    // Merge parent SVG with diff SVG
+    function mergeSvgWithDiff(parentSvg, diffSvg) {
+      const parser = new DOMParser();
+      const parentDoc = parser.parseFromString(parentSvg, 'image/svg+xml');
+      const diffDoc = parser.parseFromString(diffSvg, 'image/svg+xml');
+      
+      const parentSvgEl = parentDoc.querySelector('svg');
+      const diffSvgEl = diffDoc.querySelector('svg');
+      
+      if (!parentSvgEl || !diffSvgEl) {
+        return diffSvg; // Fallback to diff if merge fails
+      }
+      
+      // Copy all child elements from diff to parent
+      Array.from(diffSvgEl.childNodes).forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          parentSvgEl.appendChild(node.cloneNode(true));
+        }
+      });
+      
+      return new XMLSerializer().serializeToString(parentSvgEl);
+    }
+
+    // Get full SVG by recursively merging with ancestors
+    async function getFullSvg(event, relays) {
+      const { svg, isDiff, parentEventId } = parseNostrDrawEvent(event);
+      
+      if (!isDiff || !parentEventId || !svg) {
+        return svg;
+      }
+      
+      // Fetch parent event
+      const parentEvent = await fetchEvent(parentEventId, relays);
+      if (!parentEvent) {
+        return svg; // Return diff if parent not found
+      }
+      
+      // Recursively get parent's full SVG
+      const parentFullSvg = await getFullSvg(parentEvent, relays);
+      if (!parentFullSvg) {
+        return svg;
+      }
+      
+      // Merge parent with diff
+      return mergeSvgWithDiff(parentFullSvg, svg);
     }
 
     // Fetch event from relays
@@ -482,7 +531,13 @@
           return;
         }
         
-        const { svg, imageUrl } = parseNostrDrawEvent(event);
+        const { svg: rawSvg, imageUrl, isDiff, parentEventId } = parseNostrDrawEvent(event);
+        
+        // If this is a diff card, get full SVG by merging with ancestors
+        let svg = rawSvg;
+        if (isDiff && parentEventId && rawSvg) {
+          svg = await getFullSvg(event, relays);
+        }
         
         // Fetch profile
         const profile = await fetchProfile(event.pubkey, relays);
