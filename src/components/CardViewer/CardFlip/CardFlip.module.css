@@ -1812,3 +1812,41 @@
 :global(.light-theme) .deletedMessage svg {
   fill: #16a34a;
 }
+
+/* トースト通知 */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 100001;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastSlideUp 0.3s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.toast svg {
+  fill: #4ade80;
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+:global(.light-theme) .toast {
+  background: rgba(50, 50, 50, 0.95);
+}

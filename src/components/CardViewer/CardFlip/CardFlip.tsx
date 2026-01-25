@@ -113,8 +113,8 @@ export const CardFlip = memo(function CardFlip({
   // シェアボタン用の状態
   const [isCopied, setIsCopied] = useState(false);
   
-  // 埋め込みコードコピー用の状態
-  const [isEmbedCopied, setIsEmbedCopied] = useState(false);
+  // トースト通知用の状態
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // イベントJSON表示用の状態
   const [showEventJson, setShowEventJson] = useState(false);
@@ -546,10 +546,12 @@ export const CardFlip = memo(function CardFlip({
     
     try {
       await navigator.clipboard.writeText(embedCode);
-      setIsEmbedCopied(true);
-      setTimeout(() => setIsEmbedCopied(false), 2000);
+      setToastMessage('埋め込みコードをコピーしました');
+      setTimeout(() => setToastMessage(null), 2500);
     } catch (error) {
       console.error('埋め込みコードのコピーに失敗:', error);
+      setToastMessage('コピーに失敗しました');
+      setTimeout(() => setToastMessage(null), 2500);
     }
   }, [card.id]);
 
@@ -775,16 +777,10 @@ export const CardFlip = memo(function CardFlip({
                                   handleCopyEmbedCode();
                                 }}
                               >
-                                {isEmbedCopied ? (
-                                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
-                                    <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-                                  </svg>
-                                ) : (
-                                  <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
-                                    <path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/>
-                                  </svg>
-                                )}
-                                <span>{isEmbedCopied ? 'コピーしました!' : '埋め込みコードを取得'}</span>
+                                <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                                  <path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/>
+                                </svg>
+                                <span>埋め込みコードを取得</span>
                               </button>
                               
                               {/* タグ編集ボタン（自分の投稿のみ） */}
@@ -1132,6 +1128,16 @@ export const CardFlip = memo(function CardFlip({
             </svg>
             <span>削除リクエストを送信しました</span>
           </div>
+        </div>
+      )}
+
+      {/* トースト通知 */}
+      {toastMessage && (
+        <div className={styles.toast}>
+          <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+          </svg>
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>
