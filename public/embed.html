@@ -76,8 +76,21 @@
     const relayParam = params.get('relay');
     const relays = relayParam ? [relayParam] : DEFAULT_RELAYS;
 
+    // Check if string is valid Base64
+    function isBase64(str) {
+      if (!str || str.length === 0) return false;
+      // Base64 should only contain these characters
+      const base64Regex = /^[A-Za-z0-9+/=]+$/;
+      return base64Regex.test(str) && str.length % 4 === 0;
+    }
+
     // Decompress SVG
     function decompressSvg(compressedData) {
+      if (!compressedData || !isBase64(compressedData)) {
+        console.log('Content is not valid Base64');
+        return null;
+      }
+      
       try {
         // Try deflate+base64 first (current format)
         const binaryStr = atob(compressedData);
@@ -106,18 +119,39 @@
 
     // Parse NostrDraw event
     function parseNostrDrawEvent(event) {
+      console.log('Parsing event:', event.id);
+      console.log('Content length:', event.content?.length);
+      console.log('Tags:', event.tags);
+      
       const contentType = event.tags.find(t => t[0] === 'content-type')?.[1] || 'image/svg+xml';
-      const encoding = event.tags.find(t => t[0] === 'encoding')?.[1] || 'deflate+base64';
+      const encoding = event.tags.find(t => t[0] === 'encoding')?.[1];
       const imageUrl = event.tags.find(t => t[0] === 'image')?.[1];
       
       let svg = null;
+      const content = event.content || '';
       
-      if (encoding === 'deflate+base64' || encoding === 'binary+gzip+base64') {
-        svg = decompressSvg(event.content);
-      } else if (contentType === 'image/svg+xml') {
-        svg = event.content;
+      // Check if content is raw SVG (starts with <svg or <?xml)
+      if (content.trim().startsWith('<svg') || content.trim().startsWith('<?xml')) {
+        console.log('Content is raw SVG');
+        svg = content;
+      }
+      // Check if encoding tag indicates compression
+      else if (encoding === 'deflate+base64' || encoding === 'binary+gzip+base64') {
+        console.log('Trying to decompress with encoding:', encoding);
+        svg = decompressSvg(content);
+      }
+      // Try to decompress if content looks like Base64
+      else if (isBase64(content)) {
+        console.log('Content looks like Base64, trying to decompress');
+        svg = decompressSvg(content);
+      }
+      // Otherwise, if content type is SVG, use as-is
+      else if (contentType === 'image/svg+xml' && content) {
+        console.log('Using content as raw SVG');
+        svg = content;
       }
       
+      console.log('Parsed result - SVG:', !!svg, 'imageUrl:', imageUrl);
       return { svg, imageUrl, event };
     }
 
