@@ -98,7 +98,7 @@ function App() {
     isLoading: popularLoading,
     error: popularError,
     refresh: refreshPopular,
-  } = usePopularCards(3); // 過去3日間
+  } = usePopularCards(3, authState.pubkey); // 過去3日間
 
   // フォロー中のユーザーのpubkeyリスト
   const followeePubkeys = useMemo(() => 

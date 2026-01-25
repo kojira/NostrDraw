@@ -306,7 +306,7 @@ export function usePublicGalleryCards(userPubkey?: string | null) {
 }
 
 // 人気投稿（過去N日間でリアクション多い順）を取得
-export function usePopularCards(days: number = 3) {
+export function usePopularCards(days: number = 3, userPubkey?: string | null) {
   const [cards, setCards] = useState<NostrDrawPostWithReactions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -315,6 +315,8 @@ export function usePopularCards(days: number = 3) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   // キャンセルフラグ
   const cancelledRef = useRef(false);
+  // リアクション取得済みIDを追跡
+  const fetchedReactionIdsRef = useRef<Set<string>>(new Set());
 
   const loadCards = useCallback(() => {
     // 既存の購読をクリーンアップ
@@ -371,11 +373,28 @@ export function usePopularCards(days: number = 3) {
         
         if (cancelledRef.current) return;
         
+        // ユーザーのリアクション状態を取得
+        const userReactedSet = new Set<string>();
+        if (userPubkey) {
+          await Promise.all(
+            cardIds.map(async (cardId) => {
+              if (cancelledRef.current) return;
+              const reacted = await hasUserReacted(cardId, userPubkey);
+              if (reacted) userReactedSet.add(cardId);
+            })
+          );
+        }
+        
+        if (cancelledRef.current) return;
+        
+        // 取得済みとしてマーク
+        cardIds.forEach(id => fetchedReactionIdsRef.current.add(id));
+        
         const sortedCards = [...allCardsRef.current]
           .map(c => ({
             ...c,
             reactionCount: reactions.get(c.id) || 0,
-            userReacted: false,
+            userReacted: userReactedSet.has(c.id),
           }))
           .sort((a, b) => b.reactionCount - a.reactionCount || b.createdAt - a.createdAt)
           .slice(0, 20);
@@ -391,13 +410,14 @@ export function usePopularCards(days: number = 3) {
       setError(err instanceof Error ? err.message : '人気作品の取得に失敗しました');
       setIsLoading(false);
     }
-  }, [days]);
+  }, [days, userPubkey]);
 
   useEffect(() => {
     loadCards();
     
     return () => {
       cancelledRef.current = true;
+      fetchedReactionIdsRef.current = new Set();
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }

@@ -73,7 +73,7 @@ export function Gallery({
     cards: popularCards,
     isLoading: popularLoading,
     error: popularError,
-  } = usePopularCards(periodToDays(period));
+  } = usePopularCards(periodToDays(period), userPubkey);
 
   const {
     cards: recentCards,
