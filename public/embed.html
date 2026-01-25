@@ -18,6 +18,7 @@
     .container {
       width: 100%;
       height: 100%;
+      min-height: 100px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -119,39 +120,43 @@
 
     // Parse NostrDraw event
     function parseNostrDrawEvent(event) {
-      console.log('Parsing event:', event.id);
-      console.log('Content length:', event.content?.length);
-      console.log('Tags:', event.tags);
-      
       const contentType = event.tags.find(t => t[0] === 'content-type')?.[1] || 'image/svg+xml';
       const encoding = event.tags.find(t => t[0] === 'encoding')?.[1];
       const imageUrl = event.tags.find(t => t[0] === 'image')?.[1];
       
       let svg = null;
-      const content = event.content || '';
+      let content = event.content || '';
       
+      // Check if content is JSON (NostrDraw format with svgCompressed field)
+      if (content.trim().startsWith('{')) {
+        try {
+          const jsonContent = JSON.parse(content);
+          if (jsonContent.svgCompressed) {
+            svg = decompressSvg(jsonContent.svgCompressed);
+          } else if (jsonContent.svg) {
+            svg = jsonContent.svg;
+          }
+        } catch (e) {
+          console.error('Failed to parse JSON content:', e);
+        }
+      }
       // Check if content is raw SVG (starts with <svg or <?xml)
-      if (content.trim().startsWith('<svg') || content.trim().startsWith('<?xml')) {
-        console.log('Content is raw SVG');
+      else if (content.trim().startsWith('<svg') || content.trim().startsWith('<?xml')) {
         svg = content;
       }
       // Check if encoding tag indicates compression
       else if (encoding === 'deflate+base64' || encoding === 'binary+gzip+base64') {
-        console.log('Trying to decompress with encoding:', encoding);
         svg = decompressSvg(content);
       }
       // Try to decompress if content looks like Base64
       else if (isBase64(content)) {
-        console.log('Content looks like Base64, trying to decompress');
         svg = decompressSvg(content);
       }
       // Otherwise, if content type is SVG, use as-is
       else if (contentType === 'image/svg+xml' && content) {
-        console.log('Using content as raw SVG');
         svg = content;
       }
       
-      console.log('Parsed result - SVG:', !!svg, 'imageUrl:', imageUrl);
       return { svg, imageUrl, event };
     }
 
@@ -247,9 +252,22 @@
           wrapper.innerHTML = svg;
           const svgEl = wrapper.querySelector('svg');
           if (svgEl) {
+            // Ensure SVG has width/height for proper rendering
+            if (!svgEl.getAttribute('width')) {
+              svgEl.setAttribute('width', '100%');
+            }
+            if (!svgEl.getAttribute('height')) {
+              svgEl.setAttribute('height', 'auto');
+            }
+            svgEl.style.width = '100%';
+            svgEl.style.height = 'auto';
             svgEl.style.maxWidth = '100%';
             svgEl.style.maxHeight = '100%';
+            svgEl.style.display = 'block';
             cardLink.appendChild(svgEl);
+          } else {
+            // If no SVG element found, try to show as-is
+            cardLink.innerHTML = svg;
           }
         } else if (imageUrl) {
           // Fall back to image URL
