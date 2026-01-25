@@ -301,12 +301,10 @@
 
 /* グリッドレイアウト */
 .grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-6);
   width: 100%;
-  max-width: 500px;
-  margin: 0 auto;
   box-sizing: border-box;
 }
 
@@ -528,8 +526,8 @@
   }
   
   .grid {
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--space-3);
-    max-width: 100%;
   }
   
   .info {
@@ -548,7 +546,7 @@
 
 @media (max-width: 360px) {
   .grid {
-    max-width: 100%;
+    grid-template-columns: 1fr;
   }
 }
 
