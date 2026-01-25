@@ -65,6 +65,39 @@ SVGデータはgzip圧縮+Base64エンコードしてkind 31898イベントのco
 - **NIP-07** — ブラウザ拡張機能（nos2x, Albyなど）
 - **パスワード＋追加シークレット** — 拡張機能なしでもアカウント作成・ログイン可能
 
+### 📎 埋め込みウィジェット
+
+他のWebサイトにNostrDrawの作品を埋め込むことができます。
+
+**埋め込みコード生成ページ:**
+- [embed-generator.html](https://kojira.github.io/NostrDraw/embed-generator.html)
+
+Event IDを入力するとプレビューとコピー用のiframeコードを生成できます。
+
+**使用例:**
+```html
+<iframe
+  src="https://kojira.github.io/NostrDraw/embed.html?id=EVENT_ID"
+  width="300"
+  height="300"
+  frameborder="0"
+  style="border-radius: 8px;"
+></iframe>
+```
+
+**ローカルで確認する方法:**
+
+1. 開発サーバーを起動:
+   ```bash
+   pnpm dev
+   ```
+
+2. ブラウザで以下にアクセス:
+   - 埋め込みコード生成: http://localhost:5173/embed-generator.html
+   - 直接埋め込み表示: http://localhost:5173/embed.html?id=EVENT_ID
+
+3. 任意のHTMLファイルに埋め込みコードを貼り付けてテスト
+
 ### 🌍 その他の機能
 
 - **多言語対応** — 日本語 / English
